@@ -41,7 +41,9 @@ jobs:
     displayName: dotnet restore
     inputs:
       command: 'restore'
-      projects: '**/*.csproj'
+      projects: |
+        **/*.csproj
+        **/apps/**/*.csproj
       feedsToUse: 'config'
       nugetConfigPath: 'nuget.config'
       
