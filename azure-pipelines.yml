@@ -20,11 +20,6 @@ jobs:
    - name: signHash
      value: ''     
 
-variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
-
   steps:
   - task: DotNetCoreCLI@2
     displayName: Install AzureSignTool
