@@ -19,5 +19,5 @@
     <ProjectReference Include="D:\Source\Repos\eryph\hub-backend\src\Eryph.GenePool.Client.Authentication\Eryph.GenePool.Client.Authentication.csproj" />
     <ProjectReference Include="D:\Source\Repos\eryph\hub-backend\src\Eryph.GenePool.Packing\Eryph.GenePool.Packing.csproj" />
   </ItemGroup>
-
+  <Import Project="..\..\..\..\exesign.custom.targets" />
 </Project>

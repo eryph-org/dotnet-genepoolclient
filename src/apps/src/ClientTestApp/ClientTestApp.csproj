@@ -8,11 +8,9 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
-
-
   <ItemGroup>
-    <ProjectReference Include="..\Eryph.GenePool.Client.Authentication\Eryph.GenePool.Client.Authentication.csproj" />
-    <ProjectReference Include="..\Eryph.GenePool.Client\Eryph.GenePool.Client.csproj" />
+    <ProjectReference Include="..\..\..\Eryph.GenePool.Client.Authentication\Eryph.GenePool.Client.Authentication.csproj" />
+    <ProjectReference Include="..\..\..\Eryph.GenePool.Client\Eryph.GenePool.Client.csproj" />
   </ItemGroup>
 
 </Project>
