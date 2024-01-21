@@ -1,0 +1,111 @@
+# ASP.NET
+# Build and test ASP.NET projects.
+# Add steps that publish symbols, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/apps/aspnet/build-aspnet-4
+
+trigger:
+- master
+- main
+- refs/tags/v*
+
+jobs:
+- job: apps
+  pool:
+    vmImage: windows-2022  
+
+  variables:
+   - group: 'eryph'
+   - name: buildConfiguration
+     value: 'Release'
+   - name: signHash
+     value: ''     
+
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+
+  steps:
+  - task: DotNetCoreCLI@2
+    displayName: Install AzureSignTool
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+    inputs:
+      command: 'custom'
+      custom: 'tool'
+      arguments: 'install --global azuresigntool'
+
+  - task: UseGitVersion@5
+    inputs:
+      versionSpec: '5.x'
+
+  - task: DotNetCoreCLI@2
+    displayName: dotnet restore
+    inputs:
+      command: 'restore'
+      projects: '**/*.csproj'
+      feedsToUse: 'config'
+      nugetConfigPath: 'nuget.config'
+      
+  - task: DotNetCoreCLI@2
+    displayName: dotnet build
+    inputs:
+      command: build
+      projects: '**/*.csproj'
+      arguments: '--configuration $(buildConfiguration) --no-restore'
+
+  - task: DotNetCoreCLI@2
+    displayName: dotnet test
+    inputs:
+      command: test
+      projects: '**/test/**/*.csproj'
+      arguments: '--configuration $(buildConfiguration) --collect "Code coverage" --no-build'
+
+  - task: DotNetCoreCLI@2
+    displayName: publish packer app
+    inputs:
+      command: 'publish'
+      publishWebProjects: false
+      projects: '**/apps/**/*-packer/*.csproj'
+      arguments: '--runtime win7-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\packer_build /p:SignHash=$(signHash)'
+      zipAfterPublish: false
+      
+  - task: CmdLine@2
+    displayName: rename packer build
+    inputs:
+      script: 'ren eryph-packer bin'
+      workingDirectory: '$(Build.ArtifactStagingDirectory)\packer_build'
+
+  - task: AzureCLI@2
+    displayName: 'Sign eryph-packer.exe'
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+    inputs:
+      scriptType: ps
+      scriptLocation: inlineScript
+      azureSubscription: 'dbosoft Azure PN'
+      addSpnToEnvironment: true
+      workingDirectory: '$(Build.ArtifactStagingDirectory)\packer_build\bin'
+      inlineScript: |
+        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvi $Env:servicePrincipalId -kvt $Env:tenantId -kvs $Env:servicePrincipalKey -tr http://rfc3161timestamp.globalsign.com/advanced -kvc "codesigning-2023" -v eryph-packer.exe
+
+
+  - task: ArchiveFiles@2
+    displayName: pack packer build
+    inputs:
+      rootFolderOrFile: '$(Build.ArtifactStagingDirectory)\packer_build'
+      includeRootFolder: false
+      archiveType: 'zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/apps/packer/eryph_packer_$(Build.BuildNumber)_windows_amd64.zip'
+
+  - task: PublishBuildArtifacts@1
+    displayName: upload packer artifact
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)/apps/packer'
+      ArtifactName: 'packer'
+
+  - task: NuGetCommand@2
+    inputs:
+      command: 'push'
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+      nuGetFeedType: 'internal'
+      publishVstsFeed: '4612e84a-b54a-4afb-b7ce-afc8f25d1a1b'
+      allowPackageConflicts: true

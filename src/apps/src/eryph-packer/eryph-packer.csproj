@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>Eryph.Packer</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" Version="0.48.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageReference Include="System.CommandLine.Rendering" Version="0.4.0-alpha.22272.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="D:\Source\Repos\eryph\hub-backend\src\Eryph.GenePool.Client.Authentication\Eryph.GenePool.Client.Authentication.csproj" />
+    <ProjectReference Include="D:\Source\Repos\eryph\hub-backend\src\Eryph.GenePool.Packing\Eryph.GenePool.Packing.csproj" />
+  </ItemGroup>
+
+</Project>

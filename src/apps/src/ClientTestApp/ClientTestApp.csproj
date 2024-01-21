@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\Eryph.GenePool.Client.Authentication\Eryph.GenePool.Client.Authentication.csproj" />
+    <ProjectReference Include="..\Eryph.GenePool.Client\Eryph.GenePool.Client.csproj" />
+  </ItemGroup>
+
+</Project>
