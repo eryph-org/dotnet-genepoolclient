@@ -9,7 +9,7 @@ trigger:
 - refs/tags/v*
 
 jobs:
-- job: apps
+- job: build
   pool:
     vmImage: windows-2022  
 
@@ -20,12 +20,11 @@ jobs:
    - name: signHash
      value: ''     
 
-variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
+  steps:  
+  - checkout: self
+    fetchDepth: 0
+    clean: true
 
-  steps:
   - task: DotNetCoreCLI@2
     displayName: Install AzureSignTool
     condition: ne(variables['Build.Reason'], 'PullRequest')
