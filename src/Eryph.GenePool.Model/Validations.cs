@@ -7,7 +7,7 @@ namespace Eryph.GenePool.Model;
 
 public static class Validations
 {
-    public static readonly Regex NameRegex = new("^[a-z0-9]+(-[a-z0-9]+)*$", RegexOptions.Compiled);
+    public static readonly Regex NameRegex = new("^[a-z0-9]+(-[a-z0-9]+)*(.[a-z0-9]+)*$", RegexOptions.Compiled);
     public static readonly Regex HashRegex = new("^[a-z0-9]*$", RegexOptions.Compiled);
 
     public static Validation<Error, string> ValidateLength(string value, string fieldName, int maxLength, int minLength) =>
@@ -31,7 +31,7 @@ public static class Validations
         NameRegex.IsMatch(value)
             ? Prelude.Success<Error, string>(value)
             : StatusCodeToError(HttpStatusCode.BadRequest,
-                $"{fieldName} does not meet the requirements. Only alphanumeric characters, numbers and non-consecutive hyphens are permitted. Hyphens must not appear at the beginning or end.");
+                $"{fieldName} does not meet the requirements. Only alphanumeric characters, numbers, dots and non-consecutive hyphens are permitted. Hyphens and dots must not appear at the beginning or end.");
 
 
     public static Validation<Error, string> ValidateHash(string value, string fieldName) =>
