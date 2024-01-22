@@ -31,7 +31,7 @@ public record GetGeneResponse
     public bool Available { get; init; }
 
     [JsonPropertyName("download_expires")]
-    public DateTimeOffset DownloadExpires { get; init; }
+    public DateTimeOffset? DownloadExpires { get; init; }
 
 
     [JsonPropertyName("download_uris")]
