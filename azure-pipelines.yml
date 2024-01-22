@@ -41,9 +41,7 @@ jobs:
     displayName: dotnet restore
     inputs:
       command: 'restore'
-      projects: |
-        **/*.csproj
-        **/apps/**/*.csproj
+      projects: '**/*.csproj'
       feedsToUse: 'config'
       nugetConfigPath: 'nuget.config'
       
@@ -103,10 +101,17 @@ jobs:
       PathtoPublish: '$(Build.ArtifactStagingDirectory)/apps/packer'
       ArtifactName: 'packer'
 
+  - task: DotNetCoreCLI@2
+    displayName: dotnet pack
+    inputs:
+      command: pack
+      nobuild: true
+      arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)  --no-build'
+
   - task: NuGetCommand@2
     inputs:
       command: 'push'
       packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
       nuGetFeedType: 'internal'
-      publishVstsFeed: '4612e84a-b54a-4afb-b7ce-afc8f25d1a1b'
+      publishVstsFeed: '59a3608a-9bed-4cb4-9467-6efaaa3cbef5/1e425ef4-e3a0-4927-b4c0-2beff753cb88'
       allowPackageConflicts: true
