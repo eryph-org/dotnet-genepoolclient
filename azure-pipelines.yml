@@ -41,9 +41,7 @@ jobs:
     displayName: dotnet restore
     inputs:
       command: 'restore'
-      projects: |
-        **/*.csproj
-        **/apps/**/*.csproj
+      projects: '**/*.csproj'
       feedsToUse: 'config'
       nugetConfigPath: 'nuget.config'
       
@@ -102,6 +100,13 @@ jobs:
     inputs:
       PathtoPublish: '$(Build.ArtifactStagingDirectory)/apps/packer'
       ArtifactName: 'packer'
+
+  - task: DotNetCoreCLI@2
+    displayName: dotnet pack
+    inputs:
+      command: pack
+      nobuild: true
+      arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)  --no-build'
 
   - task: NuGetCommand@2
     inputs:
