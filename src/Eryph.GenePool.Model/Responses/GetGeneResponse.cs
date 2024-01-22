@@ -3,11 +3,12 @@ using System.Text.Json.Serialization;
 
 namespace Eryph.GenePool.Model.Responses;
 
+
 public record GetGeneResponse
 {
     [JsonConstructor]
     public GetGeneResponse(GenesetRefResponse Geneset, string Gene, GeneManifestData Manifest, 
-        bool Available, DateTimeOffset DownloadExpires, GenePartDownloadUri[]? DownloadUris, GeneUploadStatusResponse? UploadStatus)
+        bool Available, DateTimeOffset? DownloadExpires, GenePartDownloadUri[]? DownloadUris, GeneUploadStatusResponse? UploadStatus)
     {
         this.Geneset = Geneset;
         this.Gene = Gene;
