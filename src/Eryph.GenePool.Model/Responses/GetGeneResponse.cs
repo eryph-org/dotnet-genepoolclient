@@ -42,7 +42,7 @@ public record GetGeneResponse
 
     public void Deconstruct(out GenesetRefResponse geneset, out string gene, 
         out GeneManifestData manifest, out bool available, 
-        out DateTimeOffset downloadExpires,
+        out DateTimeOffset? downloadExpires,
         out GenePartDownloadUri[]? downloadUris, out GeneUploadStatusResponse? uploadStatus)
     {
         geneset = Geneset;
