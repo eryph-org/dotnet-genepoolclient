@@ -1,28 +1,17 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Eryph.ConfigModel.Catlets;
-using Eryph.ConfigModel.Json;
-using Eryph.ConfigModel.Yaml;
 
 namespace Eryph.GenePool.Packing;
 
 public static class VMExport
 {
-    public static async Task<IEnumerable<PackableFile>> ExportToPackable(DirectoryInfo vmExport, string genesetFolder,
+    public static (CatletConfig Config, IEnumerable<PackableFile> Files) ExportToPackable(DirectoryInfo vmExport,
         CancellationToken token)
     {
 
-        var result = new List<PackableFile>();
+        var files = new List<PackableFile>();
         var vmPlan = ConvertVmDataToConfig(vmExport) ?? new CatletConfig();
-        var configJson = ConfigModelJsonSerializer.Serialize(vmPlan);
-        var catletJsonFilePath = Path.Combine(genesetFolder, "catlet.json");
-        var configYaml = CatletConfigYamlSerializer.Serialize(vmPlan);
-        var catletYamlFilePath = Path.Combine(genesetFolder, "catlet.yaml");
-
-        await File.WriteAllTextAsync(catletJsonFilePath, configJson, token);
-        await File.WriteAllTextAsync(catletYamlFilePath, configYaml, token);
-
-        result.Add(new PackableFile(catletJsonFilePath, "catlet.json", GeneType.Catlet, "catlet", false));
 
         var vhdFiles = vmExport.GetFiles("*.vhdx", SearchOption.AllDirectories);
 
@@ -30,12 +19,11 @@ public static class VMExport
         {
             token.ThrowIfCancellationRequested();
 
-            result.Add(new PackableFile(vhdFile.FullName, vhdFile.Name,
+            files.Add(new PackableFile(vhdFile.FullName, vhdFile.Name,
                 GeneType.Volume, Path.GetFileNameWithoutExtension(vhdFile.Name), true));
         }
-
-
-        return result;
+        
+        return (vmPlan, files);
 
     }
 

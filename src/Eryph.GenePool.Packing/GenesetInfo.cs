@@ -9,10 +9,19 @@ public class GenesetInfo
     public string Organization { get; }
     public string Id { get; }
 
-    public GenesetManifestData ManifestData = new();
+    private GenesetManifestData _manifestData = new();
+    private string _genesetPath = ".";
 
+    public GenesetManifestData ManifestData
+    {
+        get
+        {
+            EnsureLoaded();
+            return _manifestData;
+        }
+    }
 
-    public GenesetInfo(string geneset)
+    public GenesetInfo(string geneset,string genesetPath )
     {
         geneset = geneset.ToLowerInvariant();
         var packParts = geneset.Split('/', StringSplitOptions.RemoveEmptyEntries);
@@ -23,16 +32,16 @@ public class GenesetInfo
 
         Organization = packParts[0];
         Id = packParts[1];
-        ManifestData.Geneset = GenesetName;
         GenesetName = $"{Organization}/{Id}";
-
+        _manifestData.Geneset = GenesetName;
+        _genesetPath = Path.GetFullPath(genesetPath);
     }
 
     public string GetGenesetPath()
     {
-        if (File.Exists("geneset.json"))
+        if (File.Exists(Path.Combine(_genesetPath,"geneset.json")))
         {
-            var currentManifest = ReadManifestFromPath(".", GenesetName);
+            var currentManifest = ReadManifestFromPath(_genesetPath, GenesetName);
             if (currentManifest.Geneset != GenesetName)
             {
                 if (currentManifest != null)
@@ -45,7 +54,7 @@ public class GenesetInfo
 
             }
 
-            return ".";
+            return _genesetPath;
         }
 
         return Path.Combine(Organization, Id);
@@ -74,7 +83,7 @@ public class GenesetInfo
 
         if (!File.Exists(Path.Combine(GetGenesetPath(), "geneset.json")))
         {
-            ManifestData = new GenesetManifestData { Geneset = GenesetName };
+            _manifestData = new GenesetManifestData { Geneset = GenesetName };
             Write();
         }
     }
@@ -88,9 +97,9 @@ public class GenesetInfo
 
     public void JoinMetadata(Dictionary<string, string> newMetadata)
     {
-        ManifestData.Metadata ??= new Dictionary<string, string>();
+        _manifestData.Metadata ??= new Dictionary<string, string>();
 
-        ManifestData.Metadata = new[] { ManifestData.Metadata, newMetadata }
+        _manifestData.Metadata = new[] { _manifestData.Metadata, newMetadata }
             .SelectMany(dict => dict)
             .ToLookup(pair => pair.Key, pair => pair.Value)
             .ToDictionary(group => group.Key, group => group.First());
@@ -99,7 +108,7 @@ public class GenesetInfo
     public void SetIsPublic(bool isPublic)
     {
         EnsureLoaded();
-        ManifestData.Public = isPublic;
+        _manifestData.Public = isPublic;
         Write();
 
     }
@@ -107,7 +116,7 @@ public class GenesetInfo
     public void SetShortDescription(string description)
     {
         EnsureLoaded();
-        ManifestData.ShortDescription = description;
+        _manifestData.ShortDescription = description;
         Write();
 
     }
@@ -115,8 +124,8 @@ public class GenesetInfo
     public void SetMarkdown(string descriptionMarkdown)
     {
         EnsureLoaded();
-        ManifestData.DescriptionMarkdown = descriptionMarkdown;
-        ManifestData.DescriptionMarkdownFile = null;
+        _manifestData.DescriptionMarkdown = descriptionMarkdown;
+        _manifestData.DescriptionMarkdownFile = null;
         Write();
 
     }
@@ -124,22 +133,22 @@ public class GenesetInfo
     public void SetMarkdownFile(string descriptionMarkdownFile)
     {
         EnsureLoaded();
-        ManifestData.DescriptionMarkdown = null;
-        ManifestData.DescriptionMarkdownFile = descriptionMarkdownFile;
+        _manifestData.DescriptionMarkdown = null;
+        _manifestData.DescriptionMarkdownFile = descriptionMarkdownFile;
         Write();
 
     }
 
     private void Write()
     {
-        var jsonString = JsonSerializer.Serialize(ManifestData);
+        var jsonString = JsonSerializer.Serialize(_manifestData);
         File.WriteAllText(Path.Combine(GetGenesetPath(), "geneset.json"), jsonString);
     }
 
     private void ReadManifest()
     {
         var path = GetGenesetPath();
-        ManifestData = ReadManifestFromPath(path, GenesetName);
+        _manifestData = ReadManifestFromPath(path, GenesetName);
     }
 
     private static GenesetManifestData ReadManifestFromPath(string path, string genesetName)
@@ -165,18 +174,18 @@ public class GenesetInfo
 
     public string ToString(bool pretty)
     {
-        return JsonSerializer.Serialize(ManifestData, new JsonSerializerOptions { WriteIndented = pretty });
+        return JsonSerializer.Serialize(_manifestData, new JsonSerializerOptions { WriteIndented = pretty });
     }
 
 
     public string? GetMarkdownContent()
     {
         ReadManifest();
-        if (ManifestData.DescriptionMarkdownFile != null)
+        if (_manifestData.DescriptionMarkdownFile != null)
         {
-            return File.ReadAllText(Path.Combine(GetGenesetPath(), ManifestData.DescriptionMarkdownFile));
+            return File.ReadAllText(Path.Combine(GetGenesetPath(), _manifestData.DescriptionMarkdownFile));
         }
 
-        return ManifestData.DescriptionMarkdown;
+        return _manifestData.DescriptionMarkdown;
     }
 }

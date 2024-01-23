@@ -270,6 +270,8 @@ public static class GenePacker
                 break;
         }
         libDir = Path.Combine(libDir, "native");
+        if (!Directory.Exists(libDir))
+            libDir = AppDomain.CurrentDomain.BaseDirectory;
 
         string libPath = null;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

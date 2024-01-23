@@ -5,16 +5,25 @@ namespace Eryph.GenePool.Packing;
 
 public class GenesetTagInfo
 {
-    public string GenesetName { get; }
+    public string GenesetTagName { get; }
     public string Organization { get; }
     public string Id { get; }
 
     public string Tag { get; }
 
-    public GenesetTagManifestData ManifestData = new();
+    private GenesetTagManifestData _manifestData = new();
+    private readonly string _genesetPath;
 
+    public GenesetTagManifestData ManifestData
+    {
+        get
+        {
+            EnsureLoaded();
+            return _manifestData;
+        }
+    }
 
-    public GenesetTagInfo(string geneset)
+    public GenesetTagInfo(string geneset, string genesetPath)
     {
         geneset = geneset.ToLowerInvariant();
         var packParts = geneset.Split('/', StringSplitOptions.RemoveEmptyEntries);
@@ -26,29 +35,29 @@ public class GenesetTagInfo
         Organization = packParts[0];
         Id = packParts[1];
         Tag = packParts.Length == 3 ? packParts[2] : "latest";
-        GenesetName = $"{Organization}/{Id}/{Tag}";
-        ManifestData.Geneset = GenesetName;
-
+        GenesetTagName = $"{Organization}/{Id}/{Tag}";
+        _manifestData.Geneset = GenesetTagName;
+        _genesetPath = Path.GetFullPath(genesetPath);
     }
 
     public string GetGenesetPath()
     {
-        if (File.Exists("geneset.json"))
+        if (File.Exists(Path.Combine(_genesetPath,"geneset-tag.json")))
         {
-            var currentManifest = ReadManifestFromPath(".", GenesetName);
-            if (currentManifest.Geneset != GenesetName)
+            var currentManifest = ReadManifestFromPath(_genesetPath, GenesetTagName);
+            if (currentManifest.Geneset != GenesetTagName)
             {
                 if (currentManifest != null)
                 {
                     throw new InvalidOperationException(
-                        $"Directory already contains a manifest for geneset '{currentManifest.Geneset}' but you trying to access geneset '{GenesetName}'. Make sure that you are in the right folder.");
+                        $"Directory already contains a manifest for geneset tag '{currentManifest.Geneset}' but you trying to access geneset tag '{GenesetTagName}'. Make sure that you are in the right folder.");
                 }
                 throw new InvalidOperationException(
                     $"Directory already contains a invalid manifest.");
 
             }
 
-            return ".";
+            return _genesetPath;
         }
 
         return Path.Combine(Organization, Id, Tag);
@@ -60,7 +69,7 @@ public class GenesetTagInfo
         if (!Directory.Exists(GetGenesetPath()))
             return false;
 
-        if (!File.Exists(Path.Combine(GetGenesetPath(), "geneset.json")))
+        if (!File.Exists(Path.Combine(GetGenesetPath(), "geneset-tag.json")))
             return false;
 
         return true;
@@ -69,15 +78,15 @@ public class GenesetTagInfo
     public void Create()
     {
         if (Exists())
-            throw new InvalidOperationException($"geneset {GenesetName} already exists.");
+            throw new InvalidOperationException($"geneset tag {GenesetTagName} already exists.");
 
         var directoryInfo = new DirectoryInfo(GetGenesetPath());
         if (!directoryInfo.Exists)
             directoryInfo.Create();
 
-        if (!File.Exists(Path.Combine(GetGenesetPath(), "geneset.json")))
+        if (!File.Exists(Path.Combine(GetGenesetPath(), "geneset-tag.json")))
         {
-            ManifestData = new GenesetTagManifestData { Geneset = GenesetName };
+            _manifestData = new GenesetTagManifestData { Geneset = GenesetTagName };
             Write();
         }
     }
@@ -91,9 +100,9 @@ public class GenesetTagInfo
 
     public void JoinMetadata(Dictionary<string, string> newMetadata)
     {
-        ManifestData.Metadata ??= new Dictionary<string, string>();
+        _manifestData.Metadata ??= new Dictionary<string, string>();
 
-        ManifestData.Metadata = new[] { ManifestData.Metadata, newMetadata }
+        _manifestData.Metadata = new[] { _manifestData.Metadata, newMetadata }
             .SelectMany(dict => dict)
             .ToLookup(pair => pair.Key, pair => pair.Value)
             .ToDictionary(group => group.Key, group => group.First());
@@ -102,14 +111,14 @@ public class GenesetTagInfo
     public void SetReference(string referencedGeneSet)
     {
         EnsureLoaded();
-        ManifestData.Reference = referencedGeneSet;
+        _manifestData.Reference = referencedGeneSet;
         Write();
     }
 
     public void SetParent(string? parent)
     {
         EnsureLoaded();
-        ManifestData.Parent = parent;
+        _manifestData.Parent = parent;
         Write();
 
     }
@@ -121,20 +130,20 @@ public class GenesetTagInfo
         switch (geneType)
         {
             case GeneType.Catlet:
-                RemoveExistingGene(ManifestData.CatletGene, hash);
-                ManifestData.CatletGene = hash;
+                RemoveExistingGene(_manifestData.CatletGene, hash);
+                _manifestData.CatletGene = hash;
                 break;
             case GeneType.Volume:
-                ManifestData.VolumeGenes ??= Array.Empty<GeneReferenceData>();
-                RemoveExistingGene(ManifestData.VolumeGenes.FirstOrDefault(x => x.Name == name)?.Hash, hash);
+                _manifestData.VolumeGenes ??= Array.Empty<GeneReferenceData>();
+                RemoveExistingGene(_manifestData.VolumeGenes.FirstOrDefault(x => x.Name == name)?.Hash, hash);
 
-                ManifestData.VolumeGenes = ManifestData.VolumeGenes.Where(x => x.Name != name)
+                _manifestData.VolumeGenes = _manifestData.VolumeGenes.Where(x => x.Name != name)
                     .Append(new GeneReferenceData { Name = name, Hash = hash }).ToArray();
                 break;
             case GeneType.Fodder:
-                ManifestData.FodderGenes ??= Array.Empty<GeneReferenceData>();
-                RemoveExistingGene(ManifestData.FodderGenes.FirstOrDefault(x => x.Name == name)?.Hash, hash);
-                ManifestData.FodderGenes = ManifestData.FodderGenes.Where(x => x.Name != name)
+                _manifestData.FodderGenes ??= Array.Empty<GeneReferenceData>();
+                RemoveExistingGene(_manifestData.FodderGenes.FirstOrDefault(x => x.Name == name)?.Hash, hash);
+                _manifestData.FodderGenes = _manifestData.FodderGenes.Where(x => x.Name != name)
                     .Append(new GeneReferenceData { Name = name, Hash = hash }).ToArray();
 
                 break;
@@ -161,21 +170,21 @@ public class GenesetTagInfo
 
     private void Write()
     {
-        var jsonString = JsonSerializer.Serialize(ManifestData);
-        File.WriteAllText(Path.Combine(GetGenesetPath(), "geneset.json"), jsonString);
+        var jsonString = JsonSerializer.Serialize(_manifestData);
+        File.WriteAllText(Path.Combine(GetGenesetPath(), "geneset-tag.json"), jsonString);
     }
 
     private void ReadManifest()
     {
         var path = GetGenesetPath();
-        ManifestData = ReadManifestFromPath(path, GenesetName);
+        _manifestData = ReadManifestFromPath(path, GenesetTagName);
     }
 
     private static GenesetTagManifestData ReadManifestFromPath(string path, string genesetName)
     {
         try
         {
-            var jsonString = File.ReadAllText(Path.Combine(path, "geneset.json"));
+            var jsonString = File.ReadAllText(Path.Combine(path, "geneset-tag.json"));
 
             var manifest = JsonSerializer.Deserialize<GenesetTagManifestData>(jsonString);
             return manifest ?? new GenesetTagManifestData { Geneset = genesetName };
@@ -194,28 +203,29 @@ public class GenesetTagInfo
 
     public string ToString(bool pretty)
     {
-        return JsonSerializer.Serialize(ManifestData, new JsonSerializerOptions { WriteIndented = pretty });
+        EnsureLoaded();
+        return JsonSerializer.Serialize(_manifestData, new JsonSerializerOptions { WriteIndented = pretty });
     }
 
 
     public IEnumerable<string> GetAllGeneNames()
     {
         ReadManifest();
-        if (!string.IsNullOrWhiteSpace(ManifestData.CatletGene))
-            yield return SplitHash(ManifestData.CatletGene);
+        if (!string.IsNullOrWhiteSpace(_manifestData.CatletGene))
+            yield return SplitHash(_manifestData.CatletGene);
 
-        if (ManifestData.VolumeGenes != null)
+        if (_manifestData.VolumeGenes != null)
         {
-            foreach (var gene in ManifestData.VolumeGenes
+            foreach (var gene in _manifestData.VolumeGenes
                          .Where(x => !string.IsNullOrWhiteSpace(x.Hash)))
             {
                 yield return SplitHash(gene.Hash ?? "");
             }
         }
 
-        if (ManifestData.FodderGenes != null)
+        if (_manifestData.FodderGenes != null)
         {
-            foreach (var gene in ManifestData.FodderGenes
+            foreach (var gene in _manifestData.FodderGenes
                          .Where(x => !string.IsNullOrWhiteSpace(x.Hash)))
             {
                 yield return SplitHash(gene.Hash ?? "");
@@ -227,5 +237,14 @@ public class GenesetTagInfo
     {
         var parts = hash.Split(':');
         return parts.Length != 2 ? hash : parts[1];
+    }
+
+    public void PreparePacking()
+    {
+        ReadManifest();
+        _manifestData.CatletGene = null;
+        _manifestData.VolumeGenes = null;
+        _manifestData.FodderGenes = null;
+        Write();
     }
 }
