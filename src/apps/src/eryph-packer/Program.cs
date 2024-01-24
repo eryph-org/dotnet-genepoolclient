@@ -550,7 +550,7 @@ void ResetPackableFolder(string genesetPath)
 {
     var packFolder = Path.Combine(genesetPath, ".pack");
     if (Directory.Exists(packFolder))
-        Directory.Delete(packFolder);
+        Directory.Delete(packFolder, true);
 
 }
 
