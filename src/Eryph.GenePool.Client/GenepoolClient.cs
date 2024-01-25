@@ -116,11 +116,11 @@ namespace Eryph.GenePool.Client
                 throw new FileNotFoundException("Manifest file not found.", manifestPath);
             var manifestContent = await File.ReadAllTextAsync(manifestPath, cancellationToken).ConfigureAwait(false);
 
-            var manifest = JsonSerializer.Deserialize<GeneManifestData>(manifestContent);
+            var manifest = JsonSerializer.Deserialize<GeneManifestData>(manifestContent, GeneModelDefaults.SerializerOptions);
             if (manifest == null)
                 throw new InvalidDataException("Manifest file is invalid.");
 
-            var hashBaseJson = JsonSerializer.Serialize(manifest);
+            var hashBaseJson = JsonSerializer.Serialize(manifest, GeneModelDefaults.SerializerOptions);
             var hashBytes = Encoding.UTF8.GetBytes(hashBaseJson);
             var manifestHash = GetHashString(System.Security.Cryptography.SHA256.Create().ComputeHash(hashBytes));
 

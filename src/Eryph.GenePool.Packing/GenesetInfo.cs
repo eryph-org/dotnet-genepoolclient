@@ -141,7 +141,7 @@ public class GenesetInfo
 
     private void Write()
     {
-        var jsonString = JsonSerializer.Serialize(_manifestData);
+        var jsonString = JsonSerializer.Serialize(_manifestData, GeneModelDefaults.SerializerOptions);
         File.WriteAllText(Path.Combine(GetGenesetPath(), "geneset.json"), jsonString);
     }
 
@@ -157,7 +157,7 @@ public class GenesetInfo
         {
             var jsonString = File.ReadAllText(Path.Combine(path, "geneset.json"));
 
-            var manifest = JsonSerializer.Deserialize<GenesetManifestData>(jsonString);
+            var manifest = JsonSerializer.Deserialize<GenesetManifestData>(jsonString, GeneModelDefaults.SerializerOptions);
             return manifest ?? new GenesetManifestData { Geneset = genesetName };
 
         }
@@ -174,7 +174,8 @@ public class GenesetInfo
 
     public string ToString(bool pretty)
     {
-        return JsonSerializer.Serialize(_manifestData, new JsonSerializerOptions { WriteIndented = pretty });
+        return JsonSerializer.Serialize(_manifestData, 
+            new JsonSerializerOptions(GeneModelDefaults.SerializerOptions) { WriteIndented = pretty });
     }
 
 

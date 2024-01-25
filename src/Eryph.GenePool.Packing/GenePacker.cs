@@ -13,7 +13,7 @@ namespace Eryph.GenePool.Packing;
 public static class GenePacker
 {
 
-    public static async Task<string> CreateGene(PackableFile file, string genesetDir, Dictionary<string, string> metadata, CancellationToken token)
+    public static async Task<string> CreateGene(PackableFile file, string genesetDir, CancellationToken token)
     {
         InitNativeLibrary();
 
@@ -79,7 +79,7 @@ public static class GenePacker
 
         }
 
-        return await CreateGene(tempDir, file, metadata, token);
+        return await CreateGene(tempDir, file, token);
     }
 
     public static string ToFormatSize(long size)
@@ -96,7 +96,7 @@ public static class GenePacker
         };
     }
 
-    private static async Task<string> CreateGene(string tempDir, PackableFile file, Dictionary<string, string> metadata, CancellationToken token)
+    private static async Task<string> CreateGene(string tempDir, PackableFile file, CancellationToken token)
     {
         var compressedPath = Path.Combine(tempDir, "compressed");
 
@@ -138,11 +138,10 @@ public static class GenePacker
             OriginalSize = sourceFile.Length,
             Format = file.ExtremeCompression ? "xz" : "gz",
             Parts = parts.ToArray(),
-            Metadata = metadata,
             Type = file.GeneType.ToString().ToLowerInvariant()
         };
 
-        var jsonString = JsonSerializer.Serialize(manifestData);
+        var jsonString = JsonSerializer.Serialize(manifestData, GeneModelDefaults.SerializerOptions);
 
         var sha256 = SHA256.Create();
         var manifestHash = GetHashString(sha256.ComputeHash(Encoding.UTF8.GetBytes(jsonString)));

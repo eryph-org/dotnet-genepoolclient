@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Eryph.ConfigModel.Catlets;
+using Eryph.GenePool.Model;
 
 namespace Eryph.GenePool.Packing;
 
@@ -37,7 +38,7 @@ public static class VMExport
         try
         {
             using var vmStream = vmConfigFile.OpenRead();
-            var configJson = JsonSerializer.Deserialize<JsonNode>(vmStream);
+            var configJson = JsonSerializer.Deserialize<JsonNode>(vmStream,GeneModelDefaults.SerializerOptions);
             if (configJson == null)
                 return null;
 

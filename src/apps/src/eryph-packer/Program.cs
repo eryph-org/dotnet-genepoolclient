@@ -11,9 +11,11 @@ using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Yaml;
 using Eryph.GenePool.Client;
+using Eryph.GenePool.Model;
 using Eryph.GenePool.Packing;
 using Eryph.Packer;
 using Spectre.Console;
+using GeneType = Eryph.GenePool.Packing.GeneType;
 
 //AnsiConsole.Profile.Capabilities.Interactive = false;
 
@@ -196,7 +198,7 @@ addVMCommand.SetHandler(async context =>
         try
         {
             await using var metadataStream = metadataFile.OpenRead();
-            var newMetadata = await JsonSerializer.DeserializeAsync<Dictionary<string, string>>(metadataStream) 
+            var newMetadata = await JsonSerializer.DeserializeAsync<Dictionary<string, string>>(metadataStream, GeneModelDefaults.SerializerOptions) 
                               ?? metadata;
             genesetInfo.JoinMetadata(newMetadata);
         }
@@ -289,7 +291,7 @@ packCommand.SetHandler(async context =>
     // this will pack all genes in .packed folder
     foreach (var packable in packableFiles)
     {
-        var packedFile = await GenePacker.CreateGene(packable, packedFolder, new Dictionary<string, string>(), token);
+        var packedFile = await GenePacker.CreateGene(packable, packedFolder, token);
         packedGenesetInfo.AddGene(packable.GeneType, packable.GeneName, packedFile);
 
     }
@@ -541,7 +543,7 @@ void WritePackableFiles(IEnumerable<PackableFile> files, string genesetPath)
     if (!Directory.Exists(packFolder))
         Directory.CreateDirectory(packFolder);
     
-    var packableJson = JsonSerializer.Serialize(files);
+    var packableJson = JsonSerializer.Serialize(files, GeneModelDefaults.SerializerOptions);
     var packableJsonFilePath = Path.Combine(packFolder, "packable.json");
     File.WriteAllText(packableJsonFilePath, packableJson);
 }
@@ -561,7 +563,7 @@ async Task<List<PackableFile>> ReadPackableFiles(string genesetPath)
     if (File.Exists(Path.Combine(packFolder, "packable.json")))
     {
         var packableJson = await File.ReadAllTextAsync(Path.Combine(packFolder, "packable.json"));
-        return JsonSerializer.Deserialize<List<PackableFile>>(packableJson) ?? new List<PackableFile>();
+        return JsonSerializer.Deserialize<List<PackableFile>>(packableJson, GeneModelDefaults.SerializerOptions) ?? new List<PackableFile>();
     }
 
     return new List<PackableFile>();

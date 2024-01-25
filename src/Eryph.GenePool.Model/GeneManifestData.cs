@@ -32,6 +32,4 @@ public class GeneManifestData
     [JsonPropertyName("original_size")]
     public long? OriginalSize { get; set; }
 
-    [JsonPropertyName("metadata")]
-    public Dictionary<string, string>? Metadata { get; set; }
 }
