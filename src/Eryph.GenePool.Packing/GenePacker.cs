@@ -12,8 +12,11 @@ namespace Eryph.GenePool.Packing;
 
 public static class GenePacker
 {
-
-    public static async Task<string> CreateGene(PackableFile file, string genesetDir, CancellationToken token)
+    public static async Task<string> CreateGene(
+        PackableFile file,
+        string genesetDir,
+        IProgress<GenePackingProgress>? progress = default,
+        CancellationToken token = default)
     {
         InitNativeLibrary();
 
@@ -27,19 +30,25 @@ public static class GenePacker
 
         var compOpts = new XZCompressOptions
         {
-            Level = LzmaCompLevel.Default,
-            ExtremeFlag = true,
+            Level = LzmaCompLevel.Level0,
+            ExtremeFlag = false,
             LeaveOpen = true,
         };
+
         var threadOpts = new XZThreadedCompressOptions
         {
             Threads = Environment.ProcessorCount > 8
                 ? Environment.ProcessorCount - 2
                 : Environment.ProcessorCount > 2 ? Environment.ProcessorCount - 1 : 1,
-
         };
 
-        Console.WriteLine($"compressing {Path.GetFileName(file.FullPath)}");
+        
+        progress?.Report(new GenePackingProgress
+        {
+            Compression = (0, fileStream.Length),
+        });
+
+        //Console.WriteLine($"compressing {Path.GetFileName(file.FullPath)}");
         await using (var targetStream = new FileStream(compressedPath,
                          FileMode.Create, FileAccess.Write, FileShare.None))
         {
@@ -53,6 +62,7 @@ public static class GenePacker
             {
                 int read;
                 long totalRead = 0;
+                long lastReported = 0;
                 var totalSizeString = ToFormatSize(fileStream.Length);
                 var stopWatch = Stopwatch.StartNew();
                 while ((read = await fileStream.ReadAsync(new Memory<byte>(buffer), token)) > 0)
@@ -60,17 +70,28 @@ public static class GenePacker
                     await compressionStream.WriteAsync(new ReadOnlyMemory<byte>(buffer, 0, read), token);
                     totalRead += read;
 
+                    
+                    progress?.Report(new GenePackingProgress
+                    {
+                        Compression = (totalRead, fileStream.Length),
+                    });
+                    
+
+                    /*
                     if (stopWatch.Elapsed.TotalSeconds > 5)
                     {
                         var percent = Math.Round(totalRead * 1d / fileStream.Length * 100, 0, MidpointRounding.ToZero);
                         Console.WriteLine($"{percent,3} % - {ToFormatSize(totalRead)} of {totalSizeString} processed ({ToFormatSize(targetStream.Length)} compressed size)");
                         stopWatch.Restart();
                     }
+                    */
                 }
                 await compressionStream.FlushAsync(token);
-
-                Console.WriteLine($"100 % - {ToFormatSize(totalRead)} of {totalSizeString} processed ({ToFormatSize(targetStream.Length)} compressed size)");
-
+                progress?.Report(new GenePackingProgress
+                {
+                    Compression = (fileStream.Length, fileStream.Length),
+                });
+                //Console.WriteLine($"100 % - {ToFormatSize(totalRead)} of {totalSizeString} processed ({ToFormatSize(targetStream.Length)} compressed size)");
             }
             finally
             {
@@ -79,7 +100,7 @@ public static class GenePacker
 
         }
 
-        return await CreateGene(tempDir, file, token);
+        return await CreateGene(tempDir, file, progress, token);
     }
 
     public static string ToFormatSize(long size)
@@ -96,14 +117,23 @@ public static class GenePacker
         };
     }
 
-    private static async Task<string> CreateGene(string tempDir, PackableFile file, CancellationToken token)
+    private static async Task<string> CreateGene(
+        string tempDir,
+        PackableFile file,
+        IProgress<GenePackingProgress> progress,
+        CancellationToken token)
     {
         var compressedPath = Path.Combine(tempDir, "compressed");
 
         var fileInfo = new FileInfo(compressedPath);
         var totalSize = fileInfo.Length;
 
-        var splitFiles = await SplitFile(compressedPath, 1024 * 1024 * 80, token);
+        progress.Report(new GenePackingProgress
+        {
+            Splitting = (0, totalSize),
+        });
+
+        var splitFiles = await SplitFile(compressedPath, 1024 * 1024 * 80, progress, token);
         token.ThrowIfCancellationRequested();
 
         File.Delete(compressedPath);
@@ -162,12 +192,18 @@ public static class GenePacker
         return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
     }
 
-    private static async Task<IEnumerable<string>> SplitFile(string inputFile, int chunkSize, CancellationToken token)
+    private static async Task<IEnumerable<string>> SplitFile(
+        string inputFile,
+        int chunkSize,
+        IProgress<GenePackingProgress>? progress,
+        CancellationToken token)
     {
         const int bufferSize = 81920;
         var buffer = (new byte[bufferSize]).AsMemory();
 
         await using Stream input = File.OpenRead(inputFile);
+        long totalSize = input.Length;
+        long totalRead = 0;
         var index = 0;
         var fileNames = new List<string>();
         while (input.Position < input.Length)
@@ -187,10 +223,20 @@ public static class GenePacker
 
                     await output.WriteAsync(buffer[..bytesRead], token);
                     remaining -= bytesRead;
+                    totalRead += bytesRead;
+                    progress?.Report(new GenePackingProgress
+                    {
+                        Splitting = (totalRead, totalSize),
+                    });
                 }
             }
             index++;
         }
+
+        progress?.Report(new GenePackingProgress
+        {
+            Splitting = (totalSize, totalSize),
+        });
 
         return fileNames;
     }

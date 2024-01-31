@@ -14,7 +14,11 @@ using Eryph.GenePool.Client;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Packing;
 using Eryph.Packer;
+using Eryph.Packer.Commands;
 using Spectre.Console;
+using Spectre.Console.Cli;
+using Spectre.Console.Json;
+using Command = System.CommandLine.Command;
 using GeneType = Eryph.GenePool.Packing.GeneType;
 
 //AnsiConsole.Profile.Capabilities.Interactive = false;
@@ -131,6 +135,11 @@ initGenesetCommand.SetHandler( context =>
 
         if (!string.IsNullOrWhiteSpace(description))
             genesetInfo.SetShortDescription(description);
+
+        AnsiConsole.Write(new Rows(
+            new Text("Geneset was initialized:"),
+            new JsonText(genesetInfo.ToString())));
+
         return;
     }
 
@@ -149,7 +158,9 @@ initGenesetTagCommand.SetHandler(context =>
     if (!genesetTagInfo.Exists())
     {
         genesetTagInfo.Create();
-        Console.WriteLine(genesetTagInfo.ToString(true));
+        AnsiConsole.Write(new Rows(
+            new Text("Geneset tag was initialized:"),
+            new JsonText(genesetTagInfo.ToString(false))));
         return;
     }
 
@@ -163,8 +174,9 @@ refCommand.SetHandler( context =>
     var genesetInfo = PrepareGeneSetTagCommand(context);
     var refPack = context.ParseResult.GetValueForArgument(refArgument);
     genesetInfo.SetReference(refPack);
-    Console.WriteLine(genesetInfo.ToString(true));
-
+    AnsiConsole.Write(new Rows(
+        new Text("Reference was added to the geneset tag:"),
+        new JsonText(genesetInfo.ToString(false))));
 });
 
 
@@ -173,14 +185,14 @@ refCommand.SetHandler( context =>
 infoGenesetCommand.SetHandler(context =>
 {
     var genesetInfo = PrepareGeneSetCommand(context);
-    Console.WriteLine(genesetInfo.ToString(true));
+    AnsiConsole.Write(new JsonText(genesetInfo.ToString()));
 
 });
+
 infoGenesetTagCommand.SetHandler(context =>
 {
-    var genesetInfo = PrepareGeneSetTagCommand(context);
-    Console.WriteLine(genesetInfo.ToString(true));    
-
+    var genesetTagInfo = PrepareGeneSetTagCommand(context);
+    AnsiConsole.Write(new JsonText(genesetTagInfo.ToString()));
 });
 
 
@@ -218,108 +230,154 @@ addVMCommand.SetHandler(async context =>
     ResetPackableFolder(absolutePackPath);
     WritePackableFiles(packableFiles, absolutePackPath);
     
-    Console.WriteLine(genesetInfo.ToString(true));
-
-
+    AnsiConsole.Write(new JsonText(genesetInfo.ToString()));
 });
 
 // pack catlet command
 // ------------------------------
 packCommand.SetHandler(async context =>
 {
-    var token = context.GetCancellationToken();
-    var genesetTagInfo = PrepareGeneSetTagCommand(context);
-    var absoluteGenesetPath = Path.GetFullPath(genesetTagInfo.GetGenesetPath());
-
-    // folder .pack is the temporary folder for packing
-    var catletFile = Path.Combine(absoluteGenesetPath, "catlet.yaml");
-    var packFolder = Path.Combine(absoluteGenesetPath, ".pack");
-    if(!Directory.Exists(packFolder))
-        Directory.CreateDirectory(packFolder);
-
-
-    var packableFiles = await ReadPackableFiles(absoluteGenesetPath);
-    string? parent = null;
-    // pack catlet
-    if (File.Exists(catletFile))
-    {
-        var catletContent = File.ReadAllText(catletFile);
-        var catletConfig = DeserializeCatletConfigString(catletContent);
-        var configJson = ConfigModelJsonSerializer.Serialize(catletConfig);
-        await File.WriteAllTextAsync(Path.Combine(packFolder, "catlet.json"), configJson);
-        packableFiles.Add(new PackableFile(Path.Combine(packFolder, "catlet.json"), 
-            "catlet.json", GeneType.Catlet, "catlet", false));
-        parent = catletConfig.Parent;
-    }
-
-    // pack fodder
-    var fodderDir = new DirectoryInfo(Path.Combine(absoluteGenesetPath, "fodder"));
-    if (fodderDir.Exists)
-    {
-        foreach (var fodderFile in fodderDir.GetFiles("*.*").Where(x =>
-                 {
-                     var extension = Path.GetExtension(x.Name).ToLowerInvariant();
-                     return extension is ".yaml" or ".yml";
-                 }))
+    var packedGenesetInfo = await AnsiConsole.Progress()
+        .HideCompleted(false)
+        .Columns(
+            new TaskDescriptionColumn(),
+            new ProgressBarColumn(),
+            new PercentageColumn(),
+            new SpinnerColumn { Spinner = Spinner.Known.Pong })
+        .StartAsync(async progressContext =>
         {
-            var fodderContent = File.ReadAllText(fodderFile.FullName);
-            var fodderConfig = DeserializeFodderConfigString(fodderContent);
-            var fodderJson = ConfigModelJsonSerializer.Serialize(fodderConfig);
-            var fodderPackFolder = Path.Combine(packFolder, "fodder");
-            if(!Directory.Exists(fodderPackFolder))
-                Directory.CreateDirectory(fodderPackFolder);
+            var prepareCatletProgressTask = progressContext.AddTask("Preparing catlet", autoStart: true);
+            prepareCatletProgressTask.IsIndeterminate(true);
 
-            var fodderJsonFile = Path.Combine(fodderPackFolder, $"{fodderConfig.Name}.json");
-            await File.WriteAllTextAsync(fodderJsonFile, fodderJson);
-            packableFiles.Add(new PackableFile(fodderJsonFile,
-                $"{fodderConfig.Name}.json", GeneType.Fodder, fodderConfig.Name, false));
+            var prepareFodderProgressTask = progressContext.AddTask("Preparing fodder", autoStart: false);
+            prepareFodderProgressTask.IsIndeterminate(true);
 
-        }
-    }
+            var token = context.GetCancellationToken();
+            var genesetTagInfo = PrepareGeneSetTagCommand(context);
+            var absoluteGenesetPath = Path.GetFullPath(genesetTagInfo.GetGenesetPath());
 
-    // created .packed folder with packing result
-    var packedFolder = Path.Combine(absoluteGenesetPath, ".packed");
-    if (Directory.Exists(packedFolder))
-        Directory.Delete(packedFolder, true);
-    Directory.CreateDirectory(packedFolder);
-    genesetTagInfo.PreparePacking();
-    File.Copy(Path.Combine(absoluteGenesetPath, "geneset-tag.json"), Path.Combine(packedFolder, "geneset-tag.json"));
-    var packedGenesetInfo = new GenesetTagInfo(genesetTagInfo.GenesetTagName, packedFolder);
-
-    packedGenesetInfo.SetParent(parent);
-
-    // this will pack all genes in .packed folder
-    foreach (var packable in packableFiles)
-    {
-        var packedFile = await GenePacker.CreateGene(packable, packedFolder, token);
-        packedGenesetInfo.AddGene(packable.GeneType, packable.GeneName, packedFile);
-
-    }
-
-    // remove the temporary .pack folder
-    if (Directory.Exists(packFolder))
-        Directory.Delete(packFolder, true);
+            // folder .pack is the temporary folder for packing
+            var catletFile = Path.Combine(absoluteGenesetPath, "catlet.yaml");
+            var packFolder = Path.Combine(absoluteGenesetPath, ".pack");
+            if (!Directory.Exists(packFolder))
+                Directory.CreateDirectory(packFolder);
 
 
-    Console.WriteLine(packedGenesetInfo.ToString(true));
+            var packableFiles = await ReadPackableFiles(absoluteGenesetPath);
+            string? parent = null;
+            // pack catlet
+            if (File.Exists(catletFile))
+            {
+                var catletContent = File.ReadAllText(catletFile);
+                var catletConfig = DeserializeCatletConfigString(catletContent);
+                var configJson = ConfigModelJsonSerializer.Serialize(catletConfig);
+                await File.WriteAllTextAsync(Path.Combine(packFolder, "catlet.json"), configJson);
+                packableFiles.Add(new PackableFile(Path.Combine(packFolder, "catlet.json"),
+                    "catlet.json", GeneType.Catlet, "catlet", false));
+                parent = catletConfig.Parent;
+            }
 
-    static CatletConfig DeserializeCatletConfigString(string configString)
-    {
-        configString = configString.Trim();
-        configString = configString.Replace("\r\n", "\n");
+            prepareCatletProgressTask.Value = 100;
+            prepareCatletProgressTask.StopTask();
 
-        return CatletConfigYamlSerializer.Deserialize(configString);
+            prepareFodderProgressTask.StartTask();
+            // pack fodder
+            var fodderDir = new DirectoryInfo(Path.Combine(absoluteGenesetPath, "fodder"));
+            if (fodderDir.Exists)
+            {
+                foreach (var fodderFile in fodderDir.GetFiles("*.*").Where(x =>
+                         {
+                             var extension = Path.GetExtension(x.Name).ToLowerInvariant();
+                             return extension is ".yaml" or ".yml";
+                         }))
+                {
+                    var fodderContent = File.ReadAllText(fodderFile.FullName);
+                    var fodderConfig = DeserializeFodderConfigString(fodderContent);
+                    var fodderJson = ConfigModelJsonSerializer.Serialize(fodderConfig);
+                    var fodderPackFolder = Path.Combine(packFolder, "fodder");
+                    if (!Directory.Exists(fodderPackFolder))
+                        Directory.CreateDirectory(fodderPackFolder);
 
-    }
+                    var fodderJsonFile = Path.Combine(fodderPackFolder, $"{fodderConfig.Name}.json");
+                    await File.WriteAllTextAsync(fodderJsonFile, fodderJson);
+                    packableFiles.Add(new PackableFile(fodderJsonFile,
+                        $"{fodderConfig.Name}.json", GeneType.Fodder, fodderConfig.Name, false));
 
-    static FodderGeneConfig DeserializeFodderConfigString(string configString)
-    {
-        configString = configString.Trim();
-        configString = configString.Replace("\r\n", "\n");
+                }
+            }
 
-        return FodderGeneConfigYamlSerializer.Deserialize(configString);
+            prepareFodderProgressTask.Value = 100;
+            prepareFodderProgressTask.StopTask();
 
-    }
+            // created .packed folder with packing result
+            var packedFolder = Path.Combine(absoluteGenesetPath, ".packed");
+            if (Directory.Exists(packedFolder))
+                Directory.Delete(packedFolder, true);
+            Directory.CreateDirectory(packedFolder);
+            genesetTagInfo.PreparePacking();
+            File.Copy(Path.Combine(absoluteGenesetPath, "geneset-tag.json"),
+                Path.Combine(packedFolder, "geneset-tag.json"));
+            var packedGenesetInfo = new GenesetTagInfo(genesetTagInfo.GenesetTagName, packedFolder);
+
+            packedGenesetInfo.SetParent(parent);
+
+            // this will pack all genes in .packed folder
+            foreach (var packable in packableFiles)
+            {
+                var compressingProgressTask =
+                    progressContext.AddTask($"Compressing gene {packable.GeneName}", autoStart: false);
+                var packingProgressTask =
+                    progressContext.AddTask($"Packing gene {packable.GeneName}", autoStart: false);
+                var progress = new Progress<GenePackingProgress>();
+                progress.ProgressChanged += (_, progressData) =>
+                {
+                    if (progressData.Compression.HasValue)
+                    {
+                        compressingProgressTask.StartTask();
+                        (compressingProgressTask.Value, compressingProgressTask.MaxValue) =
+                            progressData.Compression.Value;
+                    }
+
+                    if (progressData.Splitting.HasValue)
+                    {
+                        if (packingProgressTask is { IsStarted: false, IsFinished: false })
+                            compressingProgressTask.StartTask();
+
+                        (packingProgressTask.Value, packingProgressTask.MaxValue) =
+                            progressData.Splitting.Value;
+                    }
+                };
+                var packedFile = await GenePacker.CreateGene(packable, packedFolder, progress, token);
+                packedGenesetInfo.AddGene(packable.GeneType, packable.GeneName, packedFile);
+            }
+
+
+            // remove the temporary .pack folder
+            if (Directory.Exists(packFolder))
+                Directory.Delete(packFolder, true);
+
+            return packedGenesetInfo;
+
+            static CatletConfig DeserializeCatletConfigString(string configString)
+            {
+                configString = configString.Trim();
+                configString = configString.Replace("\r\n", "\n");
+
+                return CatletConfigYamlSerializer.Deserialize(configString);
+
+            }
+
+            static FodderGeneConfig DeserializeFodderConfigString(string configString)
+            {
+                configString = configString.Trim();
+                configString = configString.Replace("\r\n", "\n");
+
+                return FodderGeneConfigYamlSerializer.Deserialize(configString);
+
+            }
+        });
+
+    AnsiConsole.Write(new JsonText(packedGenesetInfo.ToString()));
 });
 
 
@@ -499,42 +557,61 @@ pushCommand.SetHandler(async context =>
     }
     catch (Exception ex)
     {
-        AnsiConsole.MarkupLine($"[bold red]{ex.Message}[/]");
+        AnsiConsole.WriteException(ex);
     }
 
 });
 
-var commandLineBuilder = new CommandLineBuilder(rootCommand);
-commandLineBuilder.UseDefaults();
-commandLineBuilder.UseAnsiTerminalWhenAvailable();
-commandLineBuilder.UseExceptionHandler((ex, context) =>
+Parser BuildParser()
 {
-    if (ex is not OperationCanceledException)
+    var commandLineBuilder = new CommandLineBuilder(rootCommand);
+    commandLineBuilder.UseDefaults();
+    commandLineBuilder.UseAnsiTerminalWhenAvailable();
+    commandLineBuilder.UseExceptionHandler((ex, context) =>
     {
-        context.Console.ResetTerminalForegroundColor();
-        context.Console.SetTerminalForegroundRed();
-
-
-        if (context.BindingContext.ParseResult.HasOption(debugOption))
+        if (ex is not OperationCanceledException)
         {
-            context.Console.Error.Write(context.LocalizationResources.ExceptionHandlerHeader());
-            context.Console.Error.WriteLine(ex.ToString());
+            context.Console.ResetTerminalForegroundColor();
+            context.Console.SetTerminalForegroundRed();
+
+
+            if (context.BindingContext.ParseResult.HasOption(debugOption))
+            {
+                context.Console.Error.Write(context.LocalizationResources.ExceptionHandlerHeader());
+                context.Console.Error.WriteLine(ex.ToString());
+            }
+            else
+            {
+                context.Console.Error.WriteLine(ex.Message);
+            }
+
+            context.Console.ResetTerminalForegroundColor();
         }
-        else
-        {
-            context.Console.Error.WriteLine(ex.Message);
-        }
 
-        context.Console.ResetTerminalForegroundColor();
-    }
+        context.ExitCode = 1;
 
-    context.ExitCode = 1;
+    });
 
-});
+    return commandLineBuilder.Build();
+}
 
-var parser = commandLineBuilder.Build();
+CommandApp BuildSpectre()
+{
+    var app = new CommandApp();
+
+    app.Configure(config =>
+    {
+        config.AddCommand<PackCommand>("pack");
+    });
+
+    return app;
+}
+
+var parser = BuildParser();
+var app = BuildSpectre();
 
 return await parser.InvokeAsync(args);
+//return await app.RunAsync(args);
 
 
 void WritePackableFiles(IEnumerable<PackableFile> files, string genesetPath)
