@@ -6,6 +6,7 @@ using System.CommandLine.IO;
 using System.CommandLine.Parsing;
 using System.CommandLine.Rendering;
 using System.Text.Json;
+using Azure;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Json;
@@ -247,10 +248,10 @@ packCommand.SetHandler(async context =>
         .StartAsync(async progressContext =>
         {
             var prepareCatletProgressTask = progressContext.AddTask("Preparing catlet", autoStart: true);
-            prepareCatletProgressTask.IsIndeterminate(true);
+            //prepareCatletProgressTask.IsIndeterminate(true);
 
             var prepareFodderProgressTask = progressContext.AddTask("Preparing fodder", autoStart: false);
-            prepareFodderProgressTask.IsIndeterminate(true);
+            //prepareFodderProgressTask.IsIndeterminate(true);
 
             var token = context.GetCancellationToken();
             var genesetTagInfo = PrepareGeneSetTagCommand(context);
@@ -321,36 +322,37 @@ packCommand.SetHandler(async context =>
 
             packedGenesetInfo.SetParent(parent);
 
+            var packingTasks = packableFiles.Select(pf => (
+                Packable: pf,
+                Compression: progressContext.AddTask($"Compressing gene {pf.GeneName}", autoStart: false),
+                Packing: progressContext.AddTask($"Packing gene {pf.GeneName}", autoStart: false))
+                ).ToList();
+
             // this will pack all genes in .packed folder
-            foreach (var packable in packableFiles)
+            foreach (var packingTask in packingTasks)
             {
-                var compressingProgressTask =
-                    progressContext.AddTask($"Compressing gene {packable.GeneName}", autoStart: false);
-                var packingProgressTask =
-                    progressContext.AddTask($"Packing gene {packable.GeneName}", autoStart: false);
+                packingTask.Compression.StartTask();
                 var progress = new Progress<GenePackingProgress>();
                 progress.ProgressChanged += (_, progressData) =>
                 {
                     if (progressData.Compression.HasValue)
                     {
-                        compressingProgressTask.StartTask();
-                        (compressingProgressTask.Value, compressingProgressTask.MaxValue) =
+                        (packingTask.Compression.Value, packingTask.Compression.MaxValue) =
                             progressData.Compression.Value;
                     }
 
                     if (progressData.Splitting.HasValue)
                     {
-                        if (packingProgressTask is { IsStarted: false, IsFinished: false })
-                            compressingProgressTask.StartTask();
+                        if (packingTask.Packing is { IsStarted: false, IsFinished: false })
+                            packingTask.Packing.StartTask();
 
-                        (packingProgressTask.Value, packingProgressTask.MaxValue) =
+                        (packingTask.Packing.Value, packingTask.Packing.MaxValue) =
                             progressData.Splitting.Value;
                     }
                 };
-                var packedFile = await GenePacker.CreateGene(packable, packedFolder, progress, token);
-                packedGenesetInfo.AddGene(packable.GeneType, packable.GeneName, packedFile);
+                var packedFile = await GenePacker.CreateGene(packingTask.Packable, packedFolder, progress, token);
+                packedGenesetInfo.AddGene(packingTask.Packable.GeneType, packingTask.Packable.GeneName, packedFile);
             }
-
 
             // remove the temporary .pack folder
             if (Directory.Exists(packFolder))
@@ -567,6 +569,7 @@ Parser BuildParser()
     var commandLineBuilder = new CommandLineBuilder(rootCommand);
     commandLineBuilder.UseDefaults();
     commandLineBuilder.UseAnsiTerminalWhenAvailable();
+    /*
     commandLineBuilder.UseExceptionHandler((ex, context) =>
     {
         if (ex is not OperationCanceledException)
@@ -591,6 +594,7 @@ Parser BuildParser()
         context.ExitCode = 1;
 
     });
+    */
 
     return commandLineBuilder.Build();
 }

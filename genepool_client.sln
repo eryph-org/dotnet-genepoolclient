@@ -15,6 +15,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "eryph-packer", "src\apps\sr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.GenePool.Packing", "src\Eryph.GenePool.Packing\Eryph.GenePool.Packing.csproj", "{1D958850-2CFB-47ED-93AE-59AD4EBAE57B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.GenePool.Packing.Tests", "test\Eryph.GenePool.Packing.Tests\Eryph.GenePool.Packing.Tests.csproj", "{4B3373EF-C601-43D5-8186-6EE4B98640A6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{1D958850-2CFB-47ED-93AE-59AD4EBAE57B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1D958850-2CFB-47ED-93AE-59AD4EBAE57B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1D958850-2CFB-47ED-93AE-59AD4EBAE57B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4B3373EF-C601-43D5-8186-6EE4B98640A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4B3373EF-C601-43D5-8186-6EE4B98640A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4B3373EF-C601-43D5-8186-6EE4B98640A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4B3373EF-C601-43D5-8186-6EE4B98640A6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

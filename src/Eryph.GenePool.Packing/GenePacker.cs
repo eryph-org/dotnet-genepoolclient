@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -49,12 +50,16 @@ public static class GenePacker
         });
 
         //Console.WriteLine($"compressing {Path.GetFileName(file.FullPath)}");
-        await using (var targetStream = new FileStream(compressedPath,
-                         FileMode.Create, FileAccess.Write, FileShare.None))
+        await using (var targetStream = new PackingStream(new DirectoryInfo(tempDir), 1024 * 1024 * 80))
+        //FileMode.Create, FileAccess.Write, FileShare.None))
         {
+            
             await using var compressionStream = file.ExtremeCompression
                 ? (Stream)new XZStream(targetStream, compOpts, threadOpts)
                 : new GZipStream(targetStream, CompressionLevel.Fastest, false);
+            
+
+            //await using var compressionStream = targetStream;
 
             var bufferSize = GetCopyBufferSize(fileStream);
             var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
@@ -70,12 +75,12 @@ public static class GenePacker
                     await compressionStream.WriteAsync(new ReadOnlyMemory<byte>(buffer, 0, read), token);
                     totalRead += read;
 
-                    
+
                     progress?.Report(new GenePackingProgress
                     {
                         Compression = (totalRead, fileStream.Length),
                     });
-                    
+
 
                     /*
                     if (stopWatch.Elapsed.TotalSeconds > 5)
@@ -98,9 +103,36 @@ public static class GenePacker
                 ArrayPool<byte>.Shared.Return(buffer);
             }
 
-        }
+            compressionStream.Close();
+            targetStream.Close();
 
-        return await CreateGene(tempDir, file, progress, token);
+            var sourceFile = new FileInfo(file.FullPath);
+            var manifestData = new GeneManifestData
+            {
+
+                FileName = file.FileName,
+                Name = file.GeneName,
+                Size = targetStream.Length,
+                OriginalSize = sourceFile.Length,
+                Format = file.ExtremeCompression ? "xz" : "gz",
+                Parts = targetStream.GetChunks().ToArray(),
+                Type = file.GeneType.ToString().ToLowerInvariant()
+            };
+
+            var jsonString = JsonSerializer.Serialize(manifestData, GeneModelDefaults.SerializerOptions);
+
+            var sha256 = SHA256.Create();
+            var manifestHash = GetHashString(sha256.ComputeHash(Encoding.UTF8.GetBytes(jsonString)));
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "gene.json"), jsonString, token);
+
+            var destDir = Path.Combine(Path.GetDirectoryName(tempDir)!, manifestHash);
+            if (Directory.Exists(destDir))
+                Directory.Delete(destDir, true);
+
+            Directory.Move(tempDir, destDir);
+
+            return $"sha256:{manifestHash}";
+        }
     }
 
     public static string ToFormatSize(long size)
