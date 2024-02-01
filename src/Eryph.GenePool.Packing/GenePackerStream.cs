@@ -12,14 +12,14 @@ using LanguageExt;
 
 namespace Eryph.GenePool.Packing
 {
-    internal sealed class PackingStream : Stream
+    internal sealed class GenePackerStream : Stream
     {
         private readonly DirectoryInfo _chunksDirectory;
         private readonly long _chunkSize;
         private bool _isDisposed;
         private long _totalBytes;
 
-        public PackingStream(DirectoryInfo chunksDirectory, long chunkSize)
+        public GenePackerStream(DirectoryInfo chunksDirectory, long chunkSize)
         {
             _chunksDirectory = chunksDirectory;
             _chunkSize = chunkSize;

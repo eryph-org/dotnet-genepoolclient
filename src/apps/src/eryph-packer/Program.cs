@@ -332,7 +332,7 @@ packCommand.SetHandler(async context =>
             foreach (var packingTask in packingTasks)
             {
                 packingTask.Compression.StartTask();
-                var progress = new Progress<GenePackingProgress>();
+                var progress = new Progress<GenePackerProgress>();
                 progress.ProgressChanged += (_, progressData) =>
                 {
                     if (progressData.Compression.HasValue)

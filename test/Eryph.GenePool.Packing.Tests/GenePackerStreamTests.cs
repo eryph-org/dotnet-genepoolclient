@@ -1,10 +1,10 @@
 namespace Eryph.GenePool.Packing.Tests
 {
-    public sealed class PackingStreamTests : IDisposable
+    public sealed class GenePackerStreamTests : IDisposable
     {
         private readonly string testPath;
 
-        public PackingStreamTests()
+        public GenePackerStreamTests()
         {
             testPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             Directory.CreateDirectory(testPath);
@@ -17,7 +17,7 @@ namespace Eryph.GenePool.Packing.Tests
             var data = new byte[chunkSize * 2];
             Random.Shared.NextBytes(data);
 
-            await using var stream = new PackingStream(new DirectoryInfo(testPath), chunkSize);
+            await using var stream = new GenePackerStream(new DirectoryInfo(testPath), chunkSize);
             await stream.WriteAsync(data);
             await stream.DisposeAsync();
 
@@ -33,7 +33,7 @@ namespace Eryph.GenePool.Packing.Tests
         [Fact]
         public async Task WritingZeroLengthData_ChunkIsNotCreated()
         {
-            await using var stream = new PackingStream(new DirectoryInfo(testPath), 1024);
+            await using var stream = new GenePackerStream(new DirectoryInfo(testPath), 1024);
             await stream.WriteAsync(Array.Empty<byte>());
             await stream.DisposeAsync();
 

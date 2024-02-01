@@ -13,21 +13,77 @@ namespace Eryph.GenePool.Packing;
 
 public static class GenePacker
 {
+    private const int ChunkSize = 1024 * 1024 * 80;
+    private const int BufferSize = 1024 * 1024 * 4;
+
+    private static bool _isNativeInitialized;
+
     public static async Task<string> CreateGene(
         PackableFile file,
         string genesetDir,
-        IProgress<GenePackingProgress>? progress = default,
+        IProgress<GenePackerProgress>? progress = default,
         CancellationToken token = default)
     {
-        InitNativeLibrary();
+        var originalSize = new FileInfo(file.FullPath).Length;
 
-        await using var fileStream = new FileStream(file.FullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        progress?.Report(new GenePackerProgress(0, originalSize));
 
-        var tempName = Guid.NewGuid().ToString();
-
-        var tempDir = Path.Combine(genesetDir, tempName);
+        var tempDir = Path.Combine(genesetDir, Guid.NewGuid().ToString());
         Directory.CreateDirectory(tempDir);
-        var compressedPath = Path.Combine(tempDir, "compressed");
+
+        var targetStream = new GenePackerStream(new DirectoryInfo(tempDir), ChunkSize);
+        try
+        {
+            await CompressAsync(targetStream, file.FullPath, file.ExtremeCompression, progress, token);
+            await targetStream.DisposeAsync();
+
+            progress?.Report(new GenePackerProgress(originalSize, originalSize));
+
+            var manifestData = new GeneManifestData
+            {
+
+                FileName = file.FileName,
+                Name = file.GeneName,
+                Size = targetStream.Length,
+                OriginalSize = originalSize,
+                Format = file.ExtremeCompression ? "xz" : "gz",
+                Parts = targetStream.GetChunks().ToArray(),
+                Type = file.GeneType.ToString().ToLowerInvariant()
+            };
+
+            var jsonString = JsonSerializer.Serialize(manifestData, GeneModelDefaults.SerializerOptions);
+
+            using var sha256 = SHA256.Create();
+            var manifestHash = GetHashString(sha256.ComputeHash(Encoding.UTF8.GetBytes(jsonString)));
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "gene.json"), jsonString, token);
+
+            var destDir = Path.Combine(Path.GetDirectoryName(tempDir)!, manifestHash);
+            if (Directory.Exists(destDir))
+                Directory.Delete(destDir, true);
+
+            Directory.Move(tempDir, destDir);
+
+            return $"sha256:{manifestHash}";
+        }
+        finally
+        {
+            await targetStream.DisposeAsync();
+        }
+    }
+
+    private static async Task CompressAsync(
+        Stream targetStream,
+        string filePath,
+        bool extremeCompression,
+        IProgress<GenePackerProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        if (extremeCompression)
+        {
+            InitializeNativeLibrary();
+        }
+
+        await using var sourceStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
         var compOpts = new XZCompressOptions
         {
@@ -43,180 +99,27 @@ public static class GenePacker
                 : Environment.ProcessorCount > 2 ? Environment.ProcessorCount - 1 : 1,
         };
 
-        
-        progress?.Report(new GenePackingProgress
+        await using var compressionStream = extremeCompression
+            ? (Stream)new XZStream(targetStream, compOpts, threadOpts)
+            : new GZipStream(targetStream, CompressionLevel.Fastest, false);
+
+        var buffer = ArrayPool<byte>.Shared.Rent(Math.Min(BufferSize, (int)Math.Min(int.MaxValue, sourceStream.Length)));
+        try
         {
-            Compression = (0, fileStream.Length),
-        });
-
-        //Console.WriteLine($"compressing {Path.GetFileName(file.FullPath)}");
-        await using (var targetStream = new PackingStream(new DirectoryInfo(tempDir), 1024 * 1024 * 80))
-        //FileMode.Create, FileAccess.Write, FileShare.None))
-        {
-            
-            await using var compressionStream = file.ExtremeCompression
-                ? (Stream)new XZStream(targetStream, compOpts, threadOpts)
-                : new GZipStream(targetStream, CompressionLevel.Fastest, false);
-            
-
-            //await using var compressionStream = targetStream;
-
-            var bufferSize = GetCopyBufferSize(fileStream);
-            var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
-            try
+            int read;
+            long totalRead = 0;
+            while ((read = await sourceStream.ReadAsync(new Memory<byte>(buffer), cancellationToken)) > 0)
             {
-                int read;
-                long totalRead = 0;
-                long lastReported = 0;
-                var totalSizeString = ToFormatSize(fileStream.Length);
-                var stopWatch = Stopwatch.StartNew();
-                while ((read = await fileStream.ReadAsync(new Memory<byte>(buffer), token)) > 0)
-                {
-                    await compressionStream.WriteAsync(new ReadOnlyMemory<byte>(buffer, 0, read), token);
-                    totalRead += read;
+                await compressionStream.WriteAsync(new ReadOnlyMemory<byte>(buffer, 0, read), cancellationToken);
+                totalRead += read;
 
-
-                    progress?.Report(new GenePackingProgress
-                    {
-                        Compression = (totalRead, fileStream.Length),
-                    });
-
-
-                    /*
-                    if (stopWatch.Elapsed.TotalSeconds > 5)
-                    {
-                        var percent = Math.Round(totalRead * 1d / fileStream.Length * 100, 0, MidpointRounding.ToZero);
-                        Console.WriteLine($"{percent,3} % - {ToFormatSize(totalRead)} of {totalSizeString} processed ({ToFormatSize(targetStream.Length)} compressed size)");
-                        stopWatch.Restart();
-                    }
-                    */
-                }
-                await compressionStream.FlushAsync(token);
-                progress?.Report(new GenePackingProgress
-                {
-                    Compression = (fileStream.Length, fileStream.Length),
-                });
-                //Console.WriteLine($"100 % - {ToFormatSize(totalRead)} of {totalSizeString} processed ({ToFormatSize(targetStream.Length)} compressed size)");
+                progress?.Report(new GenePackerProgress(totalRead, sourceStream.Length));
             }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(buffer);
-            }
-
-            compressionStream.Close();
-            targetStream.Close();
-
-            var sourceFile = new FileInfo(file.FullPath);
-            var manifestData = new GeneManifestData
-            {
-
-                FileName = file.FileName,
-                Name = file.GeneName,
-                Size = targetStream.Length,
-                OriginalSize = sourceFile.Length,
-                Format = file.ExtremeCompression ? "xz" : "gz",
-                Parts = targetStream.GetChunks().ToArray(),
-                Type = file.GeneType.ToString().ToLowerInvariant()
-            };
-
-            var jsonString = JsonSerializer.Serialize(manifestData, GeneModelDefaults.SerializerOptions);
-
-            var sha256 = SHA256.Create();
-            var manifestHash = GetHashString(sha256.ComputeHash(Encoding.UTF8.GetBytes(jsonString)));
-            await File.WriteAllTextAsync(Path.Combine(tempDir, "gene.json"), jsonString, token);
-
-            var destDir = Path.Combine(Path.GetDirectoryName(tempDir)!, manifestHash);
-            if (Directory.Exists(destDir))
-                Directory.Delete(destDir, true);
-
-            Directory.Move(tempDir, destDir);
-
-            return $"sha256:{manifestHash}";
         }
-    }
-
-    public static string ToFormatSize(long size)
-    {
-        return size switch
+        finally
         {
-            < 1024 => $"{size} bytes",
-            < 1024 << 10 => $"{Math.Round(size / 1024D, 2)} KB",
-            < 1024 << 20 => $"{Math.Round(size * 1D / (1024 << 10), 2):F} MB",
-            < 1024L << 30 => $"{Math.Round(size * 1D / (1024L << 20), 2):F} GB",
-            < 1024L << 40 => $"{Math.Round(size * 1D / (1024L << 30), 2):F} TB",
-            < 1024L << 50 => $"{Math.Round(size * 1D / (1024L << 40), 2):F} PB",
-            _ => $"{size} bytes"
-        };
-    }
-
-    private static async Task<string> CreateGene(
-        string tempDir,
-        PackableFile file,
-        IProgress<GenePackingProgress> progress,
-        CancellationToken token)
-    {
-        var compressedPath = Path.Combine(tempDir, "compressed");
-
-        var fileInfo = new FileInfo(compressedPath);
-        var totalSize = fileInfo.Length;
-
-        progress.Report(new GenePackingProgress
-        {
-            Splitting = (0, totalSize),
-        });
-
-        var splitFiles = await SplitFile(compressedPath, 1024 * 1024 * 80, progress, token);
-        token.ThrowIfCancellationRequested();
-
-        File.Delete(compressedPath);
-
-        var parts = new List<string>();
-        foreach (var splitFile in splitFiles)
-        {
-            token.ThrowIfCancellationRequested();
-
-            var hashAlg = SHA1.Create();
-            await using (var dataStream = File.OpenRead(splitFile))
-            {
-                await hashAlg.ComputeHashAsync(dataStream, token);
-            }
-
-            var hashString = GetHashString(hashAlg.Hash!);
-
-            var splitFileDir = Path.GetDirectoryName(splitFile) ?? "";
-            File.Move(splitFile, Path.Combine(splitFileDir, $"{hashString}.part"));
-            parts.Add($"sha1:{hashString}");
+            ArrayPool<byte>.Shared.Return(buffer);
         }
-
-        token.ThrowIfCancellationRequested();
-
-        var sourceFile = new FileInfo(file.FullPath);
-        var manifestData = new GeneManifestData
-        {
-
-            FileName = file.FileName,
-            Name = file.GeneName,
-            Size = totalSize,
-            OriginalSize = sourceFile.Length,
-            Format = file.ExtremeCompression ? "xz" : "gz",
-            Parts = parts.ToArray(),
-            Type = file.GeneType.ToString().ToLowerInvariant()
-        };
-
-        var jsonString = JsonSerializer.Serialize(manifestData, GeneModelDefaults.SerializerOptions);
-
-        var sha256 = SHA256.Create();
-        var manifestHash = GetHashString(sha256.ComputeHash(Encoding.UTF8.GetBytes(jsonString)));
-        await File.WriteAllTextAsync(Path.Combine(tempDir, "gene.json"), jsonString, token);
-
-        var destDir = Path.Combine(Path.GetDirectoryName(tempDir)!, manifestHash);
-        if (Directory.Exists(destDir))
-            Directory.Delete(destDir, true);
-
-        Directory.Move(tempDir, destDir);
-
-        return $"sha256:{manifestHash}";
-
     }
 
     static string GetHashString(byte[] hashBytes)
@@ -224,104 +127,12 @@ public static class GenePacker
         return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
     }
 
-    private static async Task<IEnumerable<string>> SplitFile(
-        string inputFile,
-        int chunkSize,
-        IProgress<GenePackingProgress>? progress,
-        CancellationToken token)
+    private static void InitializeNativeLibrary()
     {
-        const int bufferSize = 81920;
-        var buffer = (new byte[bufferSize]).AsMemory();
-
-        await using Stream input = File.OpenRead(inputFile);
-        long totalSize = input.Length;
-        long totalRead = 0;
-        var index = 0;
-        var fileNames = new List<string>();
-        while (input.Position < input.Length)
-        {
-            if (token.IsCancellationRequested)
-                break;
-
-            var fileName = $"{inputFile}.{index}";
-            fileNames.Add(fileName);
-            await using (Stream output = File.Create(fileName))
-            {
-                int remaining = chunkSize, bytesRead;
-                while (remaining > 0 && (bytesRead = await input.ReadAsync(buffer[..Math.Min(remaining, bufferSize)], token)) > 0)
-                {
-                    if (token.IsCancellationRequested)
-                        break;
-
-                    await output.WriteAsync(buffer[..bytesRead], token);
-                    remaining -= bytesRead;
-                    totalRead += bytesRead;
-                    progress?.Report(new GenePackingProgress
-                    {
-                        Splitting = (totalRead, totalSize),
-                    });
-                }
-            }
-            index++;
-        }
-
-        progress?.Report(new GenePackingProgress
-        {
-            Splitting = (totalSize, totalSize),
-        });
-
-        return fileNames;
-    }
-
-    private static bool _nativeInitialized;
-
-
-    //License: Licensed to the .NET Foundation, MIT
-    private static int GetCopyBufferSize(Stream stream)
-    {
-        // This value was originally picked to be the largest multiple of 4096 that is still smaller than the large object heap threshold (85K).
-        // The CopyTo{Async} buffer is short-lived and is likely to be collected at Gen0, and it offers a significant improvement in Copy
-        // performance.  Since then, the base implementations of CopyTo{Async} have been updated to use ArrayPool, which will end up rounding
-        // this size up to the next power of two (131,072), which will by default be on the large object heap.  However, most of the time
-        // the buffer should be pooled, the LOH threshold is now configurable and thus may be different than 85K, and there are measurable
-        // benefits to using the larger buffer size.  So, for now, this value remains.
-        const int defaultCopyBufferSize = 81920;
-
-        int bufferSize = defaultCopyBufferSize;
-
-        if (stream.CanSeek)
-        {
-            long length = stream.Length;
-            long position = stream.Position;
-            if (length <= position) // Handles negative overflows
-            {
-                // There are no bytes left in the stream to copy.
-                // However, because CopyTo{Async} is virtual, we need to
-                // ensure that any override is still invoked to provide its
-                // own validation, so we use the smallest legal buffer size here.
-                bufferSize = 1;
-            }
-            else
-            {
-                long remaining = length - position;
-                if (remaining > 0)
-                {
-                    // In the case of a positive overflow, stick to the default size
-                    bufferSize = (int)Math.Min(bufferSize, remaining);
-                }
-            }
-        }
-
-        return bufferSize;
-    }
-
-
-    public static void InitNativeLibrary()
-    {
-        if (_nativeInitialized)
+        if (_isNativeInitialized)
             return;
 
-        _nativeInitialized = true;
+        _isNativeInitialized = true;
 
         string libDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes");
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
