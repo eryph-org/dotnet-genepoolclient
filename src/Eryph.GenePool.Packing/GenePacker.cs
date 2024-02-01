@@ -14,7 +14,7 @@ namespace Eryph.GenePool.Packing;
 public static class GenePacker
 {
     private const int ChunkSize = 1024 * 1024 * 80;
-    private const int BufferSize = 1024 * 1024 * 4;
+    private const int BufferSize = 1024 * 1024 * 1;
 
     private static bool _isNativeInitialized;
 
@@ -119,8 +119,8 @@ public static class GenePacker
 
         var compOpts = new XZCompressOptions
         {
-            Level = LzmaCompLevel.Level0,
-            ExtremeFlag = false,
+            Level = LzmaCompLevel.Default,
+            ExtremeFlag = true,
             LeaveOpen = true,
         };
 

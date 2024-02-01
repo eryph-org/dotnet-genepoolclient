@@ -15,9 +15,7 @@ using Eryph.GenePool.Client;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Packing;
 using Eryph.Packer;
-using Eryph.Packer.Commands;
 using Spectre.Console;
-using Spectre.Console.Cli;
 using Spectre.Console.Json;
 using Command = System.CommandLine.Command;
 using GeneType = Eryph.GenePool.Packing.GeneType;
@@ -115,57 +113,41 @@ genesetTagCommand.Add(pushCommand);
 // ------------------------------
 initGenesetCommand.SetHandler( context =>
 {
-    var workdir = context.ParseResult.GetValueForOption(workDirOption);
     var isPublic = context.ParseResult.GetValueForOption(isPublicOption);
     var description = context.ParseResult.GetValueForOption(shortDescriptionOption);
 
-    if (workdir?.FullName != null)
-        Directory.SetCurrentDirectory(workdir.FullName);
-
     var genesetName = context.ParseResult.GetValueForArgument(genesetArgument);
     var genesetInfo = new GenesetInfo(genesetName, ".");
-    if (!genesetInfo.Exists())
+    if (genesetInfo.Exists())
+        throw new EryphPackerUserException("Geneset is already initialized");
+
+    genesetInfo.Create();
+    if(File.Exists(Path.Combine(genesetInfo.GetGenesetPath(), "readme.md")))
     {
-        genesetInfo.Create();
-        if(File.Exists(Path.Combine(genesetInfo.GetGenesetPath(), "readme.md")))
-        {
-            genesetInfo.SetMarkdownFile("readme.md");
-        }
-
-        genesetInfo.SetIsPublic(isPublic);
-
-        if (!string.IsNullOrWhiteSpace(description))
-            genesetInfo.SetShortDescription(description);
-
-        AnsiConsole.Write(new Rows(
-            new Text("Geneset was initialized:"),
-            new JsonText(genesetInfo.ToString())));
-
-        return;
+        genesetInfo.SetMarkdownFile("readme.md");
     }
 
-    throw new InvalidOperationException("Geneset already initialized.");
+    genesetInfo.SetIsPublic(isPublic);
+
+    if (!string.IsNullOrWhiteSpace(description))
+        genesetInfo.SetShortDescription(description);
+
+    AnsiConsole.Write(new Rows(
+        new Text("Geneset was initialized:"),
+        new JsonText(genesetInfo.ToString())));
 });
 
 initGenesetTagCommand.SetHandler(context =>
 {
-    var workdir = context.ParseResult.GetValueForOption(workDirOption);
-
-    if (workdir?.FullName != null)
-        Directory.SetCurrentDirectory(workdir.FullName);
-
     var genesetName = context.ParseResult.GetValueForArgument(genesetArgument);
     var genesetTagInfo = new GenesetTagInfo(genesetName, ".");
-    if (!genesetTagInfo.Exists())
-    {
-        genesetTagInfo.Create();
-        AnsiConsole.Write(new Rows(
-            new Text("Geneset tag was initialized:"),
-            new JsonText(genesetTagInfo.ToString(false))));
-        return;
-    }
+    if(genesetTagInfo.Exists())
+        throw new EryphPackerUserException("Geneset tag is already initialized");
 
-    throw new InvalidOperationException("Geneset tag already initialized.");
+    genesetTagInfo.Create();
+    AnsiConsole.Write(new Rows(
+        new Text("Geneset tag was initialized:"),
+        new JsonText(genesetTagInfo.ToString(false))));
 });
 
 // ref command
@@ -301,13 +283,11 @@ packCommand.SetHandler(async context =>
                     await File.WriteAllTextAsync(fodderJsonFile, fodderJson);
                     packableFiles.Add(new PackableFile(fodderJsonFile,
                         $"{fodderConfig.Name}.json", GeneType.Fodder, fodderConfig.Name, false));
-
                 }
             }
 
             prepareFodderProgressTask.Value = 100;
             prepareFodderProgressTask.StopTask();
-
 
             packingGenesetProgressTask.MaxValue = packableFiles.Count;
             packingGenesetProgressTask.StartTask();
@@ -385,173 +365,159 @@ pushCommand.SetHandler(async context =>
 
     var packedFolder = Path.Combine(genesetTagInfo.GetGenesetPath(), ".packed");
     if (!Directory.Exists(packedFolder))
-        throw new InvalidOperationException($"Geneset tag '{genesetTagInfo.GenesetTagName}' is not packed. Use 'pack' command first.");
+        throw new EryphPackerUserException($"Geneset tag '{genesetTagInfo.GenesetTagName}' is not packed. Use 'pack' command first.");
 
     genesetTagInfo = new GenesetTagInfo(genesetTagInfo.GenesetTagName, packedFolder);
     
-    try
-    {
-        var credential = await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Dots2)
-            .SpinnerStyle(Style.Parse("green bold"))
-            .StartAsync("Authenticating to genepool...",async statusContext =>
+    var credential = await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots2)
+        .SpinnerStyle(Style.Parse("green bold"))
+        .StartAsync("Authenticating to genepool...",async statusContext =>
+        {
+            statusContext.Status = "Authenticated to genepool.";
+            statusContext.Refresh();
+            return await AuthProvider.GetCredential(apiKey);
+        });
+
+    var genePoolUri = new Uri("https://eryphgenepoolapistaging.azurewebsites.net/api/");
+
+    var genePoolClient = credential.ApiKey != null
+        ? new GenePoolClient(genePoolUri, credential.ApiKey)
+        : new GenePoolClient(genePoolUri, credential.Token!);
+
+    var genesetClient = genePoolClient.GetGenesetClient(genesetTagInfo.Organization, genesetTagInfo.Id);
+    var tagClient = genesetClient.GetGenesetTagClient(genesetTagInfo.Tag);
+
+    await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots2)
+        .SpinnerStyle(Style.Parse("green bold"))
+        .StartAsync($"Checking geneset tag {genesetTagInfo.GenesetTagName}", async statusContext =>
+        {
+            var markdownContent = genesetInfo.GetMarkdownContent();
+
+            if (!await genesetClient.ExistsAsync())
             {
-                statusContext.Status = "Authenticated to genepool.";
+                statusContext.Status = $"Creating geneset {genesetInfo.GenesetName}";
                 statusContext.Refresh();
-                return await AuthProvider.GetCredential(apiKey);
-            });
+                await genesetClient.CreateAsync(genesetInfo.ManifestData.Public ?? false,
+                    genesetInfo.ManifestData.ShortDescription,
+                    markdownContent, token
+                );
+            }
 
-        var genePoolUri = new Uri("https://eryphgenepoolapistaging.azurewebsites.net/api/");
+            if (await tagClient.ExistsAsync())
+                throw new EryphPackerUserException($"Geneset tag {genesetTagInfo.GenesetTagName} already exists on genepool.");
+        });
 
-        var genePoolClient = credential.ApiKey != null
-            ? new GenePoolClient(genePoolUri, credential.ApiKey)
-            : new GenePoolClient(genePoolUri, credential.Token!);
 
-        var genesetClient = genePoolClient.GetGenesetClient(genesetTagInfo.Organization, genesetTagInfo.Id);
-        var tagClient = genesetClient.GetGenesetTagClient(genesetTagInfo.Tag);
+    var packDir = new DirectoryInfo(genesetTagInfo.GetGenesetPath());
+    var allGenes = genesetTagInfo.GetAllGeneNames().ToArray();
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Dots2)
-            .SpinnerStyle(Style.Parse("green bold"))
-            .StartAsync($"Checking geneset tag {genesetTagInfo.GenesetTagName}", async statusContext =>
+    await AnsiConsole.Progress()
+        .HideCompleted(false)
+        .Columns(new TaskGeneColumn(), 
+            new TaskGeneCountColumn(), 
+            new TaskDescriptionColumn{Alignment = Justify.Left}, 
+            new ProgressBarColumn(), 
+            new PercentageColumn(), 
+            new SpinnerColumn{Spinner = Spinner.Known.Pong}).StartAsync(async progressContext =>
+        {
+            var count = 0;
+            foreach (var geneName in allGenes)
             {
-                var markdownContent = genesetInfo.GetMarkdownContent();
+                count++;
+                var genePath = new DirectoryInfo(Path.Combine(packDir.FullName, geneName));
+                if (!genePath.Exists)
+                    throw new Exception($"Gene {geneName} not found in directory {packDir.FullName}");
 
-                if (!await genesetClient.ExistsAsync())
+                var progressLock = new object();
+                var progress = new Progress<GeneUploadProgress>();
+                ProgressTask? progressTask = null;
+                var state = new GeneUploadTask
                 {
-                    statusContext.Status = $"Creating geneset {genesetInfo.GenesetName}";
-                    statusContext.Refresh();
-                    await genesetClient.CreateAsync(genesetInfo.ManifestData.Public ?? false,
-                        genesetInfo.ManifestData.ShortDescription,
-                        markdownContent, token
-                    );
-                }
+                    GeneName = $"Gene {geneName[..12]}",
+                    No = count,
+                    Total = allGenes.Length
+                };
+                var baseDescription = !isInteractive
+                    ? $"Gene {geneName[..12]}: {count} of {allGenes.Length} - "
+                    : "";
 
-                if (await tagClient.ExistsAsync())
+                progress.ProgressChanged += (_, progressData) =>
                 {
-                    throw new Exception($"Geneset {genesetTagInfo.GenesetTagName} already exists on genepool.");
-                }
-
-            });
-
-
-        var packDir = new DirectoryInfo(genesetTagInfo.GetGenesetPath());
-        var allGenes = genesetTagInfo.GetAllGeneNames().ToArray();
-
-        await AnsiConsole.Progress()
-            .HideCompleted(false)
-            .Columns(new TaskGeneColumn(), 
-                new TaskGeneCountColumn(), 
-                new TaskDescriptionColumn{Alignment = Justify.Left}, 
-                new ProgressBarColumn(), 
-                new PercentageColumn(), 
-                new SpinnerColumn{Spinner = Spinner.Known.Pong}).StartAsync(async progressContext =>
-            {
-                var count = 0;
-                foreach (var geneName in allGenes)
-                {
-                    count++;
-                    var genePath = new DirectoryInfo(Path.Combine(packDir.FullName, geneName));
-                    if (!genePath.Exists)
-                        throw new Exception($"Gene {geneName} not found in directory {packDir.FullName}");
-
-                    var progressLock = new object();
-                    var progress = new Progress<GeneUploadProgress>();
-                    ProgressTask? progressTask = null;
-                    var state = new GeneUploadTask
+                    var totalSizeScale = "Bytes";
+                    var totalSize = progressData.TotalMissingSize * 1d;
+                    var uploadedSize = progressData.TotalUploadedSize * 1d;
+                    if (totalSize > 10 * 1024)
                     {
-                        GeneName = $"Gene {geneName[..12]}",
-                        No = count,
-                        Total = allGenes.Length
-                    };
-                    var baseDescription = !isInteractive
-                        ? $"Gene {geneName[..12]}: {count} of {allGenes.Length} - "
-                        : "";
-
-                    progress.ProgressChanged += (_, progressData) =>
-                    {
-                        var totalSizeScale = "Bytes";
-                        var totalSize = progressData.TotalMissingSize * 1d;
-                        var uploadedSize = progressData.TotalUploadedSize * 1d;
-                        if (totalSize > 10 * 1024)
-                        {
-                            totalSizeScale = "KB";
-                            totalSize /= 1024d;
-                            uploadedSize /= 1024d;
-                        }
-
-                        if (totalSize > 10 * 1024)
-                        {
-                            totalSizeScale = "MB";
-                            totalSize /= 1024d;
-                            uploadedSize /= 1024d;
-                        }
-
-                        if (totalSize > 10 * 1024)
-                        {
-                            totalSizeScale = "GB";
-                            totalSize /= 1024d;
-                            uploadedSize /= 1024d;
-                        }
-
-                        lock(progressLock)
-                        {
-                            // ReSharper disable once AccessToModifiedClosure
-                            if (progressTask == null)
-                                progressTask =
-                                    progressContext.AddTask(
-                                        $"{baseDescription}0.00 {totalSizeScale} of {totalSize:0.00} {totalSizeScale})",
-                                        maxValue: totalSize);
-
-                            progressTask.State.Update<GeneUploadTask>("gene", _ => state);
-                            progressTask.Value=uploadedSize;
-                            progressTask.Description =
-                                $"{baseDescription}{uploadedSize:0.00} {totalSizeScale} of {totalSize:0.00} {totalSizeScale}";
-                        }
-                    };
-
-                    await genePoolClient.CreateGeneFromPathAsync(
-                        genesetTagInfo.GenesetTagName, genePath.FullName, token, progress: progress);
-
-                    if (progressTask == null && isInteractive)
-                    {
-                        
-                        progressTask =
-                            progressContext.AddTask(
-                                $"{baseDescription}upload completed");
-                        progressTask.Value = 100;
-                        progressTask.State.Update<GeneUploadTask>("gene", _ => state);
-
+                        totalSizeScale = "KB";
+                        totalSize /= 1024d;
+                        uploadedSize /= 1024d;
                     }
 
-                    if (progressTask != null)
+                    if (totalSize > 10 * 1024)
                     {
+                        totalSizeScale = "MB";
+                        totalSize /= 1024d;
+                        uploadedSize /= 1024d;
+                    }
+
+                    if (totalSize > 10 * 1024)
+                    {
+                        totalSizeScale = "GB";
+                        totalSize /= 1024d;
+                        uploadedSize /= 1024d;
+                    }
+
+                    lock(progressLock)
+                    {
+                        // ReSharper disable once AccessToModifiedClosure
+                        if (progressTask == null)
+                            progressTask =
+                                progressContext.AddTask(
+                                    $"{baseDescription}0.00 {totalSizeScale} of {totalSize:0.00} {totalSizeScale})",
+                                    maxValue: totalSize);
+
+                        progressTask.State.Update<GeneUploadTask>("gene", _ => state);
+                        progressTask.Value=uploadedSize;
                         progressTask.Description =
-                            $"{baseDescription}upload completed";
-                        progressTask?.StopTask();
+                            $"{baseDescription}{uploadedSize:0.00} {totalSizeScale} of {totalSize:0.00} {totalSizeScale}";
                     }
                 };
 
-            });
+                await genePoolClient.CreateGeneFromPathAsync(
+                    genesetTagInfo.GenesetTagName, genePath.FullName, token, progress: progress);
 
+                if (progressTask == null && isInteractive)
+                {
+                    
+                    progressTask =
+                        progressContext.AddTask(
+                            $"{baseDescription}upload completed");
+                    progressTask.Value = 100;
+                    progressTask.State.Update<GeneUploadTask>("gene", _ => state);
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Dots2)
-            .SpinnerStyle(Style.Parse("green bold"))
-            .StartAsync($"Creating geneset tag {genesetTagInfo.GenesetTagName}", async statusContext =>
-            {
-                await tagClient.CreateAsync(genesetTagInfo.ManifestData, token);
+                }
 
-            });
+                if (progressTask != null)
+                {
+                    progressTask.Description =
+                        $"{baseDescription}upload completed";
+                    progressTask?.StopTask();
+                }
+            };
+        });
 
-        AnsiConsole.WriteLine($"Geneset tag '{genesetTagInfo.ManifestData.Geneset}' successfully pushed to genepool.");
+    await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots2)
+        .SpinnerStyle(Style.Parse("green bold"))
+        .StartAsync($"Creating geneset tag {genesetTagInfo.GenesetTagName}", async statusContext =>
+        {
+            await tagClient.CreateAsync(genesetTagInfo.ManifestData, token);
 
-    }
-    catch (Exception ex)
-    {
-        AnsiConsole.WriteException(ex);
-    }
+        });
 
+    AnsiConsole.WriteLine($"Geneset tag '{genesetTagInfo.ManifestData.Geneset}' successfully pushed to genepool.");
 });
 
 var commandLineBuilder = new CommandLineBuilder(rootCommand);
@@ -559,12 +525,28 @@ commandLineBuilder.UseDefaults();
 commandLineBuilder.UseAnsiTerminalWhenAvailable();
 commandLineBuilder.UseExceptionHandler((ex, context) =>
 {
-    if (ex is not OperationCanceledException)
+    if (ex is OperationCanceledException)
     {
+        AnsiConsole.MarkupLine("[yellow]The operation was canceled[/]");
+    }
+    else if (ex is EryphPackerUserException)
+    {
+        AnsiConsole.MarkupLineInterpolated($"[red]{ex.Message}[/]");
+    }
+    else
+    {
+        AnsiConsole.MarkupLine("[red]The operation failed with the following error:[/]");
         AnsiConsole.WriteException(ex);
     }
 
     context.ExitCode = 1;
+});
+commandLineBuilder.AddMiddleware(context =>
+{
+    var workdir = context.ParseResult.GetValueForOption(workDirOption);
+
+    if (workdir?.FullName != null)
+        Directory.SetCurrentDirectory(workdir.FullName);
 });
 
 var parser = commandLineBuilder.Build();
@@ -587,7 +569,6 @@ void ResetPackableFolder(string genesetPath)
     var packFolder = Path.Combine(genesetPath, ".pack");
     if (Directory.Exists(packFolder))
         Directory.Delete(packFolder, true);
-
 }
 
 async Task<List<PackableFile>> ReadPackableFiles(string genesetPath)
@@ -605,35 +586,22 @@ async Task<List<PackableFile>> ReadPackableFiles(string genesetPath)
 
 GenesetTagInfo PrepareGeneSetTagCommand(InvocationContext context)
 {
-    var workDirectory = context.ParseResult.GetValueForOption(workDirOption!);
-    var genesetName = context.ParseResult.GetValueForArgument(genesetArgument!);
-
-
-    if(workDirectory?.FullName != null)
-        Directory.SetCurrentDirectory(workDirectory.FullName);
+    var genesetName = context.ParseResult.GetValueForArgument(genesetArgument);
 
     var genesetInfo = new GenesetTagInfo(genesetName, ".");
     if (!genesetInfo.Exists())
-    {
-        throw new InvalidOperationException($"Geneset tag {genesetName} not found");
-    }
+        throw new EryphPackerUserException($"Geneset tag {genesetName} not found");
 
     return genesetInfo;
 }
 
 GenesetInfo PrepareGeneSetCommand(InvocationContext context)
 {
-    var workDirectory = context.ParseResult.GetValueForOption(workDirOption!);
-    var genesetName = context.ParseResult.GetValueForArgument(genesetArgument!);
-
-    if (workDirectory?.FullName != null)
-        Directory.SetCurrentDirectory(workDirectory.FullName);
+    var genesetName = context.ParseResult.GetValueForArgument(genesetArgument);
 
     var genesetInfo = new GenesetInfo(genesetName, ".");
     if (!genesetInfo.Exists())
-    {
-        throw new InvalidOperationException($"Geneset {genesetName} not found");
-    }
+        throw new EryphPackerUserException($"Geneset {genesetName} not found");
 
     return genesetInfo;
 }
