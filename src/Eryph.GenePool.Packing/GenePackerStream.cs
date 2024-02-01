@@ -12,6 +12,12 @@ using LanguageExt;
 
 namespace Eryph.GenePool.Packing
 {
+    /// <summary>
+    /// This special <see cref="Stream"/> implementation is used by the
+    /// <see cref="GenePacker"/>. It automatically splits the written
+    /// data into chunk files of a given size. Additionally, it computes
+    /// SHA1 hash of each file on the file.
+    /// </summary>
     internal sealed class GenePackerStream : Stream
     {
         private readonly DirectoryInfo _chunksDirectory;

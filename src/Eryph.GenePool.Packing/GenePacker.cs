@@ -41,7 +41,6 @@ public static class GenePacker
 
             var manifestData = new GeneManifestData
             {
-
                 FileName = file.FileName,
                 Name = file.GeneName,
                 Size = targetStream.Length,
