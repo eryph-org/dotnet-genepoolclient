@@ -85,22 +85,8 @@ public static class GenePacker
 
         await using var sourceStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
-        var compOpts = new XZCompressOptions
-        {
-            Level = LzmaCompLevel.Level0,
-            ExtremeFlag = false,
-            LeaveOpen = true,
-        };
-
-        var threadOpts = new XZThreadedCompressOptions
-        {
-            Threads = Environment.ProcessorCount > 8
-                ? Environment.ProcessorCount - 2
-                : Environment.ProcessorCount > 2 ? Environment.ProcessorCount - 1 : 1,
-        };
-
         await using var compressionStream = extremeCompression
-            ? (Stream)new XZStream(targetStream, compOpts, threadOpts)
+            ? CreateXZStream(targetStream)
             : new GZipStream(targetStream, CompressionLevel.Fastest, false);
 
         var buffer = ArrayPool<byte>.Shared.Rent(Math.Min(BufferSize, (int)Math.Min(int.MaxValue, sourceStream.Length)));
@@ -125,6 +111,27 @@ public static class GenePacker
     static string GetHashString(byte[] hashBytes)
     {
         return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
+    }
+
+    private static Stream CreateXZStream(Stream targetStream)
+    {
+        InitializeNativeLibrary();
+
+        var compOpts = new XZCompressOptions
+        {
+            Level = LzmaCompLevel.Level0,
+            ExtremeFlag = false,
+            LeaveOpen = true,
+        };
+
+        var threadOpts = new XZThreadedCompressOptions
+        {
+            Threads = Environment.ProcessorCount > 8
+                ? Environment.ProcessorCount - 2
+                : Environment.ProcessorCount > 2 ? Environment.ProcessorCount - 1 : 1,
+        };
+
+        return new XZStream(targetStream, compOpts, threadOpts);
     }
 
     private static void InitializeNativeLibrary()

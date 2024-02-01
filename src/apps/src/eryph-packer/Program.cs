@@ -170,7 +170,7 @@ initGenesetTagCommand.SetHandler(context =>
 
 // ref command
 // ------------------------------
-refCommand.SetHandler( context =>
+refCommand.SetHandler(context =>
 {
     var genesetInfo = PrepareGeneSetTagCommand(context);
     var refPack = context.ParseResult.GetValueForArgument(refArgument);
@@ -248,10 +248,8 @@ packCommand.SetHandler(async context =>
         .StartAsync(async progressContext =>
         {
             var prepareCatletProgressTask = progressContext.AddTask("Preparing catlet", autoStart: true);
-            //prepareCatletProgressTask.IsIndeterminate(true);
-
             var prepareFodderProgressTask = progressContext.AddTask("Preparing fodder", autoStart: false);
-            //prepareFodderProgressTask.IsIndeterminate(true);
+            var packingGenesetProgressTask = progressContext.AddTask("Packing geneset", autoStart: false);
 
             var token = context.GetCancellationToken();
             var genesetTagInfo = PrepareGeneSetTagCommand(context);
@@ -310,6 +308,10 @@ packCommand.SetHandler(async context =>
             prepareFodderProgressTask.Value = 100;
             prepareFodderProgressTask.StopTask();
 
+
+            packingGenesetProgressTask.MaxValue = packableFiles.Count;
+            packingGenesetProgressTask.StartTask();
+
             // created .packed folder with packing result
             var packedFolder = Path.Combine(absoluteGenesetPath, ".packed");
             if (Directory.Exists(packedFolder))
@@ -324,39 +326,29 @@ packCommand.SetHandler(async context =>
 
             var packingTasks = packableFiles.Select(pf => (
                 Packable: pf,
-                Compression: progressContext.AddTask($"Compressing gene {pf.GeneName}", autoStart: false),
-                Packing: progressContext.AddTask($"Packing gene {pf.GeneName}", autoStart: false))
-                ).ToList();
+                ProgressTask: progressContext.AddTask($"Packing gene {pf.GeneName}", autoStart: false)
+                )).ToList();
 
             // this will pack all genes in .packed folder
             foreach (var packingTask in packingTasks)
             {
-                packingTask.Compression.StartTask();
+                packingTask.ProgressTask.StartTask();
                 var progress = new Progress<GenePackerProgress>();
                 progress.ProgressChanged += (_, progressData) =>
                 {
-                    if (progressData.Compression.HasValue)
-                    {
-                        (packingTask.Compression.Value, packingTask.Compression.MaxValue) =
-                            progressData.Compression.Value;
-                    }
-
-                    if (progressData.Splitting.HasValue)
-                    {
-                        if (packingTask.Packing is { IsStarted: false, IsFinished: false })
-                            packingTask.Packing.StartTask();
-
-                        (packingTask.Packing.Value, packingTask.Packing.MaxValue) =
-                            progressData.Splitting.Value;
-                    }
+                    packingTask.ProgressTask.MaxValue = progressData.TotalBytes;
+                    packingTask.ProgressTask.Value = progressData.ProcessedBytes;
                 };
                 var packedFile = await GenePacker.CreateGene(packingTask.Packable, packedFolder, progress, token);
                 packedGenesetInfo.AddGene(packingTask.Packable.GeneType, packingTask.Packable.GeneName, packedFile);
+                packingGenesetProgressTask.Increment(1);
             }
 
             // remove the temporary .pack folder
             if (Directory.Exists(packFolder))
                 Directory.Delete(packFolder, true);
+
+            packingGenesetProgressTask.StopTask();
 
             return packedGenesetInfo;
 
@@ -366,7 +358,6 @@ packCommand.SetHandler(async context =>
                 configString = configString.Replace("\r\n", "\n");
 
                 return CatletConfigYamlSerializer.Deserialize(configString);
-
             }
 
             static FodderGeneConfig DeserializeFodderConfigString(string configString)
@@ -375,7 +366,6 @@ packCommand.SetHandler(async context =>
                 configString = configString.Replace("\r\n", "\n");
 
                 return FodderGeneConfigYamlSerializer.Deserialize(configString);
-
             }
         });
 
@@ -564,59 +554,22 @@ pushCommand.SetHandler(async context =>
 
 });
 
-Parser BuildParser()
+var commandLineBuilder = new CommandLineBuilder(rootCommand);
+commandLineBuilder.UseDefaults();
+commandLineBuilder.UseAnsiTerminalWhenAvailable();
+commandLineBuilder.UseExceptionHandler((ex, context) =>
 {
-    var commandLineBuilder = new CommandLineBuilder(rootCommand);
-    commandLineBuilder.UseDefaults();
-    commandLineBuilder.UseAnsiTerminalWhenAvailable();
-    /*
-    commandLineBuilder.UseExceptionHandler((ex, context) =>
+    if (ex is not OperationCanceledException)
     {
-        if (ex is not OperationCanceledException)
-        {
-            context.Console.ResetTerminalForegroundColor();
-            context.Console.SetTerminalForegroundRed();
+        AnsiConsole.WriteException(ex);
+    }
 
+    context.ExitCode = 1;
+});
 
-            if (context.BindingContext.ParseResult.HasOption(debugOption))
-            {
-                context.Console.Error.Write(context.LocalizationResources.ExceptionHandlerHeader());
-                context.Console.Error.WriteLine(ex.ToString());
-            }
-            else
-            {
-                context.Console.Error.WriteLine(ex.Message);
-            }
-
-            context.Console.ResetTerminalForegroundColor();
-        }
-
-        context.ExitCode = 1;
-
-    });
-    */
-
-    return commandLineBuilder.Build();
-}
-
-CommandApp BuildSpectre()
-{
-    var app = new CommandApp();
-
-    app.Configure(config =>
-    {
-        config.AddCommand<PackCommand>("pack");
-    });
-
-    return app;
-}
-
-var parser = BuildParser();
-var app = BuildSpectre();
+var parser = commandLineBuilder.Build();
 
 return await parser.InvokeAsync(args);
-//return await app.RunAsync(args);
-
 
 void WritePackableFiles(IEnumerable<PackableFile> files, string genesetPath)
 {
@@ -684,7 +637,6 @@ GenesetInfo PrepareGeneSetCommand(InvocationContext context)
 
     return genesetInfo;
 }
-
 
 public struct GeneUploadTask
 {

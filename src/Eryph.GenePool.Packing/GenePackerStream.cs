@@ -18,18 +18,18 @@ namespace Eryph.GenePool.Packing
         private readonly long _chunkSize;
         private bool _isDisposed;
         private long _totalBytes;
+        private readonly List<string> _chunks = new();
+        private FileStream? _currentChunk;
+        private readonly IncrementalHash _incrementalHash;
 
         public GenePackerStream(DirectoryInfo chunksDirectory, long chunkSize)
         {
             _chunksDirectory = chunksDirectory;
             _chunkSize = chunkSize;
+            _incrementalHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
         }
 
-        private readonly List<string> _chunks = new();
-        private FileStream? _currentChunk;
-        private HashAlgorithm? _hashAlgorithm;
-
-        public IEnumerable<string> GetChunks()
+        public IList<string> GetChunks()
         {
             return _chunks;
         }
@@ -62,46 +62,45 @@ namespace Eryph.GenePool.Packing
             throw new NotSupportedException();
         }
 
+
         public override void Write(byte[] buffer, int offset, int count)
+        {
+            Write(new ReadOnlySpan<byte>(buffer, offset, count));
+        }
+
+        public override void Write(ReadOnlySpan<byte> buffer)
         {
             if (_isDisposed)
                 throw new ObjectDisposedException(GetType().Name);
 
-            if (count == 0)
+            if (buffer.Length == 0)
                 return;
 
-            var currentOffset = offset;
-            var currentCount = count;
+            var currentBuffer = buffer;
 
-            while ((_currentChunk?.Length ?? 0) + currentCount > _chunkSize)
+            while ((_currentChunk?.Length ?? 0) + currentBuffer.Length > _chunkSize)
             {
                 var bytesToWrite = (int)(_chunkSize - (_currentChunk?.Length ?? 0));
-                WriteChunk(buffer, currentOffset, bytesToWrite);
+                WriteChunk(currentBuffer[..bytesToWrite]);
                 EndChunk();
                 StartChunk();
-                currentOffset += bytesToWrite;
-                currentCount -= bytesToWrite;
+                currentBuffer = currentBuffer[bytesToWrite..];
             }
 
-            WriteChunk(buffer, currentOffset, currentCount);
-
-            _totalBytes += count;
+            WriteChunk(currentBuffer);
         }
 
-        private void WriteChunk(byte[] buffer, int offset, int count)
+        private void WriteChunk(ReadOnlySpan<byte> buffer)
         {
             if (_currentChunk is null)
             {
                 StartChunk();
             }
 
-            if (_hashAlgorithm is null)
-                throw new InvalidOperationException("Chunk was not properly started");
-
-            _currentChunk.Write(buffer, offset, count);
+            _currentChunk.Write(buffer);
+            _incrementalHash.AppendData(buffer);
+            
             _totalBytes += buffer.Length;
-
-            _hashAlgorithm.TransformBlock(buffer, offset, count, null, 0);
         }
 
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -118,6 +117,7 @@ namespace Eryph.GenePool.Packing
                 return;
 
             var currentBuffer = buffer;
+            
             while ((_currentChunk?.Length ?? 0) + currentBuffer.Length > _chunkSize)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -135,32 +135,11 @@ namespace Eryph.GenePool.Packing
         private async ValueTask WriteChunkAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
         {
             if (_currentChunk is null)
-            {
                 StartChunk();
-            }
-
-            if (_hashAlgorithm is null)
-                throw new InvalidOperationException("Chunk was not properly started");
 
             await _currentChunk.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
+            _incrementalHash.AppendData(buffer.Span);
             _totalBytes += buffer.Length;
-            
-            if (MemoryMarshal.TryGetArray(buffer, out var segment))
-            {
-                _hashAlgorithm.TransformBlock(segment.Array!, segment.Offset, segment.Count, null, 0);
-                return;
-            }
-
-            var array = ArrayPool<byte>.Shared.Rent(buffer.Length);
-            try
-            {
-                buffer.CopyTo(array);
-                _hashAlgorithm.TransformBlock(segment.Array!, segment.Offset, segment.Count, null, 0);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(array);
-            }
         }
 
         public override bool CanRead => false;
@@ -177,17 +156,16 @@ namespace Eryph.GenePool.Packing
             set => throw new NotSupportedException();
         }
 
-        [MemberNotNull(nameof(_currentChunk), nameof(_hashAlgorithm))]
+        [MemberNotNull(nameof(_currentChunk))]
         private void StartChunk()
         {
             var chunkPath = Path.Combine(_chunksDirectory.FullName, $"{_chunks.Count}.part");
             _currentChunk = new FileStream(chunkPath, FileMode.Create, FileAccess.Write, FileShare.None);
-            _hashAlgorithm = SHA1.Create();
         }
 
         private async ValueTask EndChunkAsync()
         {
-            if (_currentChunk is null || _hashAlgorithm is null)
+            if (_currentChunk is null)
                 throw new InvalidOperationException("Chunk is not started");
 
             var chunkPath = _currentChunk.Name;
@@ -199,7 +177,7 @@ namespace Eryph.GenePool.Packing
 
         private void EndChunk()
         {
-            if (_currentChunk is null || _hashAlgorithm is null)
+            if (_currentChunk is null)
                 throw new InvalidOperationException("Chunk is not started");
 
             var chunkPath = _currentChunk.Name;
@@ -211,17 +189,13 @@ namespace Eryph.GenePool.Packing
 
         private void EndChunk(string chunkPath)
         {
-            if (_hashAlgorithm is null)
-                throw new InvalidOperationException("Chunk is not started");
-            
-            _hashAlgorithm.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
-            var hashString = BitConverter.ToString(_hashAlgorithm.Hash!).Replace("-", string.Empty).ToLowerInvariant();
-            _hashAlgorithm.Dispose();
-            _hashAlgorithm = null!;
+            Span<byte> span = stackalloc byte[_incrementalHash.HashLengthInBytes];
+            _incrementalHash.GetHashAndReset(span);
+            var hash = Convert.ToHexString(span).ToLowerInvariant();
 
-            var finalChunkPath = Path.Combine(_chunksDirectory.FullName, $"{hashString}.part");
+            var finalChunkPath = Path.Combine(_chunksDirectory.FullName, $"{hash}.part");
             File.Move(chunkPath, finalChunkPath);
-            _chunks.Add($"sha1:{hashString}");
+            _chunks.Add($"sha1:{hash}");
         }
 
         protected override void Dispose(bool disposing)
@@ -230,13 +204,13 @@ namespace Eryph.GenePool.Packing
             {
                 if (disposing)
                 {
-                    if(_currentChunk is not null && _hashAlgorithm is not null)
+                    if(_currentChunk is not null)
                         EndChunk();
 
                     _currentChunk?.Dispose();
                     _currentChunk = null!;
-                    _hashAlgorithm?.Dispose();
-                    _hashAlgorithm = null!;
+                    
+                    _incrementalHash?.Dispose();
                 }
                 
                 _isDisposed = true;
@@ -247,7 +221,7 @@ namespace Eryph.GenePool.Packing
 
         public override async ValueTask DisposeAsync()
         {
-            if (_currentChunk is not null && _hashAlgorithm is not null)
+            if (_currentChunk is not null)
                 await EndChunkAsync().ConfigureAwait(false);
 
             if (_currentChunk is not null)
@@ -256,12 +230,8 @@ namespace Eryph.GenePool.Packing
                 _currentChunk = null;
             }
 
-            if (_hashAlgorithm is not null)
-            {
-                _hashAlgorithm.Dispose();
-                _hashAlgorithm = null;
-            }
-                
+            _incrementalHash?.Dispose();
+
             Dispose(false);
         }
     }
