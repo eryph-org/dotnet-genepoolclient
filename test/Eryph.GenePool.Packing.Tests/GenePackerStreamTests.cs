@@ -36,10 +36,10 @@ public sealed class GenePackerStreamTests : IDisposable
         }
         await stream.DisposeAsync();
 
+        stream.Length.Should().Be(dataSize);
         var chunks = stream.GetChunks();
         chunks.Should().HaveCount(expectedChunks);
-        Directory.EnumerateFileSystemEntries(_testPath)
-            .Should().HaveCount(expectedChunks);
+        Directory.EnumerateFileSystemEntries(_testPath).Should().HaveCount(expectedChunks);
 
         var actualData = ReadAndAssertChunks(chunks);
         actualData.Should().Equal(data);
@@ -80,6 +80,7 @@ public sealed class GenePackerStreamTests : IDisposable
         }
         stream.Dispose();
 
+        stream.Length.Should().Be(dataSize);
         var chunks = stream.GetChunks();
         chunks.Should().HaveCount(expectedChunks);
         Directory.EnumerateFileSystemEntries(_testPath).Should().HaveCount(expectedChunks);

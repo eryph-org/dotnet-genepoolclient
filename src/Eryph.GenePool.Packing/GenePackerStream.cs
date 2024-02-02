@@ -7,7 +7,7 @@ namespace Eryph.GenePool.Packing;
 /// This special <see cref="Stream"/> implementation is used by the
 /// <see cref="GenePacker"/>. It automatically splits the written
 /// data into chunk files of a given size. Additionally, it computes
-/// SHA1 hash of each file on the file.
+/// the SHA1 hash of each chunk file on the fly.
 /// </summary>
 internal sealed class GenePackerStream : Stream
 {
@@ -58,7 +58,6 @@ internal sealed class GenePackerStream : Stream
     {
         throw new NotSupportedException();
     }
-
 
     public override void Write(byte[] buffer, int offset, int count)
     {
