@@ -1,12 +1,9 @@
-﻿
-using System.CommandLine;
+﻿using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
-using System.CommandLine.IO;
 using System.CommandLine.Parsing;
 using System.CommandLine.Rendering;
 using System.Text.Json;
-using Azure;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Json;
@@ -30,11 +27,7 @@ var filePathArgument = new Argument<FileInfo>("file", "path to file");
 var isPublicOption = new Option<bool>("--public", "sets genesets visibility to public");
 var shortDescriptionOption = new Option<string>("--description", "sets genesets description");
 
-
 vmExportArgument.ExistingOnly();
-
-var debugOption =
-    new Option<bool>("--debug", "Enables debug output.");
 
 var apiKeyOption =
     new Option<string>("--api-key", "API key for authentication");
@@ -49,7 +42,6 @@ workDirOption.SetDefaultValue(new DirectoryInfo(Environment.CurrentDirectory));
 
 var rootCommand = new RootCommand();
 rootCommand.AddGlobalOption(workDirOption);
-rootCommand.AddGlobalOption(debugOption);
 
 var genesetCommand = new Command("geneset", "This command operates on a geneset.");
 rootCommand.Add(genesetCommand);
@@ -169,7 +161,6 @@ infoGenesetCommand.SetHandler(context =>
 {
     var genesetInfo = PrepareGeneSetCommand(context);
     AnsiConsole.Write(new JsonText(genesetInfo.ToString()));
-
 });
 
 infoGenesetTagCommand.SetHandler(context =>
@@ -229,9 +220,8 @@ packCommand.SetHandler(async context =>
             new SpinnerColumn { Spinner = Spinner.Known.Pong })
         .StartAsync(async progressContext =>
         {
-            var prepareCatletProgressTask = progressContext.AddTask("Preparing catlet", autoStart: true);
-            var prepareFodderProgressTask = progressContext.AddTask("Preparing fodder", autoStart: false);
-            var packingGenesetProgressTask = progressContext.AddTask("Packing geneset", autoStart: false);
+            var isInteractive = AnsiConsole.Profile.Capabilities.Interactive;
+            AnsiConsole.MarkupLine("Preparing catlet...");
 
             var token = context.GetCancellationToken();
             var genesetTagInfo = PrepareGeneSetTagCommand(context);
@@ -258,11 +248,11 @@ packCommand.SetHandler(async context =>
                 parent = catletConfig.Parent;
             }
 
-            prepareCatletProgressTask.Value = 100;
-            prepareCatletProgressTask.StopTask();
+            AnsiConsole.MarkupLine("Catlet [green]prepared[/]");
 
-            prepareFodderProgressTask.StartTask();
             // pack fodder
+            AnsiConsole.MarkupLine("Preparing fodder...");
+            
             var fodderDir = new DirectoryInfo(Path.Combine(absoluteGenesetPath, "fodder"));
             if (fodderDir.Exists)
             {
@@ -286,11 +276,7 @@ packCommand.SetHandler(async context =>
                 }
             }
 
-            prepareFodderProgressTask.Value = 100;
-            prepareFodderProgressTask.StopTask();
-
-            packingGenesetProgressTask.MaxValue = packableFiles.Count;
-            packingGenesetProgressTask.StartTask();
+            AnsiConsole.MarkupLine("Fodder [green]prepared[/]");
 
             // created .packed folder with packing result
             var packedFolder = Path.Combine(absoluteGenesetPath, ".packed");
@@ -312,6 +298,9 @@ packCommand.SetHandler(async context =>
             // this will pack all genes in .packed folder
             foreach (var packingTask in packingTasks)
             {
+                if (!isInteractive)
+                    AnsiConsole.MarkupLineInterpolated($"Packing gene {packingTask.Packable.GeneName}...");
+
                 packingTask.ProgressTask.StartTask();
                 var progress = new Progress<GenePackerProgress>();
                 progress.ProgressChanged += (_, progressData) =>
@@ -320,15 +309,17 @@ packCommand.SetHandler(async context =>
                     packingTask.ProgressTask.Value = progressData.ProcessedBytes;
                 };
                 var packedFile = await GenePacker.CreateGene(packingTask.Packable, packedFolder, progress, token);
+                packingTask.ProgressTask.StopTask();
+                
+                if (!isInteractive)
+                    AnsiConsole.MarkupLineInterpolated($"Gene {packingTask.Packable.GeneName} [green]packed[/]");
+
                 packedGenesetInfo.AddGene(packingTask.Packable.GeneType, packingTask.Packable.GeneName, packedFile);
-                packingGenesetProgressTask.Increment(1);
             }
 
             // remove the temporary .pack folder
             if (Directory.Exists(packFolder))
                 Directory.Delete(packFolder, true);
-
-            packingGenesetProgressTask.StopTask();
 
             return packedGenesetInfo;
 
@@ -349,6 +340,7 @@ packCommand.SetHandler(async context =>
             }
         });
 
+    AnsiConsole.MarkupLineInterpolated($"Geneset '{packedGenesetInfo.GenesetTagName}' [green]successfully packed[/]");
     AnsiConsole.Write(new JsonText(packedGenesetInfo.ToString()));
 });
 

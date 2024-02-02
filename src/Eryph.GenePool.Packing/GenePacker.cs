@@ -167,7 +167,7 @@ public static class GenePacker
         if (!Directory.Exists(libDir))
             libDir = AppDomain.CurrentDomain.BaseDirectory;
 
-        string libPath = null;
+        string? libPath = null;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             libPath = Path.Combine(libDir, "liblzma.dll");
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
