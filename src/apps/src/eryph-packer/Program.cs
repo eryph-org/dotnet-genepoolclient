@@ -124,9 +124,8 @@ initGenesetCommand.SetHandler( context =>
     if (!string.IsNullOrWhiteSpace(description))
         genesetInfo.SetShortDescription(description);
 
-    AnsiConsole.Write(new Rows(
-        new Text("Geneset was initialized:"),
-        new JsonText(genesetInfo.ToString())));
+    AnsiConsole.WriteLine("Geneset was initialized:");
+    WriteJson(genesetInfo.ToString());
 });
 
 initGenesetTagCommand.SetHandler(context =>
@@ -137,9 +136,8 @@ initGenesetTagCommand.SetHandler(context =>
         throw new EryphPackerUserException("Geneset tag is already initialized");
 
     genesetTagInfo.Create();
-    AnsiConsole.Write(new Rows(
-        new Text("Geneset tag was initialized:"),
-        new JsonText(genesetTagInfo.ToString(false))));
+    AnsiConsole.WriteLine("Geneset tag was initialized:");
+    WriteJson(genesetTagInfo.ToString());
 });
 
 // ref command
@@ -149,9 +147,8 @@ refCommand.SetHandler(context =>
     var genesetInfo = PrepareGeneSetTagCommand(context);
     var refPack = context.ParseResult.GetValueForArgument(refArgument);
     genesetInfo.SetReference(refPack);
-    AnsiConsole.Write(new Rows(
-        new Text("Reference was added to the geneset tag:"),
-        new JsonText(genesetInfo.ToString(false))));
+    AnsiConsole.WriteLine("Reference was added to the geneset tag:");
+    WriteJson(genesetInfo.ToString(false));
 });
 
 
@@ -160,13 +157,13 @@ refCommand.SetHandler(context =>
 infoGenesetCommand.SetHandler(context =>
 {
     var genesetInfo = PrepareGeneSetCommand(context);
-    AnsiConsole.Write(new JsonText(genesetInfo.ToString()));
+    WriteJson(genesetInfo.ToString());
 });
 
 infoGenesetTagCommand.SetHandler(context =>
 {
     var genesetTagInfo = PrepareGeneSetTagCommand(context);
-    AnsiConsole.Write(new JsonText(genesetTagInfo.ToString()));
+    WriteJson(genesetTagInfo.ToString());
 });
 
 
@@ -204,7 +201,7 @@ addVMCommand.SetHandler(async context =>
     ResetPackableFolder(absolutePackPath);
     WritePackableFiles(packableFiles, absolutePackPath);
     
-    AnsiConsole.Write(new JsonText(genesetInfo.ToString()));
+    WriteJson(genesetInfo.ToString());
 });
 
 // pack catlet command
@@ -341,7 +338,7 @@ packCommand.SetHandler(async context =>
         });
 
     AnsiConsole.MarkupLineInterpolated($"Geneset '{packedGenesetInfo.GenesetTagName}' [green]successfully packed[/]");
-    AnsiConsole.Write(new JsonText(packedGenesetInfo.ToString()));
+    WriteJson(packedGenesetInfo.ToString());
 });
 
 
@@ -596,6 +593,12 @@ GenesetInfo PrepareGeneSetCommand(InvocationContext context)
         throw new EryphPackerUserException($"Geneset {genesetName} not found");
 
     return genesetInfo;
+}
+
+void WriteJson(string json)
+{
+    // Wrap the JsonText in Rows to ensure a line break at the end
+    AnsiConsole.Write(new Rows(new JsonText(json).StringColor(Color.Teal)));
 }
 
 public struct GeneUploadTask

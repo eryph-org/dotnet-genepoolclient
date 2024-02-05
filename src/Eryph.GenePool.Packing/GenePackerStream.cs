@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 
 namespace Eryph.GenePool.Packing;
@@ -185,9 +186,17 @@ internal sealed class GenePackerStream : Stream
 
     private void EndChunk(string chunkPath)
     {
-        Span<byte> span = stackalloc byte[_incrementalHash.HashLengthInBytes];
-        _incrementalHash.GetHashAndReset(span);
-        var hash = Convert.ToHexString(span).ToLowerInvariant();
+        string hash;
+        var hashBytes = ArrayPool<byte>.Shared.Rent(_incrementalHash.HashLengthInBytes);
+        try
+        {
+            var hashBytesWritten = _incrementalHash.GetHashAndReset(new Span<byte>(hashBytes));
+            hash = Convert.ToHexString(new ReadOnlySpan<byte>(hashBytes, 0, hashBytesWritten)).ToLowerInvariant();
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(hashBytes);
+        }
 
         var finalChunkPath = Path.Combine(_chunksDirectory.FullName, $"{hash}.part");
         File.Move(chunkPath, finalChunkPath);
