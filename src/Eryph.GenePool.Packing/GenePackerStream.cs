@@ -25,6 +25,7 @@ internal sealed class GenePackerStream : Stream
         _chunksDirectory = chunksDirectory;
         _chunkSize = chunkSize;
         _incrementalHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
+        StartChunk();
     }
 
     public IList<string> GetChunks()
@@ -213,9 +214,9 @@ internal sealed class GenePackerStream : Stream
                     EndChunk();
 
                 _currentChunk?.Dispose();
-                _currentChunk = null!;
+                _currentChunk = null;
 
-                _incrementalHash?.Dispose();
+                _incrementalHash.Dispose();
             }
 
             _isDisposed = true;
@@ -235,7 +236,7 @@ internal sealed class GenePackerStream : Stream
             _currentChunk = null;
         }
 
-        _incrementalHash?.Dispose();
+        _incrementalHash.Dispose();
 
         Dispose(false);
     }

@@ -17,6 +17,7 @@ public sealed class GenePackerStreamTests : IDisposable
     [InlineData(142, 50, 35, 3)]
     [InlineData(142, 20, 40, 8)]
     [InlineData(142, 40, 20, 4)]
+    [InlineData(0, 40, 20, 1)]
     public async Task WriteAsync_CreatesCorrectChunks(
         int dataSize,
         int chunkSize,
@@ -45,22 +46,12 @@ public sealed class GenePackerStreamTests : IDisposable
         actualData.Should().Equal(data);
     }
 
-    [Fact]
-    public async Task WriteAsync_ZeroLengthData_NoChunksAreCreated()
-    {
-        await using var stream = new GenePackerStream(new DirectoryInfo(_testPath), 1024);
-        await stream.WriteAsync(Array.Empty<byte>());
-        await stream.DisposeAsync();
-
-        stream.GetChunks().Should().BeEmpty();
-        Directory.EnumerateFileSystemEntries(_testPath).Should().BeEmpty();
-    }
-
     [Theory]
     [InlineData(100, 50, 35, 2)]
     [InlineData(142, 50, 35, 3)]
     [InlineData(142, 20, 40, 8)]
     [InlineData(142, 40, 20, 4)]
+    [InlineData(0, 40, 20, 1)]
     public void Write_CreatesCorrectChunks(
         int dataSize,
         int chunkSize,
@@ -87,17 +78,6 @@ public sealed class GenePackerStreamTests : IDisposable
 
         var actualData = ReadAndAssertChunks(chunks);
         actualData.Should().Equal(data);
-    }
-
-    [Fact]
-    public void Write_ZeroLengthData_NoChunksAreCreated()
-    {
-        using var stream = new GenePackerStream(new DirectoryInfo(_testPath), 1024);
-        stream.Write(Array.Empty<byte>());
-        stream.Dispose();
-
-        stream.GetChunks().Should().BeEmpty();
-        Directory.EnumerateFileSystemEntries(_testPath).Should().BeEmpty();
     }
 
     private byte[] ReadAndAssertChunks(IEnumerable<string> chunks)
