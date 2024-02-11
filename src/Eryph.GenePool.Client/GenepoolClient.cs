@@ -76,12 +76,18 @@ namespace Eryph.GenePool.Client
             _clientConfiguration = clientConfiguration;
         }
 
-        public virtual OrganizationsClient GetOrganizationsClient(string organization) =>
-            GetOrganizationsClient(Organization.ParseUnsafe(organization));
+        public virtual OrganizationClient GetOrganizationClient(string organization) =>
+            GetOrganizationClient(Organization.ParseUnsafe(organization));
 
-        public virtual OrganizationsClient GetOrganizationsClient(Organization organization) =>
+        public virtual OrganizationClient GetOrganizationClient(Organization organization) =>
             new(_clientConfiguration, Uri, organization);
 
+        public virtual ApiKeyClient GetApiKeyClient(string organization, string apikey) =>
+            new(_clientConfiguration, Uri, Organization.ParseUnsafe(organization), ApiKeyId.ParseUnsafe(apikey));
+
+
+        public virtual ApiKeyClient GetApiKeyClient(Organization organization, ApiKeyId keyId) =>
+            new(_clientConfiguration, Uri, organization, keyId);
 
         public virtual GeneClient GetGeneClient(string geneset, string gene) =>
             GetGeneClient(GeneSetIdentifier.ParseUnsafe(geneset), Gene.New(gene));

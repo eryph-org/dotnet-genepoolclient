@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.GenePool.Client.Internal;
@@ -9,7 +10,7 @@ using Eryph.GenePool.Model.Responses;
 
 namespace Eryph.GenePool.Client;
 
-public class OrganizationsClient
+public class OrganizationClient
 {
 
     private readonly ClientDiagnostics _clientDiagnostics;
@@ -19,7 +20,7 @@ public class OrganizationsClient
     private readonly Organization _organization;
 
 
-    internal OrganizationsClient(GenePoolClientConfiguration clientConfiguration, Uri endpoint, Organization organization)
+    internal OrganizationClient(GenePoolClientConfiguration clientConfiguration, Uri endpoint, Organization organization)
     {
         RestClient = new OrganizationsRestClient(clientConfiguration.ClientDiagnostics, clientConfiguration.Pipeline, endpoint, clientConfiguration.Version);
         _clientConfiguration = clientConfiguration;
@@ -41,6 +42,12 @@ public class OrganizationsClient
     public virtual GenesetTagClient GetGenesetTagClient(Geneset geneset, Tag tag) =>
         new(_clientConfiguration, _endpoint,
             GeneSetIdentifier.ParseUnsafe($"{_organization.Value}/{geneset}/{tag}"));
+
+    public virtual ApiKeyClient GetApiKeyClient(string keyId) =>
+        GetApiKeyClient(ApiKeyId.ParseUnsafe(keyId));
+
+    public virtual ApiKeyClient GetApiKeyClient(ApiKeyId keyId) =>
+        new(_clientConfiguration, _endpoint, _organization, keyId);
 
 
     /// <summary> Creates a new organization. </summary>
@@ -191,6 +198,70 @@ public class OrganizationsClient
                 Name = newName
             };
             return RestClient.Update(_organization, body, cancellationToken).Value;
+        }
+        catch (Exception e)
+        {
+            scope.Failed(e);
+            throw;
+        }
+    }
+
+
+    public virtual async Task<ApiKeySecretResponse?> CreateApiAsync(
+        string name,
+        string[] permissions,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(CreateApiKey)}");
+        scope.Start();
+        try
+        {
+            var body = new CreateApiKeyBody
+            {
+                Name = name,
+                Permissions = permissions
+            };
+
+            var apiKeyRestClient = new ApiKeyRestClient(
+                _clientConfiguration.ClientDiagnostics, 
+                _clientConfiguration.Pipeline, _endpoint, 
+                _clientConfiguration.Version);
+
+
+            return (await apiKeyRestClient.CreateAsync(_organization, body, cancellationToken).ConfigureAwait(false)).Value;
+        }
+        catch (Exception e)
+        {
+            scope.Failed(e);
+            throw;
+        }
+    }
+
+    /// <summary> Creates a new organization. </summary>
+    /// <param name="cancellationToken"> The cancellation token to use. </param>
+    /// <remarks> Creates a project. </remarks>
+    public virtual ApiKeySecretResponse? CreateApiKey(
+        string name,
+        string[] permissions,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(CreateApiKey)}");
+        scope.Start();
+        try
+        {
+            var body = new CreateApiKeyBody
+            {
+                Name = name,
+                Permissions = permissions
+            };
+
+            var apiKeyRestClient = new ApiKeyRestClient(
+                _clientConfiguration.ClientDiagnostics,
+                _clientConfiguration.Pipeline, _endpoint,
+                _clientConfiguration.Version);
+
+
+            return apiKeyRestClient.Create(_organization, body, cancellationToken).Value;
         }
         catch (Exception e)
         {
