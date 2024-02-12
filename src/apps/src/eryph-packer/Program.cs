@@ -18,7 +18,9 @@ using Command = System.CommandLine.Command;
 using GeneType = Eryph.GenePool.Packing.GeneType;
 
 //AnsiConsole.Profile.Capabilities.Interactive = false;
+var genePoolUri = new Uri("https://eryphgenepoolapistaging.azurewebsites.net/api/");
 
+var organizationArgument = new Argument<string>("organization", "name of organization.");
 var genesetArgument = new Argument<string>("geneset", "name of geneset in format organization/id/[tag]");
 var refArgument = new Argument<string>("referenced geneset", "name of referenced geneset in format organization/id/tag");
 var vmExportArgument = new Argument<DirectoryInfo>("vm export", "path to exported VM");
@@ -99,7 +101,23 @@ pushCommand.AddArgument(genesetArgument);
 pushCommand.AddOption(apiKeyOption);
 genesetTagCommand.Add(pushCommand);
 
+// ReSharper disable once StringLiteralTypo
+var apiKeyCommand = new Command("apikey", "Commands to manage api key");
+rootCommand.Add(apiKeyCommand);
+var createApiKeyCommand = new Command("create", "This command creates a new api Key");
+createApiKeyCommand.AddArgument(organizationArgument);
+apiKeyCommand.Add(createApiKeyCommand);
+var keyNameArgument = new Argument<string>("name", "name of the api key");
+var permissionsArgument = new Argument<string[]>("permissions",
+    () => new []{ "Geneset.ReadWrite" }, description: "permissions of the api key");
+createApiKeyCommand.AddArgument(keyNameArgument);
+createApiKeyCommand.AddArgument(permissionsArgument);
 
+var deleteApiKeyCommand = new Command("delete", "This command deletes a api Key");
+apiKeyCommand.Add(deleteApiKeyCommand);
+deleteApiKeyCommand.AddArgument(organizationArgument);
+var keyIdArgument = new Argument<string>("keyid", "id of the api key");
+deleteApiKeyCommand.AddArgument(keyIdArgument);
 
 // init commands
 // ------------------------------
@@ -368,8 +386,6 @@ pushCommand.SetHandler(async context =>
             return await AuthProvider.GetCredential(apiKey);
         });
 
-    var genePoolUri = new Uri("https://eryphgenepoolapistaging.azurewebsites.net/api/");
-
     var genePoolClient = credential.ApiKey != null
         ? new GenePoolClient(genePoolUri, credential.ApiKey)
         : new GenePoolClient(genePoolUri, credential.Token!);
@@ -507,6 +523,75 @@ pushCommand.SetHandler(async context =>
         });
 
     AnsiConsole.WriteLine($"Geneset tag '{genesetTagInfo.ManifestData.Geneset}' successfully pushed to genepool.");
+});
+
+// api key management
+createApiKeyCommand.SetHandler(async (context) =>
+{
+    var token = context.GetCancellationToken();
+    var organization = context.ParseResult.GetValueForArgument(organizationArgument);
+    var keyName = context.ParseResult.GetValueForArgument(keyNameArgument);
+    var permissions = context.ParseResult.GetValueForArgument(permissionsArgument);
+
+    var credential = await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots2)
+        .SpinnerStyle(Style.Parse("green bold"))
+        .StartAsync("Authenticating to genepool...", async statusContext =>
+        {
+            statusContext.Status = "Authenticated to genepool.";
+            statusContext.Refresh();
+            return await AuthProvider.GetCredential(null);
+        });
+
+
+    var genePoolClient = new GenePoolClient(genePoolUri, credential.Token!);
+    var orgClient = genePoolClient.GetOrganizationClient(organization);
+
+    var apiKeyResponseJson = await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots2)
+        .SpinnerStyle(Style.Parse("green bold"))
+        .StartAsync("Creating api key", async _ =>
+        {
+            var apiKeyResponse = await orgClient.CreateApiKeyAsync(keyName, permissions, token);
+            var apiKeyResponseJson =
+                JsonSerializer.Serialize(apiKeyResponse, new JsonSerializerOptions(GeneModelDefaults.SerializerOptions)
+                {
+                    WriteIndented = true
+                });
+            return apiKeyResponseJson;
+        });
+
+    WriteJson(apiKeyResponseJson);
+});
+
+deleteApiKeyCommand.SetHandler(async (context) =>
+{
+    var token = context.GetCancellationToken();
+    var organization = context.ParseResult.GetValueForArgument(organizationArgument);
+    var keyId = context.ParseResult.GetValueForArgument(keyIdArgument);
+
+    var credential = await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots2)
+        .SpinnerStyle(Style.Parse("green bold"))
+        .StartAsync("Authenticating to genepool...", async statusContext =>
+        {
+            statusContext.Status = "Authenticated to genepool.";
+            statusContext.Refresh();
+            return await AuthProvider.GetCredential(null);
+        });
+
+
+    var genePoolClient = new GenePoolClient(genePoolUri, credential.Token!);
+    var apiKeyClient = genePoolClient.GetApiKeyClient(organization, keyId);
+
+    await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots2)
+        .SpinnerStyle(Style.Parse("green bold"))
+        .StartAsync("Deleting api key", async _ =>
+        {
+            await apiKeyClient.DeleteAsync(token);
+        });
+
 });
 
 var commandLineBuilder = new CommandLineBuilder(rootCommand);
