@@ -24,6 +24,7 @@ internal class ApiKeyRestClient
     /// <param name="clientDiagnostics"> The handler for diagnostic messaging in the client. </param>
     /// <param name="pipeline"> The HTTP pipeline for sending and receiving REST requests and responses. </param>
     /// <param name="endpoint"> server parameter. </param>
+    /// <param name="version">The api version</param>
     /// <exception cref="ArgumentNullException"> <paramref name="clientDiagnostics"/> or <paramref name="pipeline"/> is null. </exception>
     public ApiKeyRestClient(ClientDiagnostics clientDiagnostics, HttpPipeline pipeline, Uri endpoint, GenePoolClientOptions.ServiceVersion version)
     {
@@ -41,6 +42,7 @@ internal class ApiKeyRestClient
         var uri = new RawRequestUriBuilder();
         uri.Reset(_endpoint);
         uri.AppendPath(_version, false);
+        // ReSharper disable once StringLiteralTypo
         uri.AppendPath("/apikeys/", false);
         uri.AppendPath(organization.Value, true);
         uri.AppendPath("/", true);
@@ -51,7 +53,8 @@ internal class ApiKeyRestClient
     }
 
     /// <summary> Deletes a api key. </summary>
-    /// <param name="organization"> The String to use. </param>
+    /// <param name="organization"> The organization of the api key</param>
+    /// <param name="keyId">The key id of the api key</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
     public async Task<NoResultResponse> DeleteAsync(Organization organization, ApiKeyId keyId, CancellationToken cancellationToken = default)
@@ -64,7 +67,8 @@ internal class ApiKeyRestClient
     }
 
     /// <summary> Deletes a api key. </summary>
-    /// <param name="organization"> The String to use. </param>
+    /// <param name="organization"> The organization of the api key</param>
+    /// <param name="keyId">The key id of the api key</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
     public NoResultResponse Delete(Organization organization, ApiKeyId keyId, CancellationToken cancellationToken = default)
@@ -78,8 +82,9 @@ internal class ApiKeyRestClient
             cancellationToken);
     }
 
-    /// <summary> Get a apikey. </summary>
-    /// <param name="organization"> The String to use. </param>
+    /// <summary> Get a api key. </summary>
+    /// <param name="organization"> The organization of the api key</param>
+    /// <param name="keyId">The key id of the api key</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
     public async Task<SingleResultResponse<ApiKeyResponse>> GetAsync(Organization organization,
@@ -99,7 +104,8 @@ internal class ApiKeyRestClient
     }
 
     /// <summary> Get a organization. </summary>
-    /// <param name="organization"> The String to use. </param>
+    /// <param name="organization"> The organization of the api key</param>
+    /// <param name="keyId">The key id of the api key</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
     public SingleResultResponse<ApiKeyResponse> Get(Organization organization, ApiKeyId keyId, CancellationToken cancellationToken = default)
@@ -130,6 +136,7 @@ internal class ApiKeyRestClient
         var uri = new RawRequestUriBuilder();
         uri.Reset(_endpoint);
         uri.AppendPath(_version, false);
+        // ReSharper disable once StringLiteralTypo
         uri.AppendPath("/apikeys/", false);
         uri.AppendPath(organization.Value, false);
         request.Uri = uri;
@@ -145,7 +152,8 @@ internal class ApiKeyRestClient
     }
 
     /// <summary> Creates a api key. </summary>
-    /// <param name="body"> The UpdateProjectBody to use. </param>
+    /// <param name="organization">The organization where to create the api key</param>
+    /// <param name="body"> The CreateApiKeyBody to use. </param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public async Task<SingleResultResponse<ApiKeySecretResponse>> CreateAsync(
         Organization organization,
@@ -158,7 +166,8 @@ internal class ApiKeyRestClient
 
 
     /// <summary> Creates a api key. </summary>
-    /// <param name="body"> The CreateOrganizationBody to use. </param>
+    /// <param name="organization">The organization where to create the api key</param>
+    /// <param name="body"> The CreateApiKeyBody to use. </param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public SingleResultResponse<ApiKeySecretResponse> Create(
         Organization organization,

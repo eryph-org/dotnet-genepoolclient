@@ -6,9 +6,14 @@ using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
+using JetBrains.Annotations;
 
 namespace Eryph.GenePool.Client;
 
+/// <summary>
+/// Client for managing api keys.
+/// </summary>
+[PublicAPI]
 public class ApiKeyClient
 {
 
@@ -106,7 +111,7 @@ public class ApiKeyClient
         scope.Start();
         try
         {
-            var res = RestClient.Get(_organization, _keyId, cancellationToken).Value;
+            _ = RestClient.Get(_organization, _keyId, cancellationToken).Value;
             return true;
         }
         catch (ErrorResponseException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)

@@ -36,17 +36,10 @@ public static class Validations
 
 
     public static Validation<Error, string> ValidateHash(string value, string fieldName) =>
-        NameRegex.IsMatch(value)
+        HashRegex.IsMatch(value)
             ? Prelude.Success<Error, string>(value)
             : StatusCodeToError(HttpStatusCode.BadRequest,
                 $"{fieldName} does not meet the requirements. Only alphanumeric characters and numbers are permitted.");
-
-    public static Validation<Error, string> ValidateIsGuid(string value, string fieldName) =>
-        Guid.TryParse(value, out _)
-            ? Prelude.Success<Error, string>(value)
-            : StatusCodeToError(HttpStatusCode.BadRequest,
-                $"{fieldName} does not meet the requirements. Value has to be a guid.");
-
 
     private static Error StatusCodeToError(HttpStatusCode statusCode, string? message = null) => Error.New((int)statusCode, message ?? statusCode.ToString());
 

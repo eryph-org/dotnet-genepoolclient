@@ -24,6 +24,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="clientDiagnostics"> The handler for diagnostic messaging in the client. </param>
         /// <param name="pipeline"> The HTTP pipeline for sending and receiving REST requests and responses. </param>
         /// <param name="endpoint"> server parameter. </param>
+        /// <param name="version">The api version</param>
         /// <exception cref="ArgumentNullException"> <paramref name="clientDiagnostics"/> or <paramref name="pipeline"/> is null. </exception>
         public OrganizationsRestClient(ClientDiagnostics clientDiagnostics, HttpPipeline pipeline, Uri endpoint, GenePoolClientOptions.ServiceVersion version)
         {
@@ -41,6 +42,7 @@ namespace Eryph.GenePool.Client.RestClients
             var uri = new RawRequestUriBuilder();
             uri.Reset(_endpoint);
             uri.AppendPath(_version, false);
+            // ReSharper disable once StringLiteralTypo
             uri.AppendPath("/orgs/", false);
             uri.AppendPath(organization.Value, true);
             request.Uri = uri;
@@ -49,7 +51,7 @@ namespace Eryph.GenePool.Client.RestClients
         }
 
         /// <summary> Deletes a organization. </summary>
-        /// <param name="organization"> The String to use. </param>
+        /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
         public async Task<NoResultResponse> DeleteAsync(Organization organization, CancellationToken cancellationToken = default)
@@ -62,7 +64,7 @@ namespace Eryph.GenePool.Client.RestClients
         }
 
         /// <summary> Deletes a organization. </summary>
-        /// <param name="organization"> The String to use. </param>
+        /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
         public NoResultResponse Delete(Organization organization, CancellationToken cancellationToken = default)
@@ -77,7 +79,7 @@ namespace Eryph.GenePool.Client.RestClients
         }
 
         /// <summary> Get a organization. </summary>
-        /// <param name="organization"> The String to use. </param>
+        /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
         public async Task<SingleResultResponse<OrganizationResponse>> GetAsync(Organization organization, CancellationToken cancellationToken = default)
@@ -92,7 +94,7 @@ namespace Eryph.GenePool.Client.RestClients
         }
 
         /// <summary> Get a organization. </summary>
-        /// <param name="organization"> The String to use. </param>
+        /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
         public SingleResultResponse<OrganizationResponse> Get(Organization organization, CancellationToken cancellationToken = default)
@@ -136,7 +138,7 @@ namespace Eryph.GenePool.Client.RestClients
 
 
         /// <summary> Updates a organization. </summary>
-        /// <param name="organization"> The String to use. </param>
+        /// <param name="organization"> The organization name</param>
         /// <param name="body"> The UpdateOrganizationBody to use. </param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
@@ -168,6 +170,7 @@ namespace Eryph.GenePool.Client.RestClients
             var uri = new RawRequestUriBuilder();
             uri.Reset(_endpoint);
             uri.AppendPath(_version, false);
+            // ReSharper disable once StringLiteralTypo
             uri.AppendPath("/orgs", false);
             request.Uri = uri;
             request.Headers.Add("Accept", "application/json, text/json");
@@ -182,7 +185,7 @@ namespace Eryph.GenePool.Client.RestClients
         }
 
         /// <summary> Creates a organization. </summary>
-        /// <param name="body"> The UpdateProjectBody to use. </param>
+        /// <param name="body"> The CreateOrganizationBody to use. </param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         public async Task<SingleResultResponse<OrganizationRefResponse>> CreateAsync(CreateOrganizationBody? body = null, CancellationToken cancellationToken = default)
         {

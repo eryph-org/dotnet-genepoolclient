@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.GenePool.Client.Internal;
@@ -7,9 +6,14 @@ using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Requests;
 using Eryph.GenePool.Model.Responses;
+using JetBrains.Annotations;
 
 namespace Eryph.GenePool.Client;
 
+/// <summary>
+/// Client for managing organizations.
+/// </summary>
+[PublicAPI]
 public class OrganizationClient
 {
 
@@ -30,32 +34,65 @@ public class OrganizationClient
 
     }
 
+    /// <summary>
+    /// Gets a <see cref="GenesetClient"/> for the current organization and the specified geneset.
+    /// </summary>
+    /// <param name="geneset">The geneset as string</param>
+    /// <returns></returns>
     public virtual GenesetClient GetGenesetClient(string geneset) =>
         GetGenesetClient(Geneset.ParseUnsafe(geneset));
 
+    /// <summary>
+    /// Gets a <see cref="GenesetClient"/> for the current organization and the specified geneset.
+    /// </summary>
+    /// <param name="geneset">The geneset as <see cref="Geneset"/></param>
+    /// <returns></returns>
     public virtual GenesetClient GetGenesetClient(Geneset geneset) =>
         new(_clientConfiguration, _endpoint, _organization, geneset);
 
+    /// <summary>
+    /// Gets a <see cref="GenesetTagClient"/> for the current organization and the specified geneset and tag.
+    /// </summary>
+    /// <param name="geneset">The geneset as <see cref="Geneset"/></param>
+    /// <param name="tag">The geneset tag as string</param>
+    /// <returns></returns>
     public virtual GenesetTagClient GetGenesetTagClient(string geneset, string tag) =>
         GetGenesetTagClient(Geneset.ParseUnsafe(geneset), new Tag(tag));
 
+    /// <summary>
+    /// Gets a <see cref="GenesetTagClient"/> for the current organization and the specified geneset and tag.
+    /// </summary>
+    /// <param name="geneset">The geneset as <see cref="Geneset"/></param>
+    /// <param name="tag">The geneset tag as <see cref="Tag"/></param>
+    /// <returns></returns>
     public virtual GenesetTagClient GetGenesetTagClient(Geneset geneset, Tag tag) =>
         new(_clientConfiguration, _endpoint,
             GeneSetIdentifier.ParseUnsafe($"{_organization.Value}/{geneset}/{tag}"));
 
+    /// <summary>
+    /// Gets a <see cref="ApiKeyClient"/> for the current organization and the specified key id.
+    /// </summary>
+    /// <param name="keyId">The api key id as string</param>
+    /// <returns></returns>
     public virtual ApiKeyClient GetApiKeyClient(string keyId) =>
         GetApiKeyClient(ApiKeyId.ParseUnsafe(keyId));
 
+    /// <summary>
+    /// Gets a <see cref="ApiKeyClient"/> for the current organization and the specified key id.
+    /// </summary>
+    /// <param name="keyId">The api key id as <see cref="ApiKeyId"/></param>
+    /// <returns></returns>
     public virtual ApiKeyClient GetApiKeyClient(ApiKeyId keyId) =>
         new(_clientConfiguration, _endpoint, _organization, keyId);
 
 
     /// <summary> Creates a new organization. </summary>
+    /// <param name="orgId">The referenced identity organization id.</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <remarks> Creates a project. </remarks>
     public virtual async Task<OrganizationRefResponse?> CreateAsync(Guid orgId, CancellationToken cancellationToken = default)
     {
-        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationsRestClient)}.{nameof(CreateAsync)}");
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(CreateAsync)}");
         scope.Start();
         try
         {
@@ -76,11 +113,12 @@ public class OrganizationClient
     }
 
     /// <summary> Creates a new organization. </summary>
+    /// <param name="orgId">The referenced identity organization id.</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <remarks> Creates a project. </remarks>
     public virtual OrganizationRefResponse? Create(Guid orgId, CancellationToken cancellationToken = default)
     {
-        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationsRestClient)}.{nameof(Create)}");
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Create)}");
         scope.Start();
         try
         {
@@ -99,11 +137,11 @@ public class OrganizationClient
         }
     }
 
-    /// <summary> Deletes a project. </summary>
+    /// <summary> Deletes a organization. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual async Task DeleteAsync(CancellationToken cancellationToken = default)
     {
-        using var scope = _clientDiagnostics.CreateScope("ProjectsClient.Delete");
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Delete)}");
         scope.Start();
         try
         {
@@ -116,11 +154,11 @@ public class OrganizationClient
         }
     }
 
-    /// <summary> Deletes a project. </summary>
+    /// <summary> Deletes a organization. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual void Delete(CancellationToken cancellationToken = default)
     {
-        using var scope = _clientDiagnostics.CreateScope("ProjectsClient.Delete");
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Delete)}");
         scope.Start();
         try
         {
@@ -133,11 +171,11 @@ public class OrganizationClient
         }
     }
 
-    /// <summary> Get a projects. </summary>
+    /// <summary> Get a organization. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual async Task<OrganizationResponse?> GetAsync(CancellationToken cancellationToken = default)
     {
-        using var scope = _clientDiagnostics.CreateScope("ProjectsClient.Get");
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
@@ -150,11 +188,11 @@ public class OrganizationClient
         }
     }
 
-    /// <summary> Get a projects. </summary>
+    /// <summary> Get a organization. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual OrganizationResponse? Get(CancellationToken cancellationToken = default)
     {
-        using var scope = _clientDiagnostics.CreateScope("ProjectsClient.Get");
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
@@ -167,9 +205,15 @@ public class OrganizationClient
         }
     }
 
+    /// <summary>
+    /// Renames the organization.
+    /// </summary>
+    /// <param name="newName">new name of the organization.</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public virtual async Task<OrganizationRefResponse?> RenameAsync(string newName, CancellationToken cancellationToken = default)
     {
-        using var scope = _clientDiagnostics.CreateScope("ProjectsClient.Update");
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Rename)}");
         scope.Start();
         try
         {
@@ -186,10 +230,15 @@ public class OrganizationClient
         }
     }
 
-
+    /// <summary>
+    /// Renames the organization.
+    /// </summary>
+    /// <param name="newName">New name of the organization.</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public virtual OrganizationRefResponse? Rename(string newName, CancellationToken cancellationToken = default)
     {
-        using var scope = _clientDiagnostics.CreateScope("ProjectsClient.Update");
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Rename)}");
         scope.Start();
         try
         {
@@ -206,7 +255,13 @@ public class OrganizationClient
         }
     }
 
-
+    /// <summary>
+    /// Creates a new api key for the organization.
+    /// </summary>
+    /// <param name="name">human readable name of the api key</param>
+    /// <param name="permissions">permissions to include into the api key</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public virtual async Task<ApiKeySecretResponse?> CreateApiAsync(
         string name,
         string[] permissions,
@@ -237,9 +292,13 @@ public class OrganizationClient
         }
     }
 
-    /// <summary> Creates a new organization. </summary>
-    /// <param name="cancellationToken"> The cancellation token to use. </param>
-    /// <remarks> Creates a project. </remarks>
+    /// <summary>
+    /// Creates a new api key for the organization.
+    /// </summary>
+    /// <param name="name">human readable name of the api key</param>
+    /// <param name="permissions">permissions to include into the api key</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public virtual ApiKeySecretResponse? CreateApiKey(
         string name,
         string[] permissions,
