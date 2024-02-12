@@ -48,7 +48,6 @@ internal class ApiKeyRestClient
         uri.AppendPath("/", false);
         uri.AppendPath(keyId.Value, true);
         request.Uri = uri;
-        Console.WriteLine(uri);
         request.Headers.Add("Accept", "application/json, text/json");
         return message;
     }
