@@ -262,7 +262,7 @@ public class OrganizationClient
     /// <param name="permissions">permissions to include into the api key</param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public virtual async Task<ApiKeySecretResponse?> CreateApiAsync(
+    public virtual async Task<ApiKeySecretResponse?> CreateApiKeyAsync(
         string name,
         string[] permissions,
         CancellationToken cancellationToken = default)

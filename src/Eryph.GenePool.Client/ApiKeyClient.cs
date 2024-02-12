@@ -19,7 +19,6 @@ public class ApiKeyClient
 
     private readonly ClientDiagnostics _clientDiagnostics;
     internal ApiKeyRestClient RestClient { get; }
-    internal UploadClient UploadClient { get; }
     private readonly Organization _organization;
     private readonly ApiKeyId _keyId;
 
@@ -28,7 +27,6 @@ public class ApiKeyClient
     {
         RestClient = new ApiKeyRestClient(clientConfiguration.ClientDiagnostics, clientConfiguration.Pipeline, endpoint,
             clientConfiguration.Version);
-        UploadClient = new UploadClient(clientConfiguration.ClientDiagnostics, clientConfiguration.UploadPipeline);
 
         _clientDiagnostics = clientConfiguration.ClientDiagnostics;
         _organization = organization;

@@ -552,7 +552,7 @@ createApiKeyCommand.SetHandler(async (context) =>
         .SpinnerStyle(Style.Parse("green bold"))
         .StartAsync("Creating api key", async _ =>
         {
-            var apiKeyResponse = await orgClient.CreateApiAsync(keyName, permissions, token);
+            var apiKeyResponse = await orgClient.CreateApiKeyAsync(keyName, permissions, token);
             var apiKeyResponseJson =
                 JsonSerializer.Serialize(apiKeyResponse, new JsonSerializerOptions(GeneModelDefaults.SerializerOptions)
                 {
