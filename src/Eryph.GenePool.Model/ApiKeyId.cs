@@ -7,7 +7,7 @@ namespace Eryph.GenePool.Model;
 public class ApiKeyId : NewType<ApiKeyId, string>
 {
     private const int MaxLength = 36;
-    private const int MinLength = 24;
+    private const int MinLength = 20;
 
     public ApiKeyId(string value) : base(Normalize(value))
     {
@@ -35,6 +35,7 @@ public class ApiKeyId : NewType<ApiKeyId, string>
 
     private static Validation<Error, string> Validate(string value) =>
         from length in Validations.ValidateLength(value, nameof(ApiKeyId), MaxLength, MinLength)
+        from keyId in Validations.ValidateKeyIdString(value, nameof(ApiKeyId))
         select value;
 
 

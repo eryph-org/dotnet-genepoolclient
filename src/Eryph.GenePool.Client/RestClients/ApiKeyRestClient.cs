@@ -45,9 +45,10 @@ internal class ApiKeyRestClient
         // ReSharper disable once StringLiteralTypo
         uri.AppendPath("/apikeys/", false);
         uri.AppendPath(organization.Value, true);
-        uri.AppendPath("/", true);
+        uri.AppendPath("/", false);
         uri.AppendPath(keyId.Value, true);
         request.Uri = uri;
+        Console.WriteLine(uri);
         request.Headers.Add("Accept", "application/json, text/json");
         return message;
     }
