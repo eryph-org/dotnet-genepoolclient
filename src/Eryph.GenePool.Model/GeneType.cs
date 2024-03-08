@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Eryph.GenePool.Packing;
+namespace Eryph.GenePool.Model;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum GeneType

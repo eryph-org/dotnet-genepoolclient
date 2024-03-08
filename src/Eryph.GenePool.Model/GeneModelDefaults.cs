@@ -17,6 +17,10 @@ namespace Eryph.GenePool.Model
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+                    Converters =
+                    {
+                        new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false),
+                    },
                 };
                 _options = options;
 
