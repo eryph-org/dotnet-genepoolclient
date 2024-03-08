@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.Core.Pipeline;
+using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.Responses;
 using Eryph.GenePool.Model;
@@ -33,7 +34,7 @@ internal class GenesetRestClient
         _version = version.ToString().ToLowerInvariant();
     }
 
-    internal HttpMessage CreateRequest(Organization organization, Geneset geneset, RequestMethod method)
+    internal HttpMessage CreateRequest(OrganizationName organization, GeneSetName geneset, RequestMethod method)
     {
         var message = _pipeline.CreateMessage();
         var request = message.Request;
@@ -50,25 +51,25 @@ internal class GenesetRestClient
         return message;
     }
 
-    public async Task<NoResultResponse> DeleteAsync(Organization organization, Geneset geneset, CancellationToken cancellationToken = default)
+    public async Task<NoResultResponse> DeleteAsync(OrganizationName organization, GeneSetName geneset, CancellationToken cancellationToken = default)
     {
         return await _pipeline.SendRequestAsync<NoResultResponse>(CreateRequest(organization, geneset, RequestMethod.Delete), cancellationToken).ConfigureAwait(false);
     }
 
-    public NoResultResponse Delete(Organization organization, Geneset geneset, CancellationToken cancellationToken = default)
+    public NoResultResponse Delete(OrganizationName organization, GeneSetName geneset, CancellationToken cancellationToken = default)
     {
 
         return _pipeline.SendRequest<NoResultResponse>(CreateRequest(organization, geneset, RequestMethod.Delete),
             cancellationToken);
     }
 
-    public async Task<SingleResultResponse<GenesetResponse>> GetAsync(Organization organization, Geneset geneset, CancellationToken cancellationToken = default)
+    public async Task<SingleResultResponse<GenesetResponse>> GetAsync(OrganizationName organization, GeneSetName geneset, CancellationToken cancellationToken = default)
     {
         return await _pipeline.SendRequestAsync<SingleResultResponse<GenesetResponse>>(CreateRequest(organization,geneset, RequestMethod.Get), cancellationToken).ConfigureAwait(false);
 
     }
 
-    public SingleResultResponse<GenesetResponse> Get(Organization organization, Geneset geneset, CancellationToken cancellationToken = default)
+    public SingleResultResponse<GenesetResponse> Get(OrganizationName organization, GeneSetName geneset, CancellationToken cancellationToken = default)
     {
         return _pipeline.SendRequest<SingleResultResponse<GenesetResponse>>(
             CreateRequest(organization, geneset, RequestMethod.Get), cancellationToken);

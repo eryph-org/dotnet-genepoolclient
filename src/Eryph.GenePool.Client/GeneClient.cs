@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model;
@@ -16,7 +17,6 @@ namespace Eryph.GenePool.Client;
 
 public class GeneClient
 {
-
     private readonly ClientDiagnostics _clientDiagnostics;
     internal GenesRestClient RestClient { get; }
     internal UploadClient UploadClient { get; }
@@ -25,12 +25,20 @@ public class GeneClient
     private readonly GenePoolClientConfiguration _clientConfiguration;
     private readonly Uri _endpoint;
 
-    internal GeneClient(GenePoolClientConfiguration clientConfiguration, Uri endpoint, GeneSetIdentifier geneset,
+    internal GeneClient(
+        GenePoolClientConfiguration clientConfiguration,
+        Uri endpoint,
+        GeneSetIdentifier geneset,
         Gene gene)
     {
-        RestClient = new GenesRestClient(clientConfiguration.ClientDiagnostics, clientConfiguration.Pipeline, endpoint,
+        RestClient = new GenesRestClient(
+            clientConfiguration.ClientDiagnostics,
+            clientConfiguration.Pipeline,
+            endpoint,
             clientConfiguration.Version);
-        UploadClient = new UploadClient(clientConfiguration.ClientDiagnostics, clientConfiguration.UploadPipeline);
+        UploadClient = new UploadClient(
+            clientConfiguration.ClientDiagnostics,
+            clientConfiguration.UploadPipeline);
 
         _clientDiagnostics = clientConfiguration.ClientDiagnostics;
         _geneset = geneset;
@@ -42,7 +50,8 @@ public class GeneClient
     /// <summary> Creates a new gene. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <remarks> Creates a project. </remarks>
-    public virtual async Task<GeneUploadResponse?> CreateAsync(GeneManifestData manifest,
+    public virtual async Task<GeneUploadResponse?> CreateAsync(
+        GeneManifestData manifest,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Create)}");
@@ -51,7 +60,7 @@ public class GeneClient
         {
             var body = new NewGeneRequestBody()
             {
-                Geneset = _geneset.Name,
+                Geneset = _geneset.Value,
                 Manifest = manifest
             };
 
@@ -75,7 +84,7 @@ public class GeneClient
         {
             var body = new NewGeneRequestBody()
             {
-                Geneset = _geneset.Name,
+                Geneset = _geneset.Value,
                 Manifest = manifest
             };
 

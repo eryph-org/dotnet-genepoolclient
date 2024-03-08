@@ -1,32 +1,22 @@
 ﻿using System;
+using Dbosoft.Functional.DataTypes;
+using Eryph.ConfigModel;
 using LanguageExt;
+using LanguageExt.ClassInstances;
 using LanguageExt.Common;
 
 namespace Eryph.GenePool.Model;
 
-public class GenePart : NewType<GenePart, string>
+public class GenePart : ValidatingNewType<GenePart, string, OrdStringOrdinalIgnoreCase>
 {
-    private const int MaxLength = 40;
-    private const int MinLength = 40;
-
-    public GenePart(string value) : base(Normalize(value))
+    public GenePart(string value) : base(value)
     {
-        _ = Validate(value).IfFail(err => throw new Exception(Error.Many(err).Message));
+        ValidOrThrow(Validations<Gene>.ValidateCharacters(
+                         value,
+                         allowUpperCase: false,
+                         allowHyphens: false,
+                         allowDots: false,
+                         allowSpaces: false)
+                     | Validations<Gene>.ValidateLength(value, 40, 40));
     }
-
-    private GenePart(string value, Unit _) : base(Normalize(value))
-    {
-    }
-
-    public static Either<Error, GenePart> TryParse(string value) =>
-        Validate(Normalize(value)).Map(_ => new GenePart(value, Prelude.unit)).ToEither().MapLeft(Error.Many);
-
-    private static string Normalize(string value) => string.IsNullOrWhiteSpace(value) ? "" : value;
-
-    private static Validation<Error, string> Validate(string value) =>
-        from length in Validations.ValidateLength(value, nameof(GenePart), MaxLength, MinLength)
-        from characters in Validations.ValidateHash(value, nameof(GenePart))
-        select value;
-
-
 }

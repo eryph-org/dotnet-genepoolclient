@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model;
@@ -18,15 +19,23 @@ public class GenesetClient
     internal UploadClient UploadClient { get; }
     private readonly GenePoolClientConfiguration _clientConfiguration;
     private readonly Uri _endpoint;
-    private readonly Organization _organization;
-    private readonly Geneset _geneset;
+    private readonly OrganizationName _organization;
+    private readonly GeneSetName _geneset;
 
-    internal GenesetClient(GenePoolClientConfiguration clientConfiguration, Uri endpoint, 
-        Organization organization, Geneset geneset)
+    internal GenesetClient(
+        GenePoolClientConfiguration clientConfiguration,
+        Uri endpoint, 
+        OrganizationName organization,
+        GeneSetName geneset)
     {
-        RestClient = new GenesetRestClient(clientConfiguration.ClientDiagnostics, clientConfiguration.Pipeline, endpoint,
+        RestClient = new GenesetRestClient(
+            clientConfiguration.ClientDiagnostics,
+            clientConfiguration.Pipeline,
+            endpoint,
             clientConfiguration.Version);
-        UploadClient = new UploadClient(clientConfiguration.ClientDiagnostics, clientConfiguration.UploadPipeline);
+        UploadClient = new UploadClient(
+            clientConfiguration.ClientDiagnostics,
+            clientConfiguration.UploadPipeline);
 
         _clientDiagnostics = clientConfiguration.ClientDiagnostics;
         _clientConfiguration = clientConfiguration;
@@ -37,10 +46,10 @@ public class GenesetClient
 
     public virtual GenesetTagClient GetGenesetTagClient(string tag) =>
         new(_clientConfiguration, _endpoint,
-            GeneSetIdentifier.ParseUnsafe($"{_organization.Value}/{_geneset.Value}/{tag}"));
+            GeneSetIdentifier.New($"{_organization.Value}/{_geneset.Value}/{tag}"));
 
-    public virtual GenesetTagClient GetGenesetTagClient(Tag tag) =>
-        new(_clientConfiguration, _endpoint, new GeneSetIdentifier(_organization, _geneset, tag));
+    public virtual GenesetTagClient GetGenesetTagClient(TagName tag) =>
+        GetGenesetTagClient(tag.Value);
 
 
     /// <summary> Deletes a project. </summary>

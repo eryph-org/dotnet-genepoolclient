@@ -5,7 +5,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Threading;
-
+using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.Responses;
 using Eryph.GenePool.Model;
@@ -45,7 +45,7 @@ namespace Eryph.GenePool.Client.RestClients
             uri.Reset(_endpoint);
             uri.AppendPath(_version, false);
             uri.AppendPath("/genes/", false);
-            uri.AppendPath(identifier.Name, false);
+            uri.AppendPath(identifier.Value, false);
             uri.AppendPath("/", false);
             uri.AppendPath(gene.Value, true);
             request.Uri = uri;
