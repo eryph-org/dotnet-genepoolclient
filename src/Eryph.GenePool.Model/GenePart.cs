@@ -11,12 +11,12 @@ public class GenePart : ValidatingNewType<GenePart, string, OrdStringOrdinalIgno
 {
     public GenePart(string value) : base(value)
     {
-        ValidOrThrow(Validations<Gene>.ValidateCharacters(
+        ValidOrThrow(Validations<GenePart>.ValidateCharacters(
                          value,
                          allowUpperCase: false,
                          allowHyphens: false,
                          allowDots: false,
                          allowSpaces: false)
-                     | Validations<Gene>.ValidateLength(value, 40, 40));
+                     | Validations<GenePart>.ValidateLength(value, 40, 40));
     }
 }

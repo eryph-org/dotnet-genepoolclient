@@ -37,7 +37,7 @@ public class GenesetTagClient
     }
 
     public virtual GeneClient GetGeneClient(string gene) =>
-        GetGeneClient(new Gene(gene));
+        GetGeneClient(Gene.New(gene));
 
     public virtual GeneClient GetGeneClient(Gene gene) =>
         new(_clientConfiguration, _endpoint, _identifier, gene);

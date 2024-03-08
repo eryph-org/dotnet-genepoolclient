@@ -12,7 +12,7 @@ public class ApiKeyId : ValidatingNewType<ApiKeyId, string, OrdStringOrdinalIgno
     public ApiKeyId(string value) : base(value)
     {
         ValidOrThrow(
-            Validations<ApiKeyId>.ValidateLength(value, 20, 36)
+            ConfigModel.Validations.ValidateLength(value, nameof(ApiKeyId), 20, 36)
             | Validations.ValidateKeyIdString(value, nameof(ApiKeyId)));
     }
 }
