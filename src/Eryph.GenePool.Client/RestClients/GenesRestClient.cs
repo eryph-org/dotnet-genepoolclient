@@ -45,7 +45,11 @@ namespace Eryph.GenePool.Client.RestClients
             uri.Reset(_endpoint);
             uri.AppendPath(_version, false);
             uri.AppendPath("/genes/", false);
-            uri.AppendPath(identifier.Value, false);
+            uri.AppendPath(identifier.Organization.Value, true);
+            uri.AppendPath("/", false);
+            uri.AppendPath(identifier.GeneSet.Value, true);
+            uri.AppendPath("/", false);
+            uri.AppendPath(identifier.Tag.Value, true);
             uri.AppendPath("/", false);
             uri.AppendPath(gene.Value, true);
             request.Uri = uri;

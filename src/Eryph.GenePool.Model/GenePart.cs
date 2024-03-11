@@ -7,13 +7,12 @@ using LanguageExt.Common;
 
 namespace Eryph.GenePool.Model;
 
-public class GenePart : ValidatingNewType<GenePart, string, OrdStringOrdinalIgnoreCase>
+public class GenePart : EryphName<GenePart>
 {
     public GenePart(string value) : base(value)
     {
         ValidOrThrow(Validations<GenePart>.ValidateCharacters(
                          value,
-                         allowUpperCase: false,
                          allowHyphens: false,
                          allowDots: false,
                          allowSpaces: false)
