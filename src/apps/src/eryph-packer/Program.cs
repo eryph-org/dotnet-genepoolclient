@@ -409,8 +409,8 @@ pushCommand.SetHandler(async context =>
                 );
             }
 
-            if (await tagClient.ExistsAsync())
-                throw new EryphPackerUserException($"Geneset tag {genesetTagInfo.GenesetTagName} already exists on genepool.");
+            if (!genesetTagInfo.IsReference() && await tagClient.ExistsAsync())
+                throw new EryphPackerUserException($"Geneset tag {genesetTagInfo.GenesetTagName} already exists on genepool. Tags can only be updated when they are references.");
         });
 
 
