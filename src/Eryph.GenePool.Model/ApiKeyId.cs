@@ -7,7 +7,7 @@ using LanguageExt.Common;
 
 namespace Eryph.GenePool.Model;
 
-public class ApiKeyId : ValidatingNewType<ApiKeyId, string, OrdStringOrdinalIgnoreCase>
+public class ApiKeyId : ValidatingNewType<ApiKeyId, string, OrdStringOrdinal>
 {
     public ApiKeyId(string value) : base(value)
     {
