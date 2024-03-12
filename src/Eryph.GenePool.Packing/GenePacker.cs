@@ -47,7 +47,7 @@ public static class GenePacker
                 OriginalSize = originalSize,
                 Format = file.ExtremeCompression ? "xz" : "gz",
                 Parts = targetStream.GetChunks().ToArray(),
-                Type = file.GeneType,
+                Type = file.GeneType.ToString().ToLowerInvariant()
             };
 
             var jsonString = JsonSerializer.Serialize(manifestData, GeneModelDefaults.SerializerOptions);
