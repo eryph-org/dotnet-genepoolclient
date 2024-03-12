@@ -60,7 +60,7 @@ public class GeneClient
         {
             var body = new NewGeneRequestBody()
             {
-                Geneset = _geneset.ValueWithTag,
+                Geneset = _geneset.Value,
                 Manifest = manifest
             };
 
@@ -84,7 +84,7 @@ public class GeneClient
         {
             var body = new NewGeneRequestBody()
             {
-                Geneset = _geneset.ValueWithTag,
+                Geneset = _geneset.Value,
                 Manifest = manifest
             };
 
