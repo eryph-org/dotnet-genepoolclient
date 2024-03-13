@@ -75,6 +75,8 @@ public class GenesetTagInfo
         return true;
     }
 
+    public bool IsReference() => !string.IsNullOrWhiteSpace(ManifestData.Reference);
+
     public void Create()
     {
         if (Exists())

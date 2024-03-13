@@ -9,6 +9,7 @@ using Eryph.GenePool.Client.Credentials;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
 using System.Text;
+using Eryph.ConfigModel;
 using JetBrains.Annotations;
 
 namespace Eryph.GenePool.Client
@@ -112,14 +113,14 @@ namespace Eryph.GenePool.Client
         /// <param name="organization">The organization as string.</param>
         /// <returns><see cref="OrganizationClient"/></returns>
         public virtual OrganizationClient GetOrganizationClient(string organization) =>
-            GetOrganizationClient(Organization.ParseUnsafe(organization));
+            GetOrganizationClient(OrganizationName.New(organization));
 
         /// <summary>
         /// Create a new <see cref="OrganizationClient"/> for the given organization.
         /// </summary>
         /// <param name="organization">The organization as <see cref="Organization"/>.</param>
         /// <returns><see cref="OrganizationClient"/></returns>
-        public virtual OrganizationClient GetOrganizationClient(Organization organization) =>
+        public virtual OrganizationClient GetOrganizationClient(OrganizationName organization) =>
             new(_clientConfiguration, Uri, organization);
 
         /// <summary>
@@ -129,7 +130,7 @@ namespace Eryph.GenePool.Client
         /// <param name="keyId">The id of the api key</param>
         /// <returns><see cref="ApiKeyClient"/></returns>
         public virtual ApiKeyClient GetApiKeyClient(string organization, string keyId) =>
-            new(_clientConfiguration, Uri, Organization.ParseUnsafe(organization), ApiKeyId.ParseUnsafe(keyId));
+            new(_clientConfiguration, Uri, OrganizationName.New(organization), ApiKeyId.New(keyId));
 
         /// <summary>
         /// Create a new <see cref="ApiKeyClient"/> for the given organization and api key.
@@ -137,7 +138,7 @@ namespace Eryph.GenePool.Client
         /// <param name="organization">The organization as <see cref="Organization"/></param>
         /// <param name="keyId">The id of the api key as <see cref="ApiKeyId"/></param>
         /// <returns><see cref="ApiKeyClient"/></returns>
-        public virtual ApiKeyClient GetApiKeyClient(Organization organization, ApiKeyId keyId) =>
+        public virtual ApiKeyClient GetApiKeyClient(OrganizationName organization, ApiKeyId keyId) =>
             new(_clientConfiguration, Uri, organization, keyId);
 
         /// <summary>
@@ -147,7 +148,7 @@ namespace Eryph.GenePool.Client
         /// <param name="gene">Gene as string</param>
         /// <returns><see cref="GeneClient"/></returns>
         public virtual GeneClient GetGeneClient(string geneset, string gene) =>
-            GetGeneClient(GeneSetIdentifier.ParseUnsafe(geneset), Gene.New(gene));
+            GetGeneClient(GeneSetIdentifier.New(geneset), Gene.New(gene));
 
         /// <summary>
         /// Create a new <see cref="GeneClient"/> for the given geneset and gene.
@@ -165,7 +166,7 @@ namespace Eryph.GenePool.Client
         /// <param name="geneset">The geneset name as string (without organization part).</param>
         /// <returns><see cref="GenesetClient"/></returns>
         public virtual GenesetClient GetGenesetClient(string organization, string geneset) =>
-            GetGenesetClient(Organization.ParseUnsafe(organization), Geneset.ParseUnsafe(geneset) );
+            GetGenesetClient(OrganizationName.New(organization), GeneSetName.New(geneset) );
 
         /// <summary>
         /// Create a new <see cref="GenesetClient"/> for the given organization and geneset.
@@ -173,7 +174,7 @@ namespace Eryph.GenePool.Client
         /// <param name="organization">The organization as <see cref="Organization"/>.</param>
         /// <param name="geneset">The geneset name as <see cref="Geneset"/></param>
         /// <returns><see cref="GenesetClient"/></returns>
-        public virtual GenesetClient GetGenesetClient(Organization organization, Geneset geneset) =>
+        public virtual GenesetClient GetGenesetClient(OrganizationName organization, GeneSetName geneset) =>
             new(_clientConfiguration, Uri, organization, geneset);
 
         /// <summary>
@@ -191,7 +192,7 @@ namespace Eryph.GenePool.Client
         /// </summary>
         /// <param name="genesetName">The geneset identifier as string.</param>
         public virtual GenesetTagClient GetGenesetTagClient(string genesetName) =>
-            GetGenesetTagClient(GeneSetIdentifier.ParseUnsafe(genesetName));
+            GetGenesetTagClient(GeneSetIdentifier.New(genesetName));
 
         /// <summary>
         /// Create a new <see cref="GenesetTagClient"/> for the given organization, geneset and tag.
@@ -234,7 +235,7 @@ namespace Eryph.GenePool.Client
 
             var gene = Gene.New(manifestHash);
 
-            var identifier = GeneSetIdentifier.ParseUnsafe(geneset);
+            var identifier = GeneSetIdentifier.New(geneset);
 
             var geneClient = new GeneClient(_clientConfiguration, Uri, identifier, gene);
 

@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model;
@@ -22,7 +23,10 @@ public class GenesetTagClient
     internal GenesetTagClient(GenePoolClientConfiguration clientConfiguration, Uri endpoint,
         GeneSetIdentifier identifier)
     {
-        RestClient = new GenesetTagRestClient(clientConfiguration.ClientDiagnostics, clientConfiguration.Pipeline, endpoint,
+        RestClient = new GenesetTagRestClient(
+            clientConfiguration.ClientDiagnostics,
+            clientConfiguration.Pipeline,
+            endpoint,
             clientConfiguration.Version);
         UploadClient = new UploadClient(clientConfiguration.ClientDiagnostics, clientConfiguration.UploadPipeline);
 
@@ -33,7 +37,7 @@ public class GenesetTagClient
     }
 
     public virtual GeneClient GetGeneClient(string gene) =>
-        GetGeneClient(new Gene(gene));
+        GetGeneClient(Gene.New(gene));
 
     public virtual GeneClient GetGeneClient(Gene gene) =>
         new(_clientConfiguration, _endpoint, _identifier, gene);

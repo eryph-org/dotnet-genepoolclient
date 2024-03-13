@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.Core.Pipeline;
+using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.Responses;
 using Eryph.GenePool.Model;
@@ -43,7 +44,7 @@ internal class GenesetTagRestClient
         uri.AppendPath("/genesets/", false);
         uri.AppendPath(identifier.Organization.Value, false);
         uri.AppendPath("/", false);
-        uri.AppendPath(identifier.Geneset.Value, false);
+        uri.AppendPath(identifier.GeneSet.Value, false);
         uri.AppendPath($"/{path}/", false);
         uri.AppendPath(identifier.Tag.Value, false);
         request.Uri = uri;

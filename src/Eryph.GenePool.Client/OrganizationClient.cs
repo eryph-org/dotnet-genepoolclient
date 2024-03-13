@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model;
@@ -16,17 +17,23 @@ namespace Eryph.GenePool.Client;
 [PublicAPI]
 public class OrganizationClient
 {
-
     private readonly ClientDiagnostics _clientDiagnostics;
     private readonly GenePoolClientConfiguration _clientConfiguration;
     private readonly Uri _endpoint;
     internal OrganizationsRestClient RestClient { get; }
-    private readonly Organization _organization;
+    private readonly OrganizationName _organization;
 
 
-    internal OrganizationClient(GenePoolClientConfiguration clientConfiguration, Uri endpoint, Organization organization)
+    internal OrganizationClient(
+        GenePoolClientConfiguration clientConfiguration,
+        Uri endpoint,
+        OrganizationName organization)
     {
-        RestClient = new OrganizationsRestClient(clientConfiguration.ClientDiagnostics, clientConfiguration.Pipeline, endpoint, clientConfiguration.Version);
+        RestClient = new OrganizationsRestClient(
+            clientConfiguration.ClientDiagnostics,
+            clientConfiguration.Pipeline,
+            endpoint,
+            clientConfiguration.Version);
         _clientConfiguration = clientConfiguration;
         _endpoint = endpoint;
         _clientDiagnostics = clientConfiguration.ClientDiagnostics;
@@ -40,14 +47,14 @@ public class OrganizationClient
     /// <param name="geneset">The geneset as string</param>
     /// <returns></returns>
     public virtual GenesetClient GetGenesetClient(string geneset) =>
-        GetGenesetClient(Geneset.ParseUnsafe(geneset));
+        GetGenesetClient(GeneSetName.New(geneset));
 
     /// <summary>
     /// Gets a <see cref="GenesetClient"/> for the current organization and the specified geneset.
     /// </summary>
     /// <param name="geneset">The geneset as <see cref="Geneset"/></param>
     /// <returns></returns>
-    public virtual GenesetClient GetGenesetClient(Geneset geneset) =>
+    public virtual GenesetClient GetGenesetClient(GeneSetName geneset) =>
         new(_clientConfiguration, _endpoint, _organization, geneset);
 
     /// <summary>
@@ -57,7 +64,7 @@ public class OrganizationClient
     /// <param name="tag">The geneset tag as string</param>
     /// <returns></returns>
     public virtual GenesetTagClient GetGenesetTagClient(string geneset, string tag) =>
-        GetGenesetTagClient(Geneset.ParseUnsafe(geneset), new Tag(tag));
+        GetGenesetTagClient(GeneSetName.New(geneset), TagName.New(tag));
 
     /// <summary>
     /// Gets a <see cref="GenesetTagClient"/> for the current organization and the specified geneset and tag.
@@ -65,9 +72,9 @@ public class OrganizationClient
     /// <param name="geneset">The geneset as <see cref="Geneset"/></param>
     /// <param name="tag">The geneset tag as <see cref="Tag"/></param>
     /// <returns></returns>
-    public virtual GenesetTagClient GetGenesetTagClient(Geneset geneset, Tag tag) =>
+    public virtual GenesetTagClient GetGenesetTagClient(GeneSetName geneset, TagName tag) =>
         new(_clientConfiguration, _endpoint,
-            GeneSetIdentifier.ParseUnsafe($"{_organization.Value}/{geneset}/{tag}"));
+            GeneSetIdentifier.New($"{_organization.Value}/{geneset}/{tag}"));
 
     /// <summary>
     /// Gets a <see cref="ApiKeyClient"/> for the current organization and the specified key id.
@@ -75,7 +82,7 @@ public class OrganizationClient
     /// <param name="keyId">The api key id as string</param>
     /// <returns></returns>
     public virtual ApiKeyClient GetApiKeyClient(string keyId) =>
-        GetApiKeyClient(ApiKeyId.ParseUnsafe(keyId));
+        GetApiKeyClient(ApiKeyId.New(keyId));
 
     /// <summary>
     /// Gets a <see cref="ApiKeyClient"/> for the current organization and the specified key id.

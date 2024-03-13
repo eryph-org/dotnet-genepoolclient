@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model;
@@ -16,14 +17,16 @@ namespace Eryph.GenePool.Client;
 [PublicAPI]
 public class ApiKeyClient
 {
-
     private readonly ClientDiagnostics _clientDiagnostics;
     internal ApiKeyRestClient RestClient { get; }
-    private readonly Organization _organization;
+    private readonly OrganizationName _organization;
     private readonly ApiKeyId _keyId;
 
-    internal ApiKeyClient(GenePoolClientConfiguration clientConfiguration, Uri endpoint, 
-        Organization organization, ApiKeyId keyId)
+    internal ApiKeyClient(
+        GenePoolClientConfiguration clientConfiguration,
+        Uri endpoint, 
+        OrganizationName organization,
+        ApiKeyId keyId)
     {
         RestClient = new ApiKeyRestClient(clientConfiguration.ClientDiagnostics, clientConfiguration.Pipeline, endpoint,
             clientConfiguration.Version);

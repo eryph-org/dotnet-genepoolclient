@@ -15,7 +15,6 @@ using Eryph.Packer;
 using Spectre.Console;
 using Spectre.Console.Json;
 using Command = System.CommandLine.Command;
-using GeneType = Eryph.GenePool.Packing.GeneType;
 
 //AnsiConsole.Profile.Capabilities.Interactive = false;
 var genePoolUri = new Uri("https://eryphgenepoolapistaging.azurewebsites.net/api/");
@@ -410,8 +409,8 @@ pushCommand.SetHandler(async context =>
                 );
             }
 
-            if (await tagClient.ExistsAsync())
-                throw new EryphPackerUserException($"Geneset tag {genesetTagInfo.GenesetTagName} already exists on genepool.");
+            if (!genesetTagInfo.IsReference() && await tagClient.ExistsAsync())
+                throw new EryphPackerUserException($"Geneset tag {genesetTagInfo.GenesetTagName} already exists on genepool. Tags can only be updated when they are references.");
         });
 
 

@@ -8,6 +8,7 @@ using Eryph.GenePool.Client.Responses;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Requests;
 using Eryph.GenePool.Model.Responses;
+using Eryph.ConfigModel;
 
 namespace Eryph.GenePool.Client.RestClients
 {
@@ -34,7 +35,7 @@ namespace Eryph.GenePool.Client.RestClients
             _version = version.ToString().ToLowerInvariant();
         }
 
-        internal HttpMessage CreateRequest(Organization organization, RequestMethod method)
+        internal HttpMessage CreateRequest(OrganizationName organization, RequestMethod method)
         {
             var message = _pipeline.CreateMessage();
             var request = message.Request;
@@ -54,7 +55,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public async Task<NoResultResponse> DeleteAsync(Organization organization, CancellationToken cancellationToken = default)
+        public async Task<NoResultResponse> DeleteAsync(OrganizationName organization, CancellationToken cancellationToken = default)
         {
             if (organization == null)
                 throw new ArgumentNullException(nameof(organization));
@@ -67,7 +68,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public NoResultResponse Delete(Organization organization, CancellationToken cancellationToken = default)
+        public NoResultResponse Delete(OrganizationName organization, CancellationToken cancellationToken = default)
         {
             if (organization == null)
             {
@@ -82,7 +83,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public async Task<SingleResultResponse<OrganizationResponse>> GetAsync(Organization organization, CancellationToken cancellationToken = default)
+        public async Task<SingleResultResponse<OrganizationResponse>> GetAsync(OrganizationName organization, CancellationToken cancellationToken = default)
         {
             if (organization == null)
             {
@@ -97,7 +98,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public SingleResultResponse<OrganizationResponse> Get(Organization organization, CancellationToken cancellationToken = default)
+        public SingleResultResponse<OrganizationResponse> Get(OrganizationName organization, CancellationToken cancellationToken = default)
         {
             if (organization == null)
             {
@@ -116,7 +117,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="body"> The UpdateOrganizationBody to use. </param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public async Task<SingleResultResponse<OrganizationRefResponse>> UpdateAsync(Organization organization,
+        public async Task<SingleResultResponse<OrganizationRefResponse>> UpdateAsync(OrganizationName organization,
             UpdateOrganizationBody? body = null, CancellationToken cancellationToken = default)
         {
             if (organization == null)
@@ -142,7 +143,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="body"> The UpdateOrganizationBody to use. </param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public SingleResultResponse<OrganizationRefResponse> Update(Organization organization, UpdateOrganizationBody? body = null, CancellationToken cancellationToken = default)
+        public SingleResultResponse<OrganizationRefResponse> Update(OrganizationName organization, UpdateOrganizationBody? body = null, CancellationToken cancellationToken = default)
         {
             if (organization == null)
             {
