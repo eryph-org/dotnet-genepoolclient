@@ -635,14 +635,14 @@ commandLineBuilder.UseExceptionHandler((ex, context) =>
         {
             ManyErrors me => me.Errors.Fold(grid, addToGrid),
             Exceptional ee => addRow(grid, ee.ToException().GetRenderable()),
-            _ => addRow(grid, Markup.FromInterpolated($"{error.Message}"))
+            _ => addRow(grid, new Text(error.Message))
                 .Apply(g => error.Inner.Match(
                     Some: ie => addRow(g, addToGrid(createGrid(), ie)),
                     None: () => g)),
         };
 
         AnsiConsole.Write(new Rows(
-            new Text("The operation failed with following error(s):"),
+            new Markup("[red]The operation failed with following error(s):[/]"),
             addToGrid(createGrid(), error)));
         AnsiConsole.WriteLine();
     }
