@@ -4,6 +4,7 @@ using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.CommandLine.Rendering;
 using System.Text.Json;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Json;
@@ -12,8 +13,11 @@ using Eryph.GenePool.Client;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Packing;
 using Eryph.Packer;
+using LanguageExt;
+using LanguageExt.Common;
 using Spectre.Console;
 using Spectre.Console.Json;
+using Spectre.Console.Rendering;
 using Command = System.CommandLine.Command;
 
 //AnsiConsole.Profile.Capabilities.Interactive = false;
@@ -25,17 +29,17 @@ var refArgument = new Argument<string>("referenced geneset", "name of referenced
 var vmExportArgument = new Argument<DirectoryInfo>("vm export", "path to exported VM");
 var filePathArgument = new Argument<FileInfo>("file", "path to file");
 
-var isPublicOption = new Option<bool>("--public", "sets genesets visibility to public");
-var shortDescriptionOption = new Option<string>("--description", "sets genesets description");
+var isPublicOption = new System.CommandLine.Option<bool>("--public", "sets genesets visibility to public");
+var shortDescriptionOption = new System.CommandLine.Option<string>("--description", "sets genesets description");
 
 vmExportArgument.ExistingOnly();
 
 var apiKeyOption =
-    new Option<string>("--api-key", "API key for authentication");
+    new System.CommandLine.Option<string>("--api-key", "API key for authentication");
 
 var workDirOption =
     // ReSharper disable once StringLiteralTypo
-    new Option<DirectoryInfo>("--workdir", "work directory")
+    new System.CommandLine.Option<DirectoryInfo>("--workdir", "work directory")
         .ExistingOnly();
     
 workDirOption.SetDefaultValue(new DirectoryInfo(Environment.CurrentDirectory));
@@ -255,6 +259,11 @@ packCommand.SetHandler(async context =>
             {
                 var catletContent = File.ReadAllText(catletFile);
                 var catletConfig = DeserializeCatletConfigString(catletContent);
+                var validationResult = CatletConfigValidations.ValidateCatletConfig(catletConfig);
+                validationResult.ToEither()
+                    .MapLeft(issues => Error.New("The catlet configuration is invalid.",
+                        Error.Many(issues.Map(i => i.ToError()))))
+                    .IfLeft(e => e.Throw());
                 var configJson = ConfigModelJsonSerializer.Serialize(catletConfig);
                 await File.WriteAllTextAsync(Path.Combine(packFolder, "catlet.json"), configJson);
                 packableFiles.Add(new PackableFile(Path.Combine(packFolder, "catlet.json"),
@@ -278,6 +287,11 @@ packCommand.SetHandler(async context =>
                 {
                     var fodderContent = File.ReadAllText(fodderFile.FullName);
                     var fodderConfig = DeserializeFodderConfigString(fodderContent);
+                    var validationResult = FodderGeneConfigValidations.ValidateFodderGeneConfig(fodderConfig);
+                    validationResult.ToEither()
+                        .MapLeft(issues => Error.New($"The fodder configuration '{fodderFile.Name}' is invalid.",
+                            Error.Many(issues.Map(i => i.ToError()))))
+                        .IfLeft(e => e.Throw());
                     var fodderJson = ConfigModelJsonSerializer.Serialize(fodderConfig);
                     var fodderPackFolder = Path.Combine(packFolder, "fodder");
                     if (!Directory.Exists(fodderPackFolder))
@@ -605,6 +619,32 @@ commandLineBuilder.UseExceptionHandler((ex, context) =>
     else if (ex is EryphPackerUserException)
     {
         AnsiConsole.MarkupLineInterpolated($"[red]{ex.Message}[/]");
+    }
+    else if (ex is ErrorException eex)
+    {
+        var error = eex.ToError();
+
+        Grid createGrid() => new Grid()
+            .AddColumn(new GridColumn() { Width = 2 })
+            .AddColumn();
+
+        Grid addRow(Grid grid, IRenderable renderable) =>
+            grid.AddRow(new Markup(""), renderable);
+
+        Grid addToGrid(Grid grid, Error error) => error switch
+        {
+            ManyErrors me => me.Errors.Fold(grid, addToGrid),
+            Exceptional ee => addRow(grid, ee.ToException().GetRenderable()),
+            _ => addRow(grid, new Text(error.Message))
+                .Apply(g => error.Inner.Match(
+                    Some: ie => addRow(g, addToGrid(createGrid(), ie)),
+                    None: () => g)),
+        };
+
+        AnsiConsole.Write(new Rows(
+            new Markup("[red]The operation failed with following error(s):[/]"),
+            addToGrid(createGrid(), error)));
+        AnsiConsole.WriteLine();
     }
     else
     {
