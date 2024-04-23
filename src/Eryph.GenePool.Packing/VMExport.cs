@@ -55,7 +55,7 @@ public static class VMExport
             if (!string.IsNullOrWhiteSpace(firmwareJson?["SecureBootTemplate"]?.GetValue<string>()))
                 capabilities.Add(new CatletCapabilityConfig
                 {
-                    Name = "SecureBoot",
+                    Name = "secure_boot",
                     Details = new[] { "Template:" + firmwareJson?["SecureBootTemplate"]?.GetValue<string>() }
                 });
 
@@ -63,7 +63,7 @@ public static class VMExport
             {
                 capabilities.Add(new CatletCapabilityConfig
                 {
-                    Name = "NestedVirtualization"
+                    Name = "nested_virtualization"
                 }
                 );
             }
@@ -72,11 +72,11 @@ public static class VMExport
             {
                 string[]? details = null;
                 if ((securityJson?["EncryptStateAndVmMigrationTraffic"]?.GetValue<bool>()).GetValueOrDefault())
-                    details = new[] { "TrafficEncryption" };
+                    details = new[] { "with_traffic_encryption" };
 
                 capabilities.Add(new CatletCapabilityConfig
                 {
-                    Name = "TPM",
+                    Name = "tpm",
                     Details = details
                 }
                 );
