@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.4.1-PullRequest0076.16" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Yaml" Version="0.4.1-PullRequest0076.16" />
-    <PackageReference Include="Eryph.ConfigModel.System.Json" Version="0.4.1-PullRequest0076.16" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.5.0" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Yaml" Version="0.5.0" />
+    <PackageReference Include="Eryph.ConfigModel.System.Json" Version="0.5.0" />
     <PackageReference Include="Joveler.Compression.XZ" Version="4.3.0" />
   </ItemGroup>
 
