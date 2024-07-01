@@ -267,7 +267,7 @@ packCommand.SetHandler(async context =>
                 var configJson = ConfigModelJsonSerializer.Serialize(catletConfig);
                 await File.WriteAllTextAsync(Path.Combine(packFolder, "catlet.json"), configJson);
                 packableFiles.Add(new PackableFile(Path.Combine(packFolder, "catlet.json"),
-                    "catlet.json", GeneType.Catlet, "catlet", false));
+                    "catlet.json", GeneType.Catlet, "catlet", false, catletContent));
                 parent = catletConfig.Parent;
             }
 
@@ -300,7 +300,7 @@ packCommand.SetHandler(async context =>
                     var fodderJsonFile = Path.Combine(fodderPackFolder, $"{fodderConfig.Name}.json");
                     await File.WriteAllTextAsync(fodderJsonFile, fodderJson);
                     packableFiles.Add(new PackableFile(fodderJsonFile,
-                        $"{fodderConfig.Name}.json", GeneType.Fodder, fodderConfig.Name, false));
+                        $"{fodderConfig.Name}.json", GeneType.Fodder, fodderConfig.Name, false, fodderContent));
                 }
             }
 

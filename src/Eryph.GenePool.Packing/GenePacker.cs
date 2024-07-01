@@ -39,9 +39,15 @@ public static class GenePacker
 
             progress?.Report(new GenePackerProgress(originalSize, originalSize));
 
+            // the original content is optional and can be added to the gene, however it will not affect the hash
+            var yamlFileName = !string.IsNullOrWhiteSpace(file.YamlContent) ? $"{file.GeneName}.yaml" : null;
+            long? yamlSize = !string.IsNullOrWhiteSpace(file.YamlContent) ? Encoding.Unicode.GetByteCount(file.YamlContent) : null;
+
             var manifestData = new GeneManifestData
             {
                 FileName = file.FileName,
+                YamlFileName = yamlFileName,
+                YamlSize = yamlSize,
                 Name = file.GeneName,
                 Size = targetStream.Length,
                 OriginalSize = originalSize,
@@ -55,6 +61,10 @@ public static class GenePacker
             using var sha256 = SHA256.Create();
             var manifestHash = GetHashString(sha256.ComputeHash(Encoding.UTF8.GetBytes(jsonString)));
             await File.WriteAllTextAsync(Path.Combine(tempDir, "gene.json"), jsonString, token);
+
+            if(!string.IsNullOrWhiteSpace(yamlFileName))
+                await File.WriteAllTextAsync(Path.Combine(tempDir, yamlFileName), jsonString, token);
+
 
             var destDir = Path.Combine(Path.GetDirectoryName(tempDir)!, manifestHash);
             if (Directory.Exists(destDir))

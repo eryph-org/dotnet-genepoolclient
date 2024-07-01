@@ -21,6 +21,12 @@ public class GeneManifestData
     [JsonPropertyName("filename")]
     public string? FileName { get; set; }
 
+    [JsonPropertyName("yaml_filename")]
+    public string? YamlFileName { get; set; }
+
+    [JsonPropertyName("yaml_size")]
+    public long? YamlSize { get; set; }
+
 
     [JsonPropertyName("parts")]
     public string[]? Parts { get; set; }
