@@ -7,6 +7,9 @@ namespace Eryph.GenePool.Model;
 
 public class GeneManifestData
 {
+    [JsonPropertyName("version")]
+    public string? Version { get; set; }
+
     [JsonPropertyName("name")]
     public string? Name { get; set; }
 
@@ -20,12 +23,6 @@ public class GeneManifestData
 
     [JsonPropertyName("filename")]
     public string? FileName { get; set; }
-
-    [JsonPropertyName("yaml_filename")]
-    public string? YamlFileName { get; set; }
-
-    [JsonPropertyName("yaml_size")]
-    public long? YamlSize { get; set; }
 
 
     [JsonPropertyName("parts")]
