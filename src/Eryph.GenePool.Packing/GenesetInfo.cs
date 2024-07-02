@@ -34,6 +34,7 @@ public class GenesetInfo
         Id = packParts[1];
         GenesetName = $"{Organization}/{Id}";
         _manifestData.Geneset = GenesetName;
+        _manifestData.Version = GeneModelDefaults.LatestGenesetManifestVersion.ToString();
         _genesetPath = Path.GetFullPath(genesetPath);
     }
 
@@ -158,14 +159,23 @@ public class GenesetInfo
             var jsonString = File.ReadAllText(Path.Combine(path, "geneset.json"));
 
             var manifest = JsonSerializer.Deserialize<GenesetManifestData>(jsonString, GeneModelDefaults.SerializerOptions);
-            return manifest ?? new GenesetManifestData { Geneset = genesetName };
+            return manifest ?? new GenesetManifestData
+            {
+                Geneset = genesetName,
+                Version = GeneModelDefaults.LatestGenesetManifestVersion.ToString()
+            };
 
         }
         catch
         {
-            return new GenesetManifestData { Geneset = genesetName };
+            return new GenesetManifestData
+            {
+                Geneset = genesetName,
+                Version = GeneModelDefaults.LatestGenesetManifestVersion.ToString()
+            };
         }
     }
+
 
     public override string ToString()
     {
@@ -184,7 +194,12 @@ public class GenesetInfo
         ReadManifest();
         if (_manifestData.DescriptionMarkdownFile != null)
         {
-            return File.ReadAllText(Path.Combine(GetGenesetPath(), _manifestData.DescriptionMarkdownFile));
+            var markdownPath = Path.Combine(GetGenesetPath(), _manifestData.DescriptionMarkdownFile);
+            var fileSize = new FileInfo(markdownPath).Length;
+            if(fileSize > GeneModelDefaults.MaxGenesetMarkdownBytes)
+                throw new InvalidOperationException($"Markdown file '{markdownPath}' is too large. Maximum allowed size is {GeneModelDefaults.MaxGenesetMarkdownBytes/1024/1204} MB.");
+
+            return File.ReadAllText(markdownPath);
         }
 
         return _manifestData.DescriptionMarkdown;
