@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -166,8 +167,10 @@ public class GenesetClient
     }
 
     public virtual async Task<GenesetRefResponse?> CreateAsync(bool isPublic,
+        string? shortDescription = default,
         string? description = default,
         string? descriptionMarkdown = default,
+        IDictionary<string,string>? metadata = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GenesetClient)}.{nameof(Create)}");
@@ -179,7 +182,9 @@ public class GenesetClient
                 Geneset = $"{_organization}/{_geneset}",
                 Public = isPublic,
                 ShortDescription = description,
-                DescriptionMarkdown = descriptionMarkdown
+                Description = description,
+                DescriptionMarkdown = descriptionMarkdown,
+                Metadata = metadata
             };
 
             return (await RestClient.CreateAsync(body, cancellationToken).ConfigureAwait(false)).Value;
@@ -195,8 +200,10 @@ public class GenesetClient
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <remarks> Creates a project. </remarks>
     public virtual GenesetRefResponse? Create(bool isPublic,
+        string? shortDescription = default,
         string? description = default,
         string? descriptionMarkdown = default,
+        IDictionary<string, string>? metadata = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Create)}");
@@ -208,7 +215,9 @@ public class GenesetClient
                 Geneset = $"{_organization}/{_geneset}",
                 Public = isPublic,
                 ShortDescription = description,
-                DescriptionMarkdown = descriptionMarkdown
+                Description = description,
+                DescriptionMarkdown = descriptionMarkdown,
+                Metadata = metadata
             };
             return RestClient.Create(body, cancellationToken).Value;
         }

@@ -1,6 +1,4 @@
 ﻿using System.Buffers;
-using System.Diagnostics;
-using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -39,15 +37,10 @@ public static class GenePacker
 
             progress?.Report(new GenePackerProgress(originalSize, originalSize));
 
-            // the original content is optional and can be added to the gene, however it will not affect the hash
-            var yamlFileName = !string.IsNullOrWhiteSpace(file.YamlContent) ? $"{file.GeneName}.yaml" : null;
-            long? yamlSize = !string.IsNullOrWhiteSpace(file.YamlContent) ? Encoding.Unicode.GetByteCount(file.YamlContent) : null;
-
             var manifestData = new GeneManifestData
             {
+                Version = GeneModelDefaults.LatestGeneManifestVersion.ToString(),
                 FileName = file.FileName,
-                YamlFileName = yamlFileName,
-                YamlSize = yamlSize,
                 Name = file.GeneName,
                 Size = targetStream.Length,
                 OriginalSize = originalSize,
@@ -60,10 +53,10 @@ public static class GenePacker
 
             using var sha256 = SHA256.Create();
             var manifestHash = GetHashString(sha256.ComputeHash(Encoding.UTF8.GetBytes(jsonString)));
-            await File.WriteAllTextAsync(Path.Combine(tempDir, "gene.json"), jsonString, token);
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "gene.json"), jsonString, Encoding.UTF8, token);
 
-            if(!string.IsNullOrWhiteSpace(yamlFileName))
-                await File.WriteAllTextAsync(Path.Combine(tempDir, yamlFileName), jsonString, token);
+            if(!string.IsNullOrWhiteSpace(file.YamlContent))
+                await File.WriteAllTextAsync(Path.Combine(tempDir, "gene.yaml"), file.YamlContent, Encoding.UTF8, token);
 
 
             var destDir = Path.Combine(Path.GetDirectoryName(tempDir)!, manifestHash);
@@ -117,7 +110,7 @@ public static class GenePacker
         }
     }
 
-    static string GetHashString(byte[] hashBytes)
+    private static string GetHashString(byte[] hashBytes)
     {
         return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
     }

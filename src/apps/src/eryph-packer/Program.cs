@@ -21,7 +21,8 @@ using Spectre.Console.Rendering;
 using Command = System.CommandLine.Command;
 
 //AnsiConsole.Profile.Capabilities.Interactive = false;
-var genePoolUri = new Uri("https://eryphgenepoolapistaging.azurewebsites.net/api/");
+//var genePoolUri = new Uri("https://eryphgenepoolapistaging.azurewebsites.net/api/");
+var genePoolUri = new Uri("http://localhost:7072/api/");
 
 var organizationArgument = new Argument<string>("organization", "name of organization.");
 var genesetArgument = new Argument<string>("geneset", "name of geneset in format organization/id/[tag]");
@@ -257,6 +258,11 @@ packCommand.SetHandler(async context =>
             // pack catlet
             if (File.Exists(catletFile))
             {
+                var fileLength = new FileInfo(catletFile).Length;
+                if (fileLength > GeneModelDefaults.MaxYamlSourceBytes)
+                    throw new EryphPackerUserException(
+                        $"Catlet file is too large. Max size is {GeneModelDefaults.MaxYamlSourceBytes / 1024 / 1024} MB.");
+
                 var catletContent = File.ReadAllText(catletFile);
                 var catletConfig = DeserializeCatletConfigString(catletContent);
                 var validationResult = CatletConfigValidations.ValidateCatletConfig(catletConfig);
@@ -285,6 +291,10 @@ packCommand.SetHandler(async context =>
                              return extension is ".yaml" or ".yml";
                          }))
                 {
+                    if (fodderFile.Length > GeneModelDefaults.MaxYamlSourceBytes)
+                        throw new EryphPackerUserException(
+                            $"Fodder file '{fodderFile.Name}' is too large. Max size is {GeneModelDefaults.MaxYamlSourceBytes / 1024 / 1024} MB.");
+
                     var fodderContent = File.ReadAllText(fodderFile.FullName);
                     var fodderConfig = DeserializeFodderConfigString(fodderContent);
                     var validationResult = FodderGeneConfigValidations.ValidateFodderGeneConfig(fodderConfig);
@@ -419,7 +429,10 @@ pushCommand.SetHandler(async context =>
                 statusContext.Refresh();
                 await genesetClient.CreateAsync(genesetInfo.ManifestData.Public ?? false,
                     genesetInfo.ManifestData.ShortDescription,
-                    markdownContent, token
+                    genesetInfo.ManifestData.Description,
+                    markdownContent, 
+                    genesetInfo.ManifestData.Metadata,
+                    token
                 );
             }
 

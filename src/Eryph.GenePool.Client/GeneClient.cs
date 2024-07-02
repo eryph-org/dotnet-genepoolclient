@@ -48,11 +48,16 @@ public class GeneClient
     }
 
     /// <summary> Creates a new gene. </summary>
+    /// <param name="manifest">Gene manifest</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
+    /// <param name="gene">Gene</param>
+    /// <param name="yamlContent">Original yaml content of a gene</param>
     /// <remarks> Creates a project. </remarks>
     public virtual async Task<GeneUploadResponse?> CreateAsync(
+        Gene gene,
         GeneManifestData manifest,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? yamlContent = null)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Create)}");
         scope.Start();
@@ -60,8 +65,10 @@ public class GeneClient
         {
             var body = new NewGeneRequestBody()
             {
+                Gene = gene.Value,
                 Geneset = _geneset.Value,
-                Manifest = manifest
+                Manifest = manifest,
+                YamlContent = yamlContent
             };
 
             return (await RestClient.CreateAsync(body, cancellationToken).ConfigureAwait(false)).Value;
@@ -74,9 +81,13 @@ public class GeneClient
     }
 
     /// <summary> Creates a new organization. </summary>
+    /// <param name="manifest">Gene manifest</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
+    /// <param name="gene">Gene</param>
+    /// <param name="yamlContent">Original yaml content of a gene</param>
     /// <remarks> Creates a project. </remarks>
-    public virtual GeneUploadResponse? Create(GeneManifestData manifest, CancellationToken cancellationToken = default)
+    public virtual GeneUploadResponse? Create(Gene gene, GeneManifestData manifest, CancellationToken cancellationToken = default,
+        string? yamlContent = null)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Create)}");
         scope.Start();
@@ -84,8 +95,10 @@ public class GeneClient
         {
             var body = new NewGeneRequestBody()
             {
+                Gene = gene.Value,
                 Geneset = _geneset.Value,
-                Manifest = manifest
+                Manifest = manifest,
+                YamlContent = yamlContent
             };
 
             return RestClient.Create(body, cancellationToken).Value;
@@ -315,12 +328,12 @@ public class GeneClient
         {
             var timeLeft = (uploadUri.Expires - DateTimeOffset.UtcNow).TotalSeconds;
             if (timeLeft < 10)
-                uploadUri = await GetUploadUriAsync(uploadUri.Part, cancellationToken) ??
+                uploadUri = await GetUploadUriAsync(uploadUri.Part, cancellationToken).ConfigureAwait(false) ??
                             throw new IOException("Failed to refresh upload url.");
 
-            await UploadClient.UploadPartAsync(uploadUri.UploadUri, content, cancellationToken);
+            await UploadClient.UploadPartAsync(uploadUri.UploadUri, content, cancellationToken).ConfigureAwait(false);
             await RestClient.ConfirmGenePartUploadAsync(_geneset, _gene, GenePart.New(uploadUri.Part),
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e)
         {
@@ -342,7 +355,7 @@ public class GeneClient
             .Select(p => p.Split(':')[1]).Except(stagedParts).ToArray();
 
         var uploadedPart = false;
-        uploadUris ??= Array.Empty<GenePartUploadUri>();
+        uploadUris ??= [];
 
         var totalMissingSize = 0L;
         var totalMissingCount = partsRequired.Length;
@@ -434,21 +447,26 @@ public class GeneClient
     }
 
     public virtual async Task<GetGeneResponse> UploadGeneFromPathAsync(string path,
+    Gene gene,
     GeneManifestData manifest,
     CancellationToken cancellationToken = default, TimeSpan timeout = default,
     IProgress<GeneUploadProgress>? progress = default)
     {
 
         var geneExists = await ExistsAsync(cancellationToken).ConfigureAwait(false);
+        var yamlContentPath = Path.Combine(path, "gene.yaml");
+        string? yamlContent = null;
+        if(File.Exists(yamlContentPath))
+            yamlContent = await File.ReadAllTextAsync(yamlContentPath, cancellationToken).ConfigureAwait(false);
 
         var uploadUris = Array.Empty<GenePartUploadUri>();
         if (!geneExists)
         {
-            var createResponse = await CreateAsync(manifest, cancellationToken);
+            var createResponse = await CreateAsync(gene,manifest, cancellationToken, yamlContent).ConfigureAwait(false);
             uploadUris = createResponse?.UploadUris ?? uploadUris;
         }
 
-        var geneStatus = await GetAsync(cancellationToken) ?? throw new InvalidOperationException("Gene not found.");
+        var geneStatus = await GetAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("Gene not found.");
         if (geneStatus.Available)
             return geneStatus;
 
@@ -467,7 +485,7 @@ public class GeneClient
         while (!processingTimeout.IsCancellationRequested)
         {
             await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
-            geneStatus = await GetAsync(cancellationToken) ?? throw new InvalidOperationException("Gene not found.");
+            geneStatus = await GetAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("Gene not found.");
             if (geneStatus.Available)
                 return geneStatus;
 
