@@ -732,7 +732,7 @@ GenesetTagInfo PrepareGeneSetTagCommand(InvocationContext context)
     if (!genesetInfo.Exists())
         throw new EryphPackerUserException($"Geneset tag {genesetName} not found");
 
-    //genesetInfo.Validate();
+    genesetInfo.Validate();
     return genesetInfo;
 }
 
