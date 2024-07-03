@@ -18,8 +18,8 @@ public class ManifestValidations
                | ValidateProperty(manifest, m => m.Reference, GeneSetIdentifier.NewValidation, path)
                | ValidateProperty(manifest, m => m.Parent, GeneSetIdentifier.NewValidation, path)
                | ValidateProperty(manifest, m=>m.CatletGene, ValidateGeneHash, path)
-               | ValidateList(manifest, m=>m.VolumeGenes, ValidateGeneReference, path)
-               | ValidateList(manifest, m=>m.FodderGenes, ValidateGeneReference, path)
+               | ValidateList(manifest, m=>m.VolumeGenes, ValidateGeneReference, path, 0, 100)
+               | ValidateList(manifest, m=>m.FodderGenes, ValidateGeneReference, path,0, 100)
                | ValidateProperty(manifest, m=> m.Metadata, Validations.ValidateMetadata, path);
     }
 
