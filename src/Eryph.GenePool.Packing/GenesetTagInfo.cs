@@ -1,5 +1,6 @@
 ﻿using Eryph.GenePool.Model;
 using System.Text.Json;
+using LanguageExt.Common;
 
 namespace Eryph.GenePool.Packing;
 
@@ -11,7 +12,10 @@ public class GenesetTagInfo
 
     public string Tag { get; }
 
-    private GenesetTagManifestData _manifestData = new();
+    private GenesetTagManifestData _manifestData = new()
+    {
+        Version = GeneModelDefaults.LatestGenesetTagManifestVersion.ToString()
+    };
     private readonly string _genesetPath;
 
     public GenesetTagManifestData ManifestData
@@ -88,7 +92,8 @@ public class GenesetTagInfo
 
         if (!File.Exists(Path.Combine(GetGenesetPath(), "geneset-tag.json")))
         {
-            _manifestData = new GenesetTagManifestData { Geneset = GenesetTagName };
+            _manifestData = new GenesetTagManifestData { Version = GeneModelDefaults.LatestGenesetTagManifestVersion.ToString(),
+                Geneset = GenesetTagName };
             Write();
         }
     }
@@ -102,6 +107,8 @@ public class GenesetTagInfo
 
     public void JoinMetadata(Dictionary<string, string> newMetadata)
     {
+        _ = Validations.ValidateMetadata(newMetadata).ToEither().MapLeft(Error.Many).IfLeft(l => l.Throw());
+
         _manifestData.Metadata ??= new Dictionary<string, string>();
 
         _manifestData.Metadata = new[] { _manifestData.Metadata, newMetadata }
@@ -157,6 +164,13 @@ public class GenesetTagInfo
 
     }
 
+    public void Validate()
+    {
+        EnsureLoaded();
+        _ = Validations.ValidateGenesetTagManifest(_manifestData).ToEither()
+            .MapLeft(ls => Error.New("The geneset tag manifest is invalid.", Error.Many(ls))).IfLeft(l => l.Throw());
+    }
+
     private void RemoveExistingGene(string? hashName, string newHash)
     {
         if (string.IsNullOrWhiteSpace(hashName) || hashName == newHash) return;
@@ -180,6 +194,8 @@ public class GenesetTagInfo
     {
         var path = GetGenesetPath();
         _manifestData = ReadManifestFromPath(path, GenesetTagName);
+        _manifestData.Version ??= GeneModelDefaults.LatestGenesetTagManifestVersion.ToString();
+
     }
 
     private static GenesetTagManifestData ReadManifestFromPath(string path, string genesetName)
