@@ -216,7 +216,7 @@ public class GenesetInfo
             var markdownPath = Path.Combine(GetGenesetPath(), _manifestData.DescriptionMarkdownFile);
             var fileSize = new FileInfo(markdownPath).Length;
             if (fileSize > GeneModelDefaults.MaxGenesetMarkdownBytes)
-                throw new InvalidOperationException($"Markdown file '{markdownPath}' is too large. Maximum allowed size is {GeneModelDefaults.MaxGenesetMarkdownBytes / 1024 / 1024} MB.");
+                throw new InvalidOperationException($"Markdown file '{markdownPath}' is too large. Maximum allowed size is {GeneModelDefaults.MaxGenesetMarkdownBytes / 1024 / 1024} MiB.");
 
             return File.ReadAllText(markdownPath);
         }
