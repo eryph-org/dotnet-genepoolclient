@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
-using Eryph.ConfigModel;
 using LanguageExt;
 using LanguageExt.Common;
 using static LanguageExt.Prelude;
@@ -94,71 +93,15 @@ public static class Validations
         return Some(description);
     }
 
+    public static Validation<Error, Unit> ValidateVersionString(string? version)
+        => guard(notEmpty(version) &&
+                 Version.TryParse(version ?? "", out _),
+            BadRequestError($"'{version}' is not a valid version")).ToValidation();
+
     private static Error StatusCodeToError(HttpStatusCode statusCode, string? message = null) =>
         Error.New((int)statusCode, message ?? statusCode.ToString());
 
-    private static Error BadRequestError(string? message = null) =>
+    public static Error BadRequestError(string? message = null) =>
         StatusCodeToError(HttpStatusCode.BadRequest, message);
 
-    public static Validation<Error, Unit> ValidateGenesetTagManifest(GenesetTagManifestData manifest)
-    {
-        return
-            from vVersion in guard( isEmpty(manifest.Version) ||
-                    Version.TryParse(manifest.Version ?? "", out _),
-                               BadRequestError($"Version {manifest.Version} is not supported."))
-            from vGeneset in GeneSetIdentifier.NewValidation(manifest.Geneset)
-            from vParent in notEmpty(manifest.Parent)
-                ? GeneSetIdentifier.NewValidation(manifest.Geneset).Map(_ => Unit.Default)
-                : Unit.Default
-
-            from vReference in notEmpty(manifest.Reference)
-                ? GeneSetIdentifier.NewValidation(manifest.Reference).Map(_ => Unit.Default)
-                : Unit.Default
-
-            from vCatlet in notEmpty(manifest.CatletGene) ? ValidateGeneHash(manifest.CatletGene) : Unit.Default
-
-            from vVolumes in notDefault(manifest.VolumeGenes)
-                ? ValidateGeneReferences(manifest.VolumeGenes)
-                : Unit.Default
-
-            from vFodder in notDefault(manifest.FodderGenes)
-                ? ValidateGeneReferences(manifest.FodderGenes)
-                : Unit.Default
-
-            from vMetadata in ValidateMetadata(manifest.Metadata)
-            select Unit.Default;
-    }
-
-    public static Validation<Error, Unit> ValidateGeneReferences(GeneReferenceData[] references)
-    {
-        return references.Map(ValidateGeneReference)
-            .Traverse(l => l).Map(_ => Unit.Default);
-    }
-
-    public static Validation<Error, Unit> ValidateGeneReference(GeneReferenceData reference)
-    {
-        return
-            from uName in GeneName.NewValidation(reference.Name)
-            from gHash in ValidateGeneHash(reference.Hash)
-            select Unit.Default;
-    }
-
-    public static Validation<Error, Unit> ValidateGeneHash(string hash)
-    {
-        return
-            from gNull in guardnot(notEmpty(hash), BadRequestError("Gene hash is empty")).ToValidation()
-            let splitHash = hash.Split(':')
-            from gSep in guard(splitHash.Length == 2,
-                BadRequestError("Gene hash has to contain : as hash type separator")).ToValidation()
-            from gType in guard(splitHash[0] == "sha1" || splitHash[0] == "sha256",
-                BadRequestError("hash type has to be sha1 or sha256")).ToValidation()
-            from hashLength in
-                splitHash[0] == "sha1"
-                    ? guard(splitHash[1].Length == 40, BadRequestError("sha1 hash has to be 40 characters long"))
-                        .ToValidation()
-                    : guard(splitHash[1].Length == 64, BadRequestError("sha256 hash has to be 64 characters long"))
-                        .ToValidation()
-
-            select Unit.Default;
-    }
 }

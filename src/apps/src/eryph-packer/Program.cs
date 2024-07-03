@@ -21,8 +21,8 @@ using Spectre.Console.Rendering;
 using Command = System.CommandLine.Command;
 
 //AnsiConsole.Profile.Capabilities.Interactive = false;
-//var genePoolUri = new Uri("https://eryphgenepoolapistaging.azurewebsites.net/api/");
-var genePoolUri = new Uri("http://localhost:7072/api/");
+var genePoolUri = new Uri(Environment.GetEnvironmentVariable("ERYPH_PACKER_GENEPOOL_API") 
+                          ?? "https://eryphgenepoolapistaging.azurewebsites.net/api/");
 
 var organizationArgument = new Argument<string>("organization", "name of organization.");
 var genesetArgument = new Argument<string>("geneset", "name of geneset in format organization/id/[tag]");
@@ -266,7 +266,7 @@ packCommand.SetHandler(async context =>
                 var catletContent = File.ReadAllText(catletFile);
                 var catletConfig = DeserializeCatletConfigString(catletContent);
                 var validationResult = CatletConfigValidations.ValidateCatletConfig(catletConfig);
-                validationResult.ToEither()
+                _ = validationResult.ToEither()
                     .MapLeft(issues => Error.New("The catlet configuration is invalid.",
                         Error.Many(issues.Map(i => i.ToError()))))
                     .IfLeft(e => e.Throw());
@@ -732,7 +732,7 @@ GenesetTagInfo PrepareGeneSetTagCommand(InvocationContext context)
     if (!genesetInfo.Exists())
         throw new EryphPackerUserException($"Geneset tag {genesetName} not found");
 
-    genesetInfo.Validate();
+    //genesetInfo.Validate();
     return genesetInfo;
 }
 

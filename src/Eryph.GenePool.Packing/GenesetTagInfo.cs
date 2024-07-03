@@ -1,6 +1,6 @@
 ﻿using Eryph.GenePool.Model;
 using System.Text.Json;
-using LanguageExt.Common;
+using Error = LanguageExt.Common.Error;
 
 namespace Eryph.GenePool.Packing;
 
@@ -167,8 +167,11 @@ public class GenesetTagInfo
     public void Validate()
     {
         EnsureLoaded();
-        _ = Validations.ValidateGenesetTagManifest(_manifestData).ToEither()
-            .MapLeft(ls => Error.New("The geneset tag manifest is invalid.", Error.Many(ls))).IfLeft(l => l.Throw());
+        _ = ManifestValidations.ValidateGenesetTagManifest(_manifestData).ToEither()
+                .MapLeft(issues => Error.New("The geneset tag manifest is invalid.",
+                    Error.Many(issues.Map(i => i.ToError()))))
+                .IfLeft(e => e.Throw());
+
     }
 
     private void RemoveExistingGene(string? hashName, string newHash)
