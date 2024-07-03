@@ -261,7 +261,7 @@ packCommand.SetHandler(async context =>
                 var fileLength = new FileInfo(catletFile).Length;
                 if (fileLength > GeneModelDefaults.MaxYamlSourceBytes)
                     throw new EryphPackerUserException(
-                        $"Catlet file is too large. Max size is {GeneModelDefaults.MaxYamlSourceBytes / 1024 / 1024} MB.");
+                        $"Catlet file is too large. Max size is {GeneModelDefaults.MaxYamlSourceBytes / 1024 / 1024} MiB.");
 
                 var catletContent = File.ReadAllText(catletFile);
                 var catletConfig = DeserializeCatletConfigString(catletContent);
@@ -293,7 +293,7 @@ packCommand.SetHandler(async context =>
                 {
                     if (fodderFile.Length > GeneModelDefaults.MaxYamlSourceBytes)
                         throw new EryphPackerUserException(
-                            $"Fodder file '{fodderFile.Name}' is too large. Max size is {GeneModelDefaults.MaxYamlSourceBytes / 1024 / 1024} MB.");
+                            $"Fodder file '{fodderFile.Name}' is too large. Max size is {GeneModelDefaults.MaxYamlSourceBytes / 1024 / 1024} MiB.");
 
                     var fodderContent = File.ReadAllText(fodderFile.FullName);
                     var fodderConfig = DeserializeFodderConfigString(fodderContent);
@@ -495,21 +495,21 @@ pushCommand.SetHandler(async context =>
                     var uploadedSize = progressData.TotalUploadedSize * 1d;
                     if (totalSize > 10 * 1024)
                     {
-                        totalSizeScale = "KB";
+                        totalSizeScale = "KiB";
                         totalSize /= 1024d;
                         uploadedSize /= 1024d;
                     }
 
                     if (totalSize > 10 * 1024)
                     {
-                        totalSizeScale = "MB";
+                        totalSizeScale = "MiB";
                         totalSize /= 1024d;
                         uploadedSize /= 1024d;
                     }
 
                     if (totalSize > 10 * 1024)
                     {
-                        totalSizeScale = "GB";
+                        totalSizeScale = "GiB";
                         totalSize /= 1024d;
                         uploadedSize /= 1024d;
                     }
