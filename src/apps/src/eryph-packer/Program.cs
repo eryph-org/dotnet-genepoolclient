@@ -435,6 +435,20 @@ pushCommand.SetHandler(async context =>
                     token
                 );
             }
+            else
+            {
+                statusContext.Status = $"Updating geneset {genesetInfo.GenesetName}";
+                statusContext.Refresh();
+                var geneset = await genesetClient.GetAsync(token);
+                await genesetClient.UpdateAsync(geneset?.Public ?? genesetInfo.ManifestData.Public,
+                    genesetInfo.ManifestData.ShortDescription,
+                    genesetInfo.ManifestData.Description,
+                    markdownContent,
+                    genesetInfo.ManifestData.Metadata,
+                    geneset?.ETag,
+                    token
+                );
+            }
 
             if (!genesetTagInfo.IsReference() && await tagClient.ExistsAsync())
                 throw new EryphPackerUserException($"Geneset tag {genesetTagInfo.GenesetTagName} already exists on genepool. Tags can only be updated when they are references.");
@@ -718,6 +732,7 @@ GenesetTagInfo PrepareGeneSetTagCommand(InvocationContext context)
     if (!genesetInfo.Exists())
         throw new EryphPackerUserException($"Geneset tag {genesetName} not found");
 
+    genesetInfo.Validate();
     return genesetInfo;
 }
 

@@ -1,10 +1,21 @@
 ﻿using System.Text.Json;
 using Eryph.GenePool.Model;
+using LanguageExt.Common;
 
 namespace Eryph.GenePool.Packing;
 
 public class GenesetInfo
 {
+    private static readonly JsonSerializerOptions JsonSerializerOptions;
+
+    static GenesetInfo()
+    {
+        JsonSerializerOptions = new JsonSerializerOptions(GeneModelDefaults.SerializerOptions)
+        {
+            WriteIndented = true
+        };
+    }
+
     public string GenesetName { get; }
     public string Organization { get; }
     public string Id { get; }
@@ -98,6 +109,8 @@ public class GenesetInfo
 
     public void JoinMetadata(Dictionary<string, string> newMetadata)
     {
+        _ = Validations.ValidateMetadata(newMetadata).ToEither().MapLeft(Error.Many).IfLeft(l => l.Throw());
+
         _manifestData.Metadata ??= new Dictionary<string, string>();
 
         _manifestData.Metadata = new[] { _manifestData.Metadata, newMetadata }
@@ -116,6 +129,8 @@ public class GenesetInfo
 
     public void SetShortDescription(string description)
     {
+        _ = Validations.ValidateGenesetShortDescription(description).ToEither().MapLeft(Error.Many).IfLeft(l => l.Throw());
+
         EnsureLoaded();
         _manifestData.ShortDescription = description;
         Write();
@@ -124,6 +139,8 @@ public class GenesetInfo
 
     public void SetMarkdown(string descriptionMarkdown)
     {
+        _ = Validations.ValidateMarkdownContentSize(descriptionMarkdown).ToEither().MapLeft(Error.Many).IfLeft(l => l.Throw());
+
         EnsureLoaded();
         _manifestData.DescriptionMarkdown = descriptionMarkdown;
         _manifestData.DescriptionMarkdownFile = null;
@@ -133,6 +150,7 @@ public class GenesetInfo
 
     public void SetMarkdownFile(string descriptionMarkdownFile)
     {
+        // size will be checked when reading the file
         EnsureLoaded();
         _manifestData.DescriptionMarkdown = null;
         _manifestData.DescriptionMarkdownFile = descriptionMarkdownFile;
@@ -142,7 +160,8 @@ public class GenesetInfo
 
     private void Write()
     {
-        var jsonString = JsonSerializer.Serialize(_manifestData, GeneModelDefaults.SerializerOptions);
+
+        var jsonString = JsonSerializer.Serialize(_manifestData, JsonSerializerOptions);
         File.WriteAllText(Path.Combine(GetGenesetPath(), "geneset.json"), jsonString);
     }
 
@@ -196,8 +215,8 @@ public class GenesetInfo
         {
             var markdownPath = Path.Combine(GetGenesetPath(), _manifestData.DescriptionMarkdownFile);
             var fileSize = new FileInfo(markdownPath).Length;
-            if(fileSize > GeneModelDefaults.MaxGenesetMarkdownBytes)
-                throw new InvalidOperationException($"Markdown file '{markdownPath}' is too large. Maximum allowed size is {GeneModelDefaults.MaxGenesetMarkdownBytes/1024/1204} MB.");
+            if (fileSize > GeneModelDefaults.MaxGenesetMarkdownBytes)
+                throw new InvalidOperationException($"Markdown file '{markdownPath}' is too large. Maximum allowed size is {GeneModelDefaults.MaxGenesetMarkdownBytes / 1024 / 1024} MB.");
 
             return File.ReadAllText(markdownPath);
         }
