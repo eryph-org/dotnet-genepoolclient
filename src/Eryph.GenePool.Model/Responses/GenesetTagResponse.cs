@@ -12,6 +12,7 @@ public record GenesetTagResponse
         string? ETag,
         GenesetTagManifestData? Manifest,
         IDictionary<string, string>? Metadata,
+        Uri? DownloadUri,
         Uri? GenesUri,
         GetGeneResponse[]? Genes,
         string? GenesContinuationToken,
@@ -24,6 +25,7 @@ public record GenesetTagResponse
         this.ETag = ETag;
         this.Manifest = Manifest;
         this.Metadata = Metadata;
+        this.DownloadUri = DownloadUri;
         this.GenesUri = GenesUri;
         this.Genes = Genes;
         this.GenesContinuationToken = GenesContinuationToken;
@@ -50,6 +52,9 @@ public record GenesetTagResponse
 
     [JsonPropertyName("metadata")]
     public IDictionary<string,string>? Metadata { get; init; }
+
+    [JsonPropertyName("download_uri")]
+    public Uri? DownloadUri { get; init; }
 
     [JsonPropertyName("genes_uri")]
     public Uri? GenesUri { get; init; }

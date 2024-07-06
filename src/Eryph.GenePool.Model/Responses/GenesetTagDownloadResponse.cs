@@ -10,6 +10,7 @@ public record GenesetTagDownloadResponse : GenesetTagResponse
         GenesetTagManifestData Manifest,
         GetGeneDownloadResponse[] Genes)
         : base(Name, Geneset, Tag, null, null, Manifest, null, 
+            null,
             null
             , null, null, null)
     {
