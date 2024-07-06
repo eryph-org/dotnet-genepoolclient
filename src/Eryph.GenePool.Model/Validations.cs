@@ -54,8 +54,8 @@ public static class Validations
         if (metadata == null)
             return Unit.Default;
 
-        if (metadata.Keys.Count > 10)
-            return BadRequestError("Metadata is too large. Only up to 10 keys are allowed.");
+        if (metadata.Keys.Count > GeneModelDefaults.MaxMetadataKeyCount)
+            return BadRequestError($"Metadata is too large. Only up to {GeneModelDefaults.MaxMetadataKeyCount} keys are allowed.");
 
         foreach (var kv in metadata)
         {
