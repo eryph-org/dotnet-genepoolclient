@@ -21,7 +21,7 @@ public class GenesetInfo
     public string Id { get; }
 
     private GenesetManifestData _manifestData = new();
-    private string _genesetPath = ".";
+    private readonly string _genesetPath;
 
     public GenesetManifestData ManifestData
     {

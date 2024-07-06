@@ -6,9 +6,12 @@ namespace Eryph.GenePool.Model.Responses;
 public record GenesetTagDownloadResponse : GenesetTagResponse
 {
     [JsonConstructor]
-    public GenesetTagDownloadResponse(string Name, GenesetResponse Geneset, string Tag, GenesetTagManifestData Manifest,
+    public GenesetTagDownloadResponse(string Name, GenesetResponse Geneset, string Tag, 
+        GenesetTagManifestData Manifest,
         GetGeneDownloadResponse[] Genes)
-        : base(Name, Geneset, Tag, Manifest)
+        : base(Name, Geneset, Tag, null, null, Manifest, null, 
+            null
+            , null, null, null)
     {
         this.Genes = Genes;
     }

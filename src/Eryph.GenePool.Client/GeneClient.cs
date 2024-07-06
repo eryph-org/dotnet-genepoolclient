@@ -467,7 +467,7 @@ public class GeneClient
         }
 
         var geneStatus = await GetAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("Gene not found.");
-        if (geneStatus.Available)
+        if (geneStatus.Available.GetValueOrDefault())
             return geneStatus;
 
         var uploaded = UploadMissingParts(geneStatus, path, uploadUris, cancellationToken, progress: progress);
@@ -486,7 +486,7 @@ public class GeneClient
         {
             await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
             geneStatus = await GetAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("Gene not found.");
-            if (geneStatus.Available)
+            if (geneStatus.Available.GetValueOrDefault())
                 return geneStatus;
 
             uploaded = UploadMissingParts(geneStatus, path, uploadUris, cancellationToken, progress: progress);
