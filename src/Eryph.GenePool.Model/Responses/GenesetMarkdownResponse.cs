@@ -2,11 +2,11 @@ using System.Text.Json.Serialization;
 
 namespace Eryph.GenePool.Model.Responses;
 
-public record GenesetMarkdownResponse
+public record GenesetDescriptionResponse
 {
 
     [JsonConstructor]
-    public GenesetMarkdownResponse(string Name, OrganizationRefResponse Org, string Geneset,
+    public GenesetDescriptionResponse(string Name, OrganizationRefResponse Org, string Geneset,
         string ShortDescription, string Description,
         string Markdown)
     {

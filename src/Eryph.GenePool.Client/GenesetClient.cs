@@ -123,6 +123,40 @@ public class GenesetClient
 
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
+    public virtual async Task<GenesetDescriptionResponse?> GetDescriptionAsync(CancellationToken cancellationToken = default)
+    {
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
+        scope.Start();
+        try
+        {
+            return (await RestClient.GetDescriptionAsync(_organization, _geneset, cancellationToken).ConfigureAwait(false)).Value;
+        }
+        catch (Exception e)
+        {
+            scope.Failed(e);
+            throw;
+        }
+    }
+
+    /// <summary> Get a projects. </summary>
+    /// <param name="cancellationToken"> The cancellation token to use. </param>
+    public virtual GenesetDescriptionResponse? GetDescription(CancellationToken cancellationToken = default)
+    {
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
+        scope.Start();
+        try
+        {
+            return RestClient.GetDescription(_organization, _geneset, cancellationToken).Value;
+        }
+        catch (Exception e)
+        {
+            scope.Failed(e);
+            throw;
+        }
+    }
+
+    /// <summary> Get a projects. </summary>
+    /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual bool Exists(CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");

@@ -34,7 +34,8 @@ internal class GenesetRestClient
         _version = version.ToString().ToLowerInvariant();
     }
 
-    internal HttpMessage CreateRequest(OrganizationName organization, GeneSetName geneset, RequestMethod method)
+    internal HttpMessage CreateRequest(OrganizationName organization, GeneSetName geneset, RequestMethod method,
+        string? path = null)
     {
         var message = _pipeline.CreateMessage();
         var request = message.Request;
@@ -46,6 +47,11 @@ internal class GenesetRestClient
         uri.AppendPath(organization.Value, false);
         uri.AppendPath("/", false);
         uri.AppendPath(geneset.Value, false);
+
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            uri.AppendPath($"/{path}/", false);
+        }
         request.Uri = uri;
         request.Headers.Add("Accept", "application/json, text/json");
         return message;
@@ -73,6 +79,20 @@ internal class GenesetRestClient
     {
         return _pipeline.SendRequest<SingleResultResponse<GenesetResponse>>(
             CreateRequest(organization, geneset, RequestMethod.Get), cancellationToken);
+
+    }
+
+    public async Task<SingleResultResponse<GenesetDescriptionResponse>> GetDescriptionAsync(OrganizationName organization, GeneSetName geneset, CancellationToken cancellationToken = default)
+    {
+        return await _pipeline.SendRequestAsync<SingleResultResponse<GenesetDescriptionResponse>>(
+            CreateRequest(organization, geneset, RequestMethod.Get, "description"), cancellationToken).ConfigureAwait(false);
+
+    }
+
+    public SingleResultResponse<GenesetDescriptionResponse> GetDescription(OrganizationName organization, GeneSetName geneset, CancellationToken cancellationToken = default)
+    {
+        return _pipeline.SendRequest<SingleResultResponse<GenesetDescriptionResponse>>(
+            CreateRequest(organization, geneset, RequestMethod.Get, "description"), cancellationToken);
 
     }
 
