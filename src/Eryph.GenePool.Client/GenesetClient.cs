@@ -215,7 +215,7 @@ public class GenesetClient
             {
                 Geneset = $"{_organization}/{_geneset}",
                 Public = isPublic,
-                ShortDescription = description,
+                ShortDescription = shortDescription,
                 Description = description,
                 DescriptionMarkdown = descriptionMarkdown,
                 Metadata = metadata
@@ -315,7 +315,7 @@ public class GenesetClient
             {
                 Geneset = $"{_organization}/{_geneset}",
                 Public = isPublic,
-                ShortDescription = description,
+                ShortDescription = shortDescription,
                 Description = description,
                 DescriptionMarkdown = descriptionMarkdown,
                 Metadata = metadata
