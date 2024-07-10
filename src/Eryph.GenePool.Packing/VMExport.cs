@@ -7,7 +7,7 @@ namespace Eryph.GenePool.Packing;
 
 public static class VMExport
 {
-    public static (CatletConfig Config, IEnumerable<PackableFile> Files) ExportToPackable(DirectoryInfo vmExport,
+    public static (CatletConfig? Config, IEnumerable<PackableFile> Files) ExportToPackable(DirectoryInfo vmExport,
         CancellationToken token)
     {
 

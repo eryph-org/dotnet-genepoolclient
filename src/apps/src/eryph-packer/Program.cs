@@ -194,7 +194,7 @@ infoGenesetTagCommand.SetHandler(context =>
 addVMCommand.SetHandler(async context =>
 {
     var token = context.GetCancellationToken();
-    var genesetInfo = PrepareGeneSetTagCommand(context);
+    var genesetTagInfo = PrepareGeneSetTagCommand(context);
     var vmExportDir = context.ParseResult.GetValueForArgument(vmExportArgument);
     var metadata = new Dictionary<string, string>();
     var metadataFile = new FileInfo(Path.Combine(vmExportDir.FullName, "metadata.json"));
@@ -205,7 +205,8 @@ addVMCommand.SetHandler(async context =>
             await using var metadataStream = metadataFile.OpenRead();
             var newMetadata = await JsonSerializer.DeserializeAsync<Dictionary<string, string>>(metadataStream, GeneModelDefaults.SerializerOptions) 
                               ?? metadata;
-            genesetInfo.JoinMetadata(newMetadata);
+            genesetTagInfo.JoinMetadata(newMetadata);
+
         }
         catch (Exception ex)
         {
@@ -213,17 +214,20 @@ addVMCommand.SetHandler(async context =>
         }
     }
 
-    var absolutePackPath = Path.GetFullPath(genesetInfo.GetGenesetPath());
+    var absolutePackPath = Path.GetFullPath(genesetTagInfo.GetGenesetPath());
     var (config, packableFiles) = VMExport.ExportToPackable(vmExportDir, token);
-    
-    var configYaml = CatletConfigYamlSerializer.Serialize(config);
-    var catletYamlFilePath = Path.Combine(absolutePackPath, "catlet.yaml");
-    await File.WriteAllTextAsync(catletYamlFilePath, configYaml);
+
+    if (config != null)
+    {
+        var configYaml = CatletConfigYamlSerializer.Serialize(config);
+        var catletYamlFilePath = Path.Combine(absolutePackPath, "catlet.yaml");
+        await File.WriteAllTextAsync(catletYamlFilePath, configYaml);
+    }
 
     ResetPackableFolder(absolutePackPath);
     WritePackableFiles(packableFiles, absolutePackPath);
     
-    WriteJson(genesetInfo.ToString());
+    WriteJson(genesetTagInfo.ToString());
 });
 
 // pack catlet command
