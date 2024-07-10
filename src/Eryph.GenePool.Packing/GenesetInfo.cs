@@ -22,6 +22,7 @@ public class GenesetInfo
 
     private GenesetManifestData _manifestData = new();
     private readonly string _genesetPath;
+    private bool _loaded;
 
     public GenesetManifestData ManifestData
     {
@@ -100,15 +101,26 @@ public class GenesetInfo
         }
     }
 
-    private void EnsureLoaded()
+    private void EnsureCreatedAndLoaded()
     {
         if (!Exists())
             Create();
-        ReadManifest();
+        EnsureLoaded();
+    }
+
+    private void EnsureLoaded()
+    {
+        if(_loaded)
+            return;
+
+        _loaded = true;
+        var path = GetGenesetPath();
+        _manifestData = ReadManifestFromPath(path, GenesetName);
     }
 
     public void JoinMetadata(Dictionary<string, string> newMetadata)
     {
+        EnsureCreatedAndLoaded();
         _ = Validations.ValidateMetadata(newMetadata).ToEither().MapLeft(Error.Many).IfLeft(l => l.Throw());
 
         _manifestData.Metadata ??= new Dictionary<string, string>();
@@ -117,11 +129,13 @@ public class GenesetInfo
             .SelectMany(dict => dict)
             .ToLookup(pair => pair.Key, pair => pair.Value)
             .ToDictionary(group => group.Key, group => group.First());
+
+        Write();
     }
 
     public void SetIsPublic(bool isPublic)
     {
-        EnsureLoaded();
+        EnsureCreatedAndLoaded();
         _manifestData.Public = isPublic;
         Write();
 
@@ -131,7 +145,7 @@ public class GenesetInfo
     {
         _ = Validations.ValidateGenesetShortDescription(description).ToEither().MapLeft(Error.Many).IfLeft(l => l.Throw());
 
-        EnsureLoaded();
+        EnsureCreatedAndLoaded();
         _manifestData.ShortDescription = description;
         Write();
 
@@ -141,7 +155,7 @@ public class GenesetInfo
     {
         _ = Validations.ValidateMarkdownContentSize(descriptionMarkdown).ToEither().MapLeft(Error.Many).IfLeft(l => l.Throw());
 
-        EnsureLoaded();
+        EnsureCreatedAndLoaded();
         _manifestData.DescriptionMarkdown = descriptionMarkdown;
         _manifestData.DescriptionMarkdownFile = null;
         Write();
@@ -151,7 +165,7 @@ public class GenesetInfo
     public void SetMarkdownFile(string descriptionMarkdownFile)
     {
         // size will be checked when reading the file
-        EnsureLoaded();
+        EnsureCreatedAndLoaded();
         _manifestData.DescriptionMarkdown = null;
         _manifestData.DescriptionMarkdownFile = descriptionMarkdownFile;
         Write();
@@ -165,11 +179,7 @@ public class GenesetInfo
         File.WriteAllText(Path.Combine(GetGenesetPath(), "geneset.json"), jsonString);
     }
 
-    private void ReadManifest()
-    {
-        var path = GetGenesetPath();
-        _manifestData = ReadManifestFromPath(path, GenesetName);
-    }
+
 
     private static GenesetManifestData ReadManifestFromPath(string path, string genesetName)
     {
@@ -210,7 +220,7 @@ public class GenesetInfo
 
     public string? GetMarkdownContent()
     {
-        ReadManifest();
+        EnsureLoaded();
         if (_manifestData.DescriptionMarkdownFile != null)
         {
             var markdownPath = Path.Combine(GetGenesetPath(), _manifestData.DescriptionMarkdownFile);

@@ -1,6 +1,8 @@
-﻿using Eryph.GenePool.Model;
+﻿using System.Diagnostics;
+using Eryph.GenePool.Model;
 using System.Text.Json;
 using Error = LanguageExt.Common.Error;
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Eryph.GenePool.Packing;
 
@@ -12,11 +14,9 @@ public class GenesetTagInfo
 
     public string Tag { get; }
 
-    private GenesetTagManifestData _manifestData = new()
-    {
-        Version = GeneModelDefaults.LatestGenesetTagManifestVersion.ToString()
-    };
+    private GenesetTagManifestData _manifestData;
     private readonly string _genesetPath;
+    private bool _loaded;
 
     public GenesetTagManifestData ManifestData
     {
@@ -40,7 +40,12 @@ public class GenesetTagInfo
         Id = packParts[1];
         Tag = packParts.Length == 3 ? packParts[2] : "latest";
         GenesetTagName = $"{Organization}/{Id}/{Tag}";
-        _manifestData.Geneset = GenesetTagName;
+
+        _manifestData = new GenesetTagManifestData
+            {
+            Version = GeneModelDefaults.LatestGenesetTagManifestVersion.ToString(),
+            Geneset = GenesetTagName
+        };
         _genesetPath = Path.GetFullPath(genesetPath);
     }
 
@@ -57,7 +62,7 @@ public class GenesetTagInfo
                         $"Directory already contains a manifest for geneset tag '{currentManifest.Geneset}' but you trying to access geneset tag '{GenesetTagName}'. Make sure that you are in the right folder.");
                 }
                 throw new InvalidOperationException(
-                    $"Directory already contains a invalid manifest.");
+                    "Directory already contains a invalid manifest.");
 
             }
 
@@ -98,15 +103,31 @@ public class GenesetTagInfo
         }
     }
 
-    private void EnsureLoaded()
+    private void EnsureCreatedAndLoaded()
     {
         if (!Exists())
             Create();
-        ReadManifest();
+
+        EnsureLoaded();
     }
+
+    private void EnsureLoaded()
+    {
+        if (_loaded)
+            return;
+
+        _loaded = true;
+        var path = GetGenesetPath();
+        _manifestData = ReadManifestFromPath(path, GenesetTagName);
+        _manifestData.Version ??= GeneModelDefaults.LatestGenesetTagManifestVersion.ToString();
+
+    }
+
 
     public void JoinMetadata(Dictionary<string, string> newMetadata)
     {
+        EnsureCreatedAndLoaded();
+
         _ = Validations.ValidateMetadata(newMetadata).ToEither().MapLeft(Error.Many).IfLeft(l => l.Throw());
 
         _manifestData.Metadata ??= new Dictionary<string, string>();
@@ -115,18 +136,19 @@ public class GenesetTagInfo
             .SelectMany(dict => dict)
             .ToLookup(pair => pair.Key, pair => pair.Value)
             .ToDictionary(group => group.Key, group => group.First());
+        Write();
     }
 
     public void SetReference(string referencedGeneSet)
     {
-        EnsureLoaded();
+        EnsureCreatedAndLoaded();
         _manifestData.Reference = referencedGeneSet;
         Write();
     }
 
     public void SetParent(string? parent)
     {
-        EnsureLoaded();
+        EnsureCreatedAndLoaded();
         _manifestData.Parent = parent;
         Write();
 
@@ -134,7 +156,7 @@ public class GenesetTagInfo
 
     public void AddGene(GeneType geneType, string name, string hash)
     {
-        EnsureLoaded();
+        EnsureCreatedAndLoaded();
 
         switch (geneType)
         {
@@ -193,14 +215,6 @@ public class GenesetTagInfo
         File.WriteAllText(Path.Combine(GetGenesetPath(), "geneset-tag.json"), jsonString);
     }
 
-    private void ReadManifest()
-    {
-        var path = GetGenesetPath();
-        _manifestData = ReadManifestFromPath(path, GenesetTagName);
-        _manifestData.Version ??= GeneModelDefaults.LatestGenesetTagManifestVersion.ToString();
-
-    }
-
     private static GenesetTagManifestData ReadManifestFromPath(string path, string genesetName)
     {
         try
@@ -232,7 +246,7 @@ public class GenesetTagInfo
 
     public IEnumerable<string> GetAllGeneNames()
     {
-        ReadManifest();
+        EnsureLoaded();
         if (!string.IsNullOrWhiteSpace(_manifestData.CatletGene))
             yield return SplitHash(_manifestData.CatletGene);
 
@@ -263,7 +277,7 @@ public class GenesetTagInfo
 
     public void PreparePacking()
     {
-        ReadManifest();
+        EnsureCreatedAndLoaded();
         _manifestData.CatletGene = null;
         _manifestData.VolumeGenes = null;
         _manifestData.FodderGenes = null;
