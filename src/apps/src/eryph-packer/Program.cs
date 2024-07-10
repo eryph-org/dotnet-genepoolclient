@@ -19,6 +19,7 @@ using Spectre.Console;
 using Spectre.Console.Json;
 using Spectre.Console.Rendering;
 using Command = System.CommandLine.Command;
+using Validations = Eryph.GenePool.Model.Validations;
 
 //AnsiConsole.Profile.Capabilities.Interactive = false;
 var genePoolUri = new Uri(Environment.GetEnvironmentVariable("ERYPH_PACKER_GENEPOOL_API") 
@@ -135,10 +136,18 @@ initGenesetCommand.SetHandler( context =>
     if (genesetInfo.Exists())
         throw new EryphPackerUserException("Geneset is already initialized");
 
+    if (!string.IsNullOrWhiteSpace(description))
+    {
+        _ = Validations.ValidateGenesetShortDescription(description).ToEither().MapLeft(Error.Many)
+            .IfLeft(l => l.Throw());
+    }
+
     genesetInfo.Create();
     if(File.Exists(Path.Combine(genesetInfo.GetGenesetPath(), "readme.md")))
     {
         genesetInfo.SetMarkdownFile("readme.md");
+        AnsiConsole.WriteLine("Using file readme.md as content for geneset markdown description.");
+
     }
 
     genesetInfo.SetIsPublic(isPublic);
