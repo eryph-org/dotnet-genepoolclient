@@ -14,6 +14,7 @@ public class GenePart : EryphName<GenePart>
         ValidOrThrow(Validations<GenePart>.ValidateCharacters(
                          value,
                          allowHyphens: false,
+                         allowUnderscores: false,
                          allowDots: false,
                          allowSpaces: false)
                      | Validations<GenePart>.ValidateLength(value, 40, 40));

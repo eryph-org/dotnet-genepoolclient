@@ -14,6 +14,7 @@ public class Gene : EryphName<Gene>
         ValidOrThrow(Validations<Gene>.ValidateCharacters(
                         value,
                         allowHyphens: false,
+                        allowUnderscores: false,
                         allowDots: false,
                         allowSpaces: false)
                     | Validations<Gene>.ValidateLength(value, 64, 64));
