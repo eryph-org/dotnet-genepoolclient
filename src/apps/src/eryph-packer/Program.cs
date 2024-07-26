@@ -757,6 +757,7 @@ GenesetInfo PrepareGeneSetCommand(InvocationContext context)
     if (!genesetInfo.Exists())
         throw new EryphPackerUserException($"Geneset {genesetName} not found");
 
+    genesetInfo.Validate();
     return genesetInfo;
 }
 

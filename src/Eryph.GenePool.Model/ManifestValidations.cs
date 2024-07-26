@@ -23,6 +23,16 @@ public class ManifestValidations
                | ValidateProperty(manifest, m=> m.Metadata, Validations.ValidateMetadata, path);
     }
 
+    public static Validation<ValidationIssue, Unit> ValidateGenesetManifest(GenesetManifestData manifest, string path = "")
+    {
+        return ValidateProperty(manifest, m => m.Version, Validations.ValidateVersionString, path)
+               | ValidateProperty(manifest, m => m.Geneset, GeneSetIdentifier.NewValidation, path, true)
+               | ValidateProperty(manifest, m => m.ShortDescription, Validations.ValidateGenesetShortDescription, path, true)
+               | ValidateProperty(manifest, m => m.Description, Validations.ValidateGenesetDescription, path, true)
+               | ValidateProperty(manifest, m => m.DescriptionMarkdown, Validations.ValidateMarkdownContentSize, path, true)
+               | ValidateProperty(manifest, m => m.Metadata, Validations.ValidateMetadata, path);
+    }
+
     public static Validation<ValidationIssue, Unit> ValidateGeneReference(GeneReferenceData reference, string path)
     {
         return
@@ -42,11 +52,12 @@ public class ManifestValidations
                 Validations.BadRequestError("hash type has to be sha1 or sha256")).ToValidation()
             from hashLength in
                 splitHash[0] == "sha1"
-                    ? guard(splitHash[1].Length == 40, Validations.BadRequestError("sha1 hash has to be 40 characters long"))
-                        .ToValidation()
-                    : guard(splitHash[1].Length == 64, Validations.BadRequestError("sha256 hash has to be 64 characters long"))
-                        .ToValidation()
+                    ? HashSha1.NewValidation(splitHash[1]).Map(_ => Unit.Default)
+                    : HashSha256.NewValidation(splitHash[1]).Map(_ => Unit.Default)
 
             select Unit.Default;
     }
+
+
+
 }

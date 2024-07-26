@@ -233,4 +233,14 @@ public class GenesetInfo
 
         return _manifestData.DescriptionMarkdown;
     }
+
+    public void Validate()
+    {
+        EnsureLoaded();
+        _ = ManifestValidations.ValidateGenesetManifest(_manifestData).ToEither()
+            .MapLeft(issues => Error.New("The geneset manifest is invalid.",
+                Error.Many(issues.Map(i => i.ToError()))))
+            .IfLeft(e => e.Throw());
+
+    }
 }
