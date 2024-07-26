@@ -19,18 +19,26 @@ using Spectre.Console;
 using Spectre.Console.Json;
 using Spectre.Console.Rendering;
 using Command = System.CommandLine.Command;
+using Validations = Eryph.GenePool.Model.Validations;
 
 //AnsiConsole.Profile.Capabilities.Interactive = false;
-var genePoolUri = new Uri("https://eryphgenepoolapistaging.azurewebsites.net/api/");
+var genePoolUri = new Uri(Environment.GetEnvironmentVariable("ERYPH_PACKER_GENEPOOL_API") 
+                          ?? "https://eryphgenepoolapistaging.azurewebsites.net/api/");
 
 var organizationArgument = new Argument<string>("organization", "name of organization.");
+organizationArgument.AddValidation(OrganizationName.NewValidation);
 var genesetArgument = new Argument<string>("geneset", "name of geneset in format organization/id/[tag]");
+genesetArgument.AddValidation(GeneSetIdentifier.NewValidation);
+
 var refArgument = new Argument<string>("referenced geneset", "name of referenced geneset in format organization/id/tag");
+refArgument.AddValidation(GeneSetIdentifier.NewValidation);
+
 var vmExportArgument = new Argument<DirectoryInfo>("vm export", "path to exported VM");
 var filePathArgument = new Argument<FileInfo>("file", "path to file");
 
 var isPublicOption = new System.CommandLine.Option<bool>("--public", "sets genesets visibility to public");
 var shortDescriptionOption = new System.CommandLine.Option<string>("--description", "sets genesets description");
+shortDescriptionOption.AddValidation(Validations.ValidateGenesetShortDescription);
 
 vmExportArgument.ExistingOnly();
 
@@ -138,6 +146,8 @@ initGenesetCommand.SetHandler( context =>
     if(File.Exists(Path.Combine(genesetInfo.GetGenesetPath(), "readme.md")))
     {
         genesetInfo.SetMarkdownFile("readme.md");
+        AnsiConsole.WriteLine("Using file readme.md as content for geneset markdown description.");
+
     }
 
     genesetInfo.SetIsPublic(isPublic);
@@ -193,7 +203,7 @@ infoGenesetTagCommand.SetHandler(context =>
 addVMCommand.SetHandler(async context =>
 {
     var token = context.GetCancellationToken();
-    var genesetInfo = PrepareGeneSetTagCommand(context);
+    var genesetTagInfo = PrepareGeneSetTagCommand(context);
     var vmExportDir = context.ParseResult.GetValueForArgument(vmExportArgument);
     var metadata = new Dictionary<string, string>();
     var metadataFile = new FileInfo(Path.Combine(vmExportDir.FullName, "metadata.json"));
@@ -204,7 +214,8 @@ addVMCommand.SetHandler(async context =>
             await using var metadataStream = metadataFile.OpenRead();
             var newMetadata = await JsonSerializer.DeserializeAsync<Dictionary<string, string>>(metadataStream, GeneModelDefaults.SerializerOptions) 
                               ?? metadata;
-            genesetInfo.JoinMetadata(newMetadata);
+            genesetTagInfo.JoinMetadata(newMetadata);
+
         }
         catch (Exception ex)
         {
@@ -212,17 +223,20 @@ addVMCommand.SetHandler(async context =>
         }
     }
 
-    var absolutePackPath = Path.GetFullPath(genesetInfo.GetGenesetPath());
+    var absolutePackPath = Path.GetFullPath(genesetTagInfo.GetGenesetPath());
     var (config, packableFiles) = VMExport.ExportToPackable(vmExportDir, token);
-    
-    var configYaml = CatletConfigYamlSerializer.Serialize(config);
-    var catletYamlFilePath = Path.Combine(absolutePackPath, "catlet.yaml");
-    await File.WriteAllTextAsync(catletYamlFilePath, configYaml);
+
+    if (config != null)
+    {
+        var configYaml = CatletConfigYamlSerializer.Serialize(config);
+        var catletYamlFilePath = Path.Combine(absolutePackPath, "catlet.yaml");
+        await File.WriteAllTextAsync(catletYamlFilePath, configYaml);
+    }
 
     ResetPackableFolder(absolutePackPath);
     WritePackableFiles(packableFiles, absolutePackPath);
     
-    WriteJson(genesetInfo.ToString());
+    WriteJson(genesetTagInfo.ToString());
 });
 
 // pack catlet command
@@ -257,17 +271,22 @@ packCommand.SetHandler(async context =>
             // pack catlet
             if (File.Exists(catletFile))
             {
+                var fileLength = new FileInfo(catletFile).Length;
+                if (fileLength > GeneModelDefaults.MaxYamlSourceBytes)
+                    throw new EryphPackerUserException(
+                        $"Catlet file is too large. Max size is {GeneModelDefaults.MaxYamlSourceBytes / 1024 / 1024} MiB.");
+
                 var catletContent = File.ReadAllText(catletFile);
                 var catletConfig = DeserializeCatletConfigString(catletContent);
                 var validationResult = CatletConfigValidations.ValidateCatletConfig(catletConfig);
-                validationResult.ToEither()
+                _ = validationResult.ToEither()
                     .MapLeft(issues => Error.New("The catlet configuration is invalid.",
                         Error.Many(issues.Map(i => i.ToError()))))
                     .IfLeft(e => e.Throw());
                 var configJson = ConfigModelJsonSerializer.Serialize(catletConfig);
                 await File.WriteAllTextAsync(Path.Combine(packFolder, "catlet.json"), configJson);
                 packableFiles.Add(new PackableFile(Path.Combine(packFolder, "catlet.json"),
-                    "catlet.json", GeneType.Catlet, "catlet", false));
+                    "catlet.json", GeneType.Catlet, "catlet", false, catletContent));
                 parent = catletConfig.Parent;
             }
 
@@ -285,6 +304,10 @@ packCommand.SetHandler(async context =>
                              return extension is ".yaml" or ".yml";
                          }))
                 {
+                    if (fodderFile.Length > GeneModelDefaults.MaxYamlSourceBytes)
+                        throw new EryphPackerUserException(
+                            $"Fodder file '{fodderFile.Name}' is too large. Max size is {GeneModelDefaults.MaxYamlSourceBytes / 1024 / 1024} MiB.");
+
                     var fodderContent = File.ReadAllText(fodderFile.FullName);
                     var fodderConfig = DeserializeFodderConfigString(fodderContent);
                     var validationResult = FodderGeneConfigValidations.ValidateFodderGeneConfig(fodderConfig);
@@ -300,7 +323,7 @@ packCommand.SetHandler(async context =>
                     var fodderJsonFile = Path.Combine(fodderPackFolder, $"{fodderConfig.Name}.json");
                     await File.WriteAllTextAsync(fodderJsonFile, fodderJson);
                     packableFiles.Add(new PackableFile(fodderJsonFile,
-                        $"{fodderConfig.Name}.json", GeneType.Fodder, fodderConfig.Name, false));
+                        $"{fodderConfig.Name}.json", GeneType.Fodder, fodderConfig.Name, false, fodderContent));
                 }
             }
 
@@ -419,7 +442,24 @@ pushCommand.SetHandler(async context =>
                 statusContext.Refresh();
                 await genesetClient.CreateAsync(genesetInfo.ManifestData.Public ?? false,
                     genesetInfo.ManifestData.ShortDescription,
-                    markdownContent, token
+                    genesetInfo.ManifestData.Description,
+                    markdownContent, 
+                    genesetInfo.ManifestData.Metadata,
+                    token
+                );
+            }
+            else
+            {
+                statusContext.Status = $"Updating geneset {genesetInfo.GenesetName}";
+                statusContext.Refresh();
+                var geneset = await genesetClient.GetAsync(token);
+                await genesetClient.UpdateAsync(geneset?.Public ?? genesetInfo.ManifestData.Public,
+                    genesetInfo.ManifestData.ShortDescription,
+                    genesetInfo.ManifestData.Description,
+                    markdownContent,
+                    genesetInfo.ManifestData.Metadata,
+                    geneset?.ETag,
+                    token
                 );
             }
 
@@ -468,21 +508,21 @@ pushCommand.SetHandler(async context =>
                     var uploadedSize = progressData.TotalUploadedSize * 1d;
                     if (totalSize > 10 * 1024)
                     {
-                        totalSizeScale = "KB";
+                        totalSizeScale = "KiB";
                         totalSize /= 1024d;
                         uploadedSize /= 1024d;
                     }
 
                     if (totalSize > 10 * 1024)
                     {
-                        totalSizeScale = "MB";
+                        totalSizeScale = "MiB";
                         totalSize /= 1024d;
                         uploadedSize /= 1024d;
                     }
 
                     if (totalSize > 10 * 1024)
                     {
-                        totalSizeScale = "GB";
+                        totalSizeScale = "GiB";
                         totalSize /= 1024d;
                         uploadedSize /= 1024d;
                     }
@@ -705,6 +745,7 @@ GenesetTagInfo PrepareGeneSetTagCommand(InvocationContext context)
     if (!genesetInfo.Exists())
         throw new EryphPackerUserException($"Geneset tag {genesetName} not found");
 
+    genesetInfo.Validate();
     return genesetInfo;
 }
 
@@ -716,6 +757,7 @@ GenesetInfo PrepareGeneSetCommand(InvocationContext context)
     if (!genesetInfo.Exists())
         throw new EryphPackerUserException($"Geneset {genesetName} not found");
 
+    genesetInfo.Validate();
     return genesetInfo;
 }
 

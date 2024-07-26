@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -122,6 +123,40 @@ public class GenesetClient
 
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
+    public virtual async Task<GenesetDescriptionResponse?> GetDescriptionAsync(CancellationToken cancellationToken = default)
+    {
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
+        scope.Start();
+        try
+        {
+            return (await RestClient.GetDescriptionAsync(_organization, _geneset, cancellationToken).ConfigureAwait(false)).Value;
+        }
+        catch (Exception e)
+        {
+            scope.Failed(e);
+            throw;
+        }
+    }
+
+    /// <summary> Get a projects. </summary>
+    /// <param name="cancellationToken"> The cancellation token to use. </param>
+    public virtual GenesetDescriptionResponse? GetDescription(CancellationToken cancellationToken = default)
+    {
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
+        scope.Start();
+        try
+        {
+            return RestClient.GetDescription(_organization, _geneset, cancellationToken).Value;
+        }
+        catch (Exception e)
+        {
+            scope.Failed(e);
+            throw;
+        }
+    }
+
+    /// <summary> Get a projects. </summary>
+    /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual bool Exists(CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
@@ -166,8 +201,10 @@ public class GenesetClient
     }
 
     public virtual async Task<GenesetRefResponse?> CreateAsync(bool isPublic,
+        string? shortDescription = default,
         string? description = default,
         string? descriptionMarkdown = default,
+        IDictionary<string,string>? metadata = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GenesetClient)}.{nameof(Create)}");
@@ -178,11 +215,80 @@ public class GenesetClient
             {
                 Geneset = $"{_organization}/{_geneset}",
                 Public = isPublic,
-                ShortDescription = description,
-                DescriptionMarkdown = descriptionMarkdown
+                ShortDescription = shortDescription,
+                Description = description,
+                DescriptionMarkdown = descriptionMarkdown,
+                Metadata = metadata
             };
 
             return (await RestClient.CreateAsync(body, cancellationToken).ConfigureAwait(false)).Value;
+        }
+        catch (Exception e)
+        {
+            scope.Failed(e);
+            throw;
+        }
+    }
+
+    public virtual async Task<GenesetRefResponse?> UpdateAsync(
+        bool? isPublic = default,
+        string? shortDescription = default,
+        string? description = default,
+        string? descriptionMarkdown = default,
+        IDictionary<string, string>? metadata = default,
+        string? etag = default,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(GenesetClient)}.{nameof(Update)}");
+        scope.Start();
+        try
+        {
+            var body = new GenesetUpdateRequestBody()
+            {
+
+                Public = isPublic,
+                ShortDescription = shortDescription,
+                Description = description,
+                DescriptionMarkdown = descriptionMarkdown,
+                Metadata = metadata,
+                ETag = etag
+            };
+
+            return (await RestClient.UpdateAsync(_organization, _geneset, body, cancellationToken).ConfigureAwait(false)).Value;
+        }
+        catch (Exception e)
+        {
+            scope.Failed(e);
+            throw;
+        }
+    }
+
+    /// <summary> Creates a new organization. </summary>
+    /// <param name="cancellationToken"> The cancellation token to use. </param>
+    /// <remarks> Creates a project. </remarks>
+    public virtual GenesetRefResponse? Update(
+        bool? isPublic = default,
+        string? shortDescription = default,
+        string? description = default,
+        string? descriptionMarkdown = default,
+        IDictionary<string, string>? metadata = default,
+        string? etag = default,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Update)}");
+        scope.Start();
+        try
+        {
+            var body = new GenesetUpdateRequestBody()
+            {
+                Public = isPublic,
+                ShortDescription = shortDescription,
+                Description = description,
+                DescriptionMarkdown = descriptionMarkdown,
+                Metadata = metadata,
+                ETag = etag
+            };
+            return RestClient.Update(_organization, _geneset, body, cancellationToken).Value;
         }
         catch (Exception e)
         {
@@ -195,8 +301,10 @@ public class GenesetClient
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <remarks> Creates a project. </remarks>
     public virtual GenesetRefResponse? Create(bool isPublic,
+        string? shortDescription = default,
         string? description = default,
         string? descriptionMarkdown = default,
+        IDictionary<string, string>? metadata = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Create)}");
@@ -207,8 +315,10 @@ public class GenesetClient
             {
                 Geneset = $"{_organization}/{_geneset}",
                 Public = isPublic,
-                ShortDescription = description,
-                DescriptionMarkdown = descriptionMarkdown
+                ShortDescription = shortDescription,
+                Description = description,
+                DescriptionMarkdown = descriptionMarkdown,
+                Metadata = metadata
             };
             return RestClient.Create(body, cancellationToken).Value;
         }

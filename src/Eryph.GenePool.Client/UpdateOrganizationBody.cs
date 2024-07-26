@@ -13,4 +13,6 @@ public record UpdateOrganizationBody
 
     public Guid? OrgId { get; set; }
 
+    public string? ETag { get; set; }
+
 }

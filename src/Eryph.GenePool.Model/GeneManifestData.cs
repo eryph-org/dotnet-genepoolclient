@@ -7,6 +7,9 @@ namespace Eryph.GenePool.Model;
 
 public class GeneManifestData
 {
+    [JsonPropertyName("version")]
+    public string? Version { get; set; }
+
     [JsonPropertyName("name")]
     public string? Name { get; set; }
 

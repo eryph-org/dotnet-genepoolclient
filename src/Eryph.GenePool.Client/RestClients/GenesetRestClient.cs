@@ -34,7 +34,8 @@ internal class GenesetRestClient
         _version = version.ToString().ToLowerInvariant();
     }
 
-    internal HttpMessage CreateRequest(OrganizationName organization, GeneSetName geneset, RequestMethod method)
+    internal HttpMessage CreateRequest(OrganizationName organization, GeneSetName geneset, RequestMethod method,
+        string? path = null)
     {
         var message = _pipeline.CreateMessage();
         var request = message.Request;
@@ -46,6 +47,11 @@ internal class GenesetRestClient
         uri.AppendPath(organization.Value, false);
         uri.AppendPath("/", false);
         uri.AppendPath(geneset.Value, false);
+
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            uri.AppendPath($"/{path}/", false);
+        }
         request.Uri = uri;
         request.Headers.Add("Accept", "application/json, text/json");
         return message;
@@ -73,6 +79,20 @@ internal class GenesetRestClient
     {
         return _pipeline.SendRequest<SingleResultResponse<GenesetResponse>>(
             CreateRequest(organization, geneset, RequestMethod.Get), cancellationToken);
+
+    }
+
+    public async Task<SingleResultResponse<GenesetDescriptionResponse>> GetDescriptionAsync(OrganizationName organization, GeneSetName geneset, CancellationToken cancellationToken = default)
+    {
+        return await _pipeline.SendRequestAsync<SingleResultResponse<GenesetDescriptionResponse>>(
+            CreateRequest(organization, geneset, RequestMethod.Get, "description"), cancellationToken).ConfigureAwait(false);
+
+    }
+
+    public SingleResultResponse<GenesetDescriptionResponse> GetDescription(OrganizationName organization, GeneSetName geneset, CancellationToken cancellationToken = default)
+    {
+        return _pipeline.SendRequest<SingleResultResponse<GenesetDescriptionResponse>>(
+            CreateRequest(organization, geneset, RequestMethod.Get, "description"), cancellationToken);
 
     }
 
@@ -118,4 +138,48 @@ internal class GenesetRestClient
 
     }
 
+
+    internal HttpMessage CreateUpdateRequest(OrganizationName organization, GeneSetName geneset, GenesetUpdateRequestBody body)
+    {
+        var message = _pipeline.CreateMessage();
+        var request = message.Request;
+        request.Method = RequestMethod.Put;
+        var uri = new RawRequestUriBuilder();
+        uri.Reset(_endpoint);
+        uri.AppendPath(_version, false);
+        uri.AppendPath("/genesets/", false);
+        uri.AppendPath(organization.Value, true);
+        uri.AppendPath("/", false);
+        uri.AppendPath(geneset.Value, true);
+        request.Uri = uri;
+        request.Headers.Add("Accept", "application/json, text/json");
+        request.Headers.Add("Content-Type", "application/json");
+        var content = new Utf8JsonRequestContent();
+        content.JsonWriter.WriteObjectValue(body);
+        request.Content = content;
+
+        return message;
+    }
+
+    /// <summary> Creates a organization. </summary>
+    /// <param name="body"> The UpdateProjectBody to use. </param>
+    /// <param name="cancellationToken"> The cancellation token to use. </param>
+    public async Task<SingleResultResponse<GenesetRefResponse>> UpdateAsync(OrganizationName organization, GeneSetName geneset, GenesetUpdateRequestBody body, CancellationToken cancellationToken = default)
+    {
+
+        using var message = CreateUpdateRequest(organization, geneset, body);
+        return await _pipeline.SendRequestAsync<SingleResultResponse<GenesetRefResponse>>(message, cancellationToken).ConfigureAwait(false);
+    }
+
+
+    /// <summary> Creates a organization. </summary>
+    /// <param name="body"> The CreateOrganizationBody to use. </param>
+    /// <param name="cancellationToken"> The cancellation token to use. </param>
+    public SingleResultResponse<GenesetRefResponse> Update(OrganizationName organization, GeneSetName geneset, GenesetUpdateRequestBody body, CancellationToken cancellationToken = default)
+    {
+
+        using var message = CreateUpdateRequest(organization, geneset, body);
+        return _pipeline.SendRequest<SingleResultResponse<GenesetRefResponse>>(message, cancellationToken);
+
+    }
 }

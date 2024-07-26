@@ -216,9 +216,10 @@ public class OrganizationClient
     /// Renames the organization.
     /// </summary>
     /// <param name="newName">new name of the organization.</param>
+    /// <param name="etag"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public virtual async Task<OrganizationRefResponse?> RenameAsync(string newName, CancellationToken cancellationToken = default)
+    public virtual async Task<OrganizationRefResponse?> RenameAsync(string newName, string? etag = null, CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Rename)}");
         scope.Start();
@@ -226,7 +227,8 @@ public class OrganizationClient
         {
             var body = new UpdateOrganizationBody()
             {
-                Name = newName
+                Name = newName,
+                ETag = etag
             };
             return (await RestClient.UpdateAsync(_organization, body, cancellationToken).ConfigureAwait(false)).Value;
         }
@@ -243,7 +245,7 @@ public class OrganizationClient
     /// <param name="newName">New name of the organization.</param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public virtual OrganizationRefResponse? Rename(string newName, CancellationToken cancellationToken = default)
+    public virtual OrganizationRefResponse? Rename(string newName, string? etag = null, CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Rename)}");
         scope.Start();
@@ -251,7 +253,8 @@ public class OrganizationClient
         {
             var body = new UpdateOrganizationBody()
             {
-                Name = newName
+                Name = newName,
+                ETag = etag
             };
             return RestClient.Update(_organization, body, cancellationToken).Value;
         }

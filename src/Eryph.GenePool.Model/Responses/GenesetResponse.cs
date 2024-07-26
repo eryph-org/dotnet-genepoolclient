@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace Eryph.GenePool.Model.Responses;
@@ -5,13 +7,30 @@ namespace Eryph.GenePool.Model.Responses;
 public record GenesetResponse
 {
     [JsonConstructor]
-    public GenesetResponse(string Name, OrganizationRefResponse Org, string Geneset, bool Public, GenesetToTagResponse[]? Tags)
+    public GenesetResponse(string Name, OrganizationRefResponse Org, string Geneset,
+        Uri? Uri,
+        string ETag,
+        bool Public, string ShortDescription, string? Description, bool HasMarkdown,
+        Uri DescriptionUri,
+        IDictionary<string, string> Metadata,
+        Uri TagsUri,
+        GenesetTagResponse[]? Tags, string? TagsContinuationToken, Uri? TagsContinuationUri)
     {
         this.Name = Name;
         this.Org = Org;
         this.Geneset = Geneset;
+        this.Uri = Uri;
         this.Public = Public;
+        this.ShortDescription = ShortDescription;
+        this.Description = Description;
+        this.HasMarkdown = HasMarkdown;
+        this.DescriptionUri = DescriptionUri;
+        this.Metadata = Metadata;
+        this.TagsUri = TagsUri;
         this.Tags = Tags;
+        this.TagsContinuationToken = TagsContinuationToken;
+        this.TagsContinuationUri = TagsContinuationUri;
+        this.ETag = ETag;
     }
 
     [JsonPropertyName("name")] public string Name { get; init; }
@@ -20,15 +39,27 @@ public record GenesetResponse
     [JsonPropertyName("geneset")]
     public string Geneset { get; init; }
 
-    [JsonPropertyName("public")] public bool Public { get; init; }
-    [JsonPropertyName("tags")] public GenesetToTagResponse[]? Tags { get; init; }
+    [JsonPropertyName("uri")]
+    public Uri? Uri { get; init; }
 
-    public void Deconstruct(out string name, out OrganizationRefResponse org, out string geneset, out bool @public, out GenesetToTagResponse[]? tags)
-    {
-        name = Name;
-        org = Org;
-        geneset = Geneset;
-        @public = Public;
-        tags = Tags;
-    }
+    [JsonPropertyName("etag")] public string? ETag { get; init; }
+
+
+    [JsonPropertyName("public")] public bool Public { get; init; }
+
+    [JsonPropertyName("short_description")] public string ShortDescription { get; init; }
+    [JsonPropertyName("description_uri")] public Uri DescriptionUri { get; init; }
+
+    [JsonPropertyName("description")] public string? Description { get; init; }
+
+    [JsonPropertyName("has_markdown_description")] public bool HasMarkdown { get; init; }
+
+    [JsonPropertyName("metadata")] public IDictionary<string, string> Metadata { get; init; }
+
+    [JsonPropertyName("tags_uri")] public Uri? TagsUri { get; init; }
+
+    [JsonPropertyName("tags")] public GenesetTagResponse[]? Tags { get; init; }
+    [JsonPropertyName("tags_continuation_token")] public string? TagsContinuationToken { get; init; }
+    [JsonPropertyName("tags_continuation_uri")] public Uri? TagsContinuationUri { get; init; }
+
 }

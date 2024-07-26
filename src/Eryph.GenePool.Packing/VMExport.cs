@@ -7,7 +7,7 @@ namespace Eryph.GenePool.Packing;
 
 public static class VMExport
 {
-    public static (CatletConfig Config, IEnumerable<PackableFile> Files) ExportToPackable(DirectoryInfo vmExport,
+    public static (CatletConfig? Config, IEnumerable<PackableFile> Files) ExportToPackable(DirectoryInfo vmExport,
         CancellationToken token)
     {
 
@@ -21,7 +21,7 @@ public static class VMExport
             token.ThrowIfCancellationRequested();
 
             files.Add(new PackableFile(vhdFile.FullName, vhdFile.Name,
-                GeneType.Volume, Path.GetFileNameWithoutExtension(vhdFile.Name), true));
+                GeneType.Volume, Path.GetFileNameWithoutExtension(vhdFile.Name), true, null));
         }
         
         return (vmPlan, files);

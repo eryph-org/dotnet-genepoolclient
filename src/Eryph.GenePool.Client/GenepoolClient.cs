@@ -240,7 +240,7 @@ namespace Eryph.GenePool.Client
             var geneClient = new GeneClient(_clientConfiguration, Uri, identifier, gene);
 
             return await geneClient.UploadGeneFromPathAsync(
-                path, manifest, cancellationToken, timeout, progress).ConfigureAwait(false);
+                path, new Gene(manifestHash), manifest, cancellationToken, timeout, progress).ConfigureAwait(false);
         }
 
         private static string GetHashString(byte[] bytes)

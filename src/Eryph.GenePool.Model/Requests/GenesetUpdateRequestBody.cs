@@ -3,10 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace Eryph.GenePool.Model.Requests;
 
-public class NewGenesetRequestBody
+public class GenesetUpdateRequestBody
 {
-    [JsonPropertyName("geneset")]
-    public string? Geneset { get; set; }
 
     [JsonPropertyName("short_description")]
 
@@ -26,4 +24,8 @@ public class NewGenesetRequestBody
 
     [JsonPropertyName("metadata")]
     public IDictionary<string, string>? Metadata { get; set; }
+
+    [JsonPropertyName("etag")]
+    public string? ETag { get; set; }
+
 }
