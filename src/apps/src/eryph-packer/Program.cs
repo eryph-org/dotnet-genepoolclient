@@ -26,13 +26,19 @@ var genePoolUri = new Uri(Environment.GetEnvironmentVariable("ERYPH_PACKER_GENEP
                           ?? "https://eryphgenepoolapistaging.azurewebsites.net/api/");
 
 var organizationArgument = new Argument<string>("organization", "name of organization.");
+organizationArgument.AddValidation(OrganizationName.NewValidation);
 var genesetArgument = new Argument<string>("geneset", "name of geneset in format organization/id/[tag]");
+genesetArgument.AddValidation(GeneSetIdentifier.NewValidation);
+
 var refArgument = new Argument<string>("referenced geneset", "name of referenced geneset in format organization/id/tag");
+refArgument.AddValidation(GeneSetIdentifier.NewValidation);
+
 var vmExportArgument = new Argument<DirectoryInfo>("vm export", "path to exported VM");
 var filePathArgument = new Argument<FileInfo>("file", "path to file");
 
 var isPublicOption = new System.CommandLine.Option<bool>("--public", "sets genesets visibility to public");
 var shortDescriptionOption = new System.CommandLine.Option<string>("--description", "sets genesets description");
+shortDescriptionOption.AddValidation(Validations.ValidateGenesetShortDescription);
 
 vmExportArgument.ExistingOnly();
 
@@ -135,12 +141,6 @@ initGenesetCommand.SetHandler( context =>
     var genesetInfo = new GenesetInfo(genesetName, ".");
     if (genesetInfo.Exists())
         throw new EryphPackerUserException("Geneset is already initialized");
-
-    if (!string.IsNullOrWhiteSpace(description))
-    {
-        _ = Validations.ValidateGenesetShortDescription(description).ToEither().MapLeft(Error.Many)
-            .IfLeft(l => l.Throw());
-    }
 
     genesetInfo.Create();
     if(File.Exists(Path.Combine(genesetInfo.GetGenesetPath(), "readme.md")))
