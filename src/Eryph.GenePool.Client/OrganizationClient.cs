@@ -265,12 +265,25 @@ public class OrganizationClient
     /// <summary>
     /// Creates a new api key for the organization.
     /// </summary>
-    /// <param name="name">human readable name of the api key</param>
+    /// <param name="name">human-readable name of the api key</param>
+    /// <param name="permissions">permissions to include into the api key</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public virtual Task<ApiKeySecretResponse?> CreateApiKeyAsync(
+        string name,
+        string[] permissions,
+        CancellationToken cancellationToken = default) =>
+        CreateApiKeyAsync(ApiKeyName.New(name), permissions, cancellationToken);
+
+    /// <summary>
+    /// Creates a new api key for the organization.
+    /// </summary>
+    /// <param name="name">human-readable name of the api key</param>
     /// <param name="permissions">permissions to include into the api key</param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public virtual async Task<ApiKeySecretResponse?> CreateApiKeyAsync(
-        string name,
+        ApiKeyName name,
         string[] permissions,
         CancellationToken cancellationToken = default)
     {
@@ -280,7 +293,7 @@ public class OrganizationClient
         {
             var body = new CreateApiKeyBody
             {
-                Name = name,
+                Name = name.Value,
                 Permissions = permissions
             };
 
@@ -302,12 +315,25 @@ public class OrganizationClient
     /// <summary>
     /// Creates a new api key for the organization.
     /// </summary>
-    /// <param name="name">human readable name of the api key</param>
+    /// <param name="name">human-readable name of the api key</param>
     /// <param name="permissions">permissions to include into the api key</param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public virtual ApiKeySecretResponse? CreateApiKey(
         string name,
+        string[] permissions,
+        CancellationToken cancellationToken = default) =>
+        CreateApiKey(ApiKeyName.New(name), permissions, cancellationToken);
+
+    /// <summary>
+    /// Creates a new api key for the organization.
+    /// </summary>
+    /// <param name="name">human.readable name of the api key</param>
+    /// <param name="permissions">permissions to include into the api key</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public virtual ApiKeySecretResponse? CreateApiKey(
+        ApiKeyName name,
         string[] permissions,
         CancellationToken cancellationToken = default)
     {
@@ -317,7 +343,7 @@ public class OrganizationClient
         {
             var body = new CreateApiKeyBody
             {
-                Name = name,
+                Name = name.Value,
                 Permissions = permissions
             };
 

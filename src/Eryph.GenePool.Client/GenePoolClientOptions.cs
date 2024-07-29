@@ -48,12 +48,15 @@ public class GenePoolClientOptions : ClientOptions
     }
 
     public ServiceVersion Version { get; }
+    
     public Uri Endpoint { get; }
 
     public string[] Scopes { get; set; } = new[]
     {
         ScopeNames.OrgReadWrite, ScopeNames.GenesetReadWrite
     };
+
+    public string? HardwareId { get; set; }
 
     public GenePoolClientOptions(ServiceVersion version = LatestVersion, string endpoint = DefaultEndpoint)
     {
@@ -103,6 +106,9 @@ public class GenePoolClientOptions : ClientOptions
             //ResponseClassifier = classifier,
             //RequestFailedDetailsParser = new StorageRequestFailedDetailsParser()
         };
+
+        if (HardwareId is not null)
+            pipelineOptions.PerCallPolicies.Add(new HardwareIdHeaderPolicy(HardwareId));
 
         if(authentication != null)
             pipelineOptions.PerRetryPolicies.Add(authentication); // authentication needs to be the last of the perRetry client policies passed in to Build
