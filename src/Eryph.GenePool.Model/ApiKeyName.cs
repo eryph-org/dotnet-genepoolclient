@@ -9,7 +9,7 @@ namespace Eryph.GenePool.Model;
 
 public class ApiKeyName : ValidatingNewType<ApiKeyName, string, OrdStringOrdinalIgnoreCase>
 {
-    public ApiKeyName(string value) : base(value)
+    public ApiKeyName(string value) : base(Normalize(value)!)
     {
         ValidOrThrow(Validations<ApiKeyName>.ValidateCharacters(
                          value,
@@ -19,4 +19,6 @@ public class ApiKeyName : ValidatingNewType<ApiKeyName, string, OrdStringOrdinal
                          allowSpaces: false)
                      | Validations<ApiKeyName>.ValidateLength(value, 1, 50));
     }
+
+    private static string? Normalize(string value) => value?.ToLowerInvariant();
 }
