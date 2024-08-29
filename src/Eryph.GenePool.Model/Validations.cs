@@ -61,7 +61,7 @@ public static class Validations
         {
             if (kv.Key.Length > GeneModelDefaults.MaxMetadataKeyLength)
                 return BadRequestError(
-                    $"Metadata key '{kv.Key}' is too long. Max length of keys is {GeneModelDefaults.MaxMetadataKeyLength}.");
+                    $"Metadata key '{kv.Key[..10]}..' is too long. Max length of keys is {GeneModelDefaults.MaxMetadataKeyLength}.");
 
             if (kv.Value.Length > GeneModelDefaults.MaxMetadataValueLength)
                 return BadRequestError(
@@ -89,13 +89,14 @@ public static class Validations
 
         if (description.Length > 90)
             return BadRequestError(
-                $"Short description is too long (max. 90 chars allowed).");
+                "Short description is too long (max. 90 chars allowed).");
         return Some(description);
     }
 
     public static Validation<Error, Unit> ValidateVersionString(string? version)
-        => guard(notEmpty(version) &&
-                 Version.TryParse(version ?? "", out _),
+        => guard(version is not null && 
+                 notEmpty(version) && 
+                 Version.TryParse(version, out _),
             BadRequestError($"'{version}' is not a valid version")).ToValidation();
 
     private static Error StatusCodeToError(HttpStatusCode statusCode, string? message = null) =>

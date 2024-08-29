@@ -119,7 +119,7 @@ public class GenesetTagInfo
         _loaded = true;
         var path = GetGenesetPath();
         _manifestData = ReadManifestFromPath(path, GenesetTagName);
-        _manifestData.Version ??= GeneModelDefaults.LatestGenesetTagManifestVersion.ToString();
+        _manifestData.Version ??= "1.0";
 
     }
 

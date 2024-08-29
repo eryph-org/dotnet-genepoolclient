@@ -145,10 +145,16 @@ initGenesetCommand.SetHandler( context =>
     genesetInfo.Create();
     if(File.Exists(Path.Combine(genesetInfo.GetGenesetPath(), "readme.md")))
     {
-        genesetInfo.SetMarkdownFile("readme.md");
         AnsiConsole.WriteLine("Using file readme.md as content for geneset markdown description.");
+    }
+    else
+    {
+        File.WriteAllText(
+            Path.Combine(genesetInfo.GetGenesetPath(), "readme.md"), $"# geneset {genesetInfo.GenesetName}\n");
+        AnsiConsole.WriteLine("Generated skeleton readme.md for geneset.");
 
     }
+    genesetInfo.SetMarkdownFile("readme.md");
 
     genesetInfo.SetIsPublic(isPublic);
 
