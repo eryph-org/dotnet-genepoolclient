@@ -10,6 +10,7 @@ public class HashSha256 : EryphName<HashSha256>
                          value,
                          allowDots: false,
                          allowHyphens: false,
+                         allowUnderscores: false,
                          allowSpaces: false)
                      | Validations<GeneName>.ValidateLength(value, 64, 64));
     }
