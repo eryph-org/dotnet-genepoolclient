@@ -28,8 +28,8 @@ public class ManifestValidations
         return ValidateProperty(manifest, m => m.Version, Validations.ValidateVersionString, path)
                | ValidateProperty(manifest, m => m.Geneset, GeneSetIdentifier.NewValidation, path, true)
                | ValidateProperty(manifest, m => m.ShortDescription, Validations.ValidateGenesetShortDescription, path, true)
-               | ValidateProperty(manifest, m => m.Description, Validations.ValidateGenesetDescription, path, true)
-               | ValidateProperty(manifest, m => m.DescriptionMarkdown, Validations.ValidateMarkdownContentSize, path, true)
+               | ValidateProperty(manifest, m => m.Description, Validations.ValidateGenesetDescription, path)
+               | ValidateProperty(manifest, m => m.DescriptionMarkdown, Validations.ValidateMarkdownContentSize, path)
                | ValidateProperty(manifest, m => m.Metadata, Validations.ValidateMetadata, path);
     }
 

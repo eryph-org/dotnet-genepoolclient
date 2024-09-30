@@ -5,6 +5,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Threading;
+using Azure;
 using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.Responses;
@@ -57,25 +58,25 @@ namespace Eryph.GenePool.Client.RestClients
             return message;
         }
 
-        public async Task<NoResultResponse> DeleteAsync(GeneSetIdentifier geneset, Gene gene, CancellationToken cancellationToken = default)
+        public async Task<Response<NoResultResponse>> DeleteAsync(GeneSetIdentifier geneset, Gene gene, CancellationToken cancellationToken = default)
         {
             return await _pipeline.SendRequestAsync<NoResultResponse>(CreateRequest(geneset, gene, RequestMethod.Delete), cancellationToken).ConfigureAwait(false);
         }
 
-        public NoResultResponse Delete(GeneSetIdentifier geneset, Gene gene, CancellationToken cancellationToken = default)
+        public Response<NoResultResponse> Delete(GeneSetIdentifier geneset, Gene gene, CancellationToken cancellationToken = default)
         {
 
             return _pipeline.SendRequest<NoResultResponse>(CreateRequest(geneset, gene, RequestMethod.Delete),
                 cancellationToken);
         }
 
-        public async Task<SingleResultResponse<GetGeneResponse>> GetAsync(GeneSetIdentifier geneset, Gene gene, CancellationToken cancellationToken = default)
+        public async Task<Response<SingleResultResponse<GetGeneResponse>>> GetAsync(GeneSetIdentifier geneset, Gene gene, CancellationToken cancellationToken = default)
         {
             return await _pipeline.SendRequestAsync<SingleResultResponse<GetGeneResponse>>(CreateRequest(geneset, gene, RequestMethod.Get), cancellationToken).ConfigureAwait(false);
 
         }
 
-        public SingleResultResponse<GetGeneResponse> Get(GeneSetIdentifier geneset, Gene gene, CancellationToken cancellationToken = default)
+        public Response<SingleResultResponse<GetGeneResponse>> Get(GeneSetIdentifier geneset, Gene gene, CancellationToken cancellationToken = default)
         {
             return _pipeline.SendRequest<SingleResultResponse<GetGeneResponse>>(
                 CreateRequest(geneset, gene, RequestMethod.Get), cancellationToken);
@@ -90,28 +91,28 @@ namespace Eryph.GenePool.Client.RestClients
             return message;
         }
 
-        public async Task<SingleResultResponse<GenePartUploadUri>> GetGenePartUploadUriAsync(GeneSetIdentifier geneset, Gene gene, GenePart part, CancellationToken cancellationToken = default)
+        public async Task<Response<SingleResultResponse<GenePartUploadUri>>> GetGenePartUploadUriAsync(GeneSetIdentifier geneset, Gene gene, GenePart part, CancellationToken cancellationToken = default)
         {
             return await _pipeline.SendRequestAsync<SingleResultResponse<GenePartUploadUri>>(
                 CreateUploadUriRequest(geneset, gene, part), cancellationToken).ConfigureAwait(false);
 
         }
 
-        public SingleResultResponse<GenePartUploadUri> GetGenePartUploadUri(GeneSetIdentifier geneset, Gene gene, GenePart part, CancellationToken cancellationToken = default)
+        public Response<SingleResultResponse<GenePartUploadUri>> GetGenePartUploadUri(GeneSetIdentifier geneset, Gene gene, GenePart part, CancellationToken cancellationToken = default)
         {
             return _pipeline.SendRequest<SingleResultResponse<GenePartUploadUri>>(
                 CreateUploadUriRequest(geneset, gene, part), cancellationToken);
 
         }
         
-        public async Task<NoResultResponse> ConfirmGenePartUploadAsync(GeneSetIdentifier geneset, Gene gene, GenePart part, CancellationToken cancellationToken = default)
+        public async Task<Response<NoResultResponse>> ConfirmGenePartUploadAsync(GeneSetIdentifier geneset, Gene gene, GenePart part, CancellationToken cancellationToken = default)
         {
             return await _pipeline.SendRequestAsync<NoResultResponse>(
                 CreateConfirmUploadRequest(geneset, gene, part), cancellationToken).ConfigureAwait(false);
 
         }
 
-        public NoResultResponse ConfirmGenePartUpload(GeneSetIdentifier geneset, Gene gene, GenePart part, CancellationToken cancellationToken = default)
+        public Response<NoResultResponse> ConfirmGenePartUpload(GeneSetIdentifier geneset, Gene gene, GenePart part, CancellationToken cancellationToken = default)
         {
             return _pipeline.SendRequest<NoResultResponse>(
                 CreateConfirmUploadRequest(geneset, gene, part), cancellationToken);
@@ -151,7 +152,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <summary> Creates a organization. </summary>
         /// <param name="body"> The UpdateProjectBody to use. </param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
-        public async Task<SingleResultResponse<GeneUploadResponse>> CreateAsync(NewGeneRequestBody? body = null, CancellationToken cancellationToken = default)
+        public async Task<Response<SingleResultResponse<GeneUploadResponse>>> CreateAsync(NewGeneRequestBody? body = null, CancellationToken cancellationToken = default)
         {
 
             using var message = CreateNewGeneRequest(body);
@@ -162,13 +163,14 @@ namespace Eryph.GenePool.Client.RestClients
         /// <summary> Creates a organization. </summary>
         /// <param name="body"> The CreateOrganizationBody to use. </param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
-        public SingleResultResponse<GeneUploadResponse> Create(NewGeneRequestBody? body = null, CancellationToken cancellationToken = default)
+        public Response<SingleResultResponse<GeneUploadResponse>> Create(NewGeneRequestBody? body = null, CancellationToken cancellationToken = default)
         {
 
             using var message = CreateNewGeneRequest(body);
             return _pipeline.SendRequest<SingleResultResponse<GeneUploadResponse>>(message, cancellationToken);
 
         }
+
 
     }
 }

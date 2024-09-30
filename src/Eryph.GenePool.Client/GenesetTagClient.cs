@@ -85,7 +85,7 @@ public class GenesetTagClient
         scope.Start();
         try
         {
-            return (await RestClient.GetAsync(_identifier, cancellationToken).ConfigureAwait(false)).Value;
+            return (await RestClient.GetAsync(_identifier, cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -102,7 +102,7 @@ public class GenesetTagClient
         scope.Start();
         try
         {
-            return RestClient.Get(_identifier, cancellationToken).Value;
+            return RestClient.Get(_identifier, cancellationToken).Value.Value;
         }
         catch (Exception e)
         {
@@ -117,7 +117,7 @@ public class GenesetTagClient
         scope.Start();
         try
         {
-            return (await RestClient.GetForDownloadAsync(_identifier, cancellationToken).ConfigureAwait(false)).Value;
+            return (await RestClient.GetForDownloadAsync(_identifier, cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -134,7 +134,7 @@ public class GenesetTagClient
         scope.Start();
         try
         {
-            return RestClient.GetForDownload(_identifier, cancellationToken).Value;
+            return RestClient.GetForDownload(_identifier, cancellationToken).Value.Value;
         }
         catch (Exception e)
         {
@@ -197,7 +197,7 @@ public class GenesetTagClient
         try
         {
 
-            return (await RestClient.CreateAsync(manifest, cancellationToken).ConfigureAwait(false)).Value;
+            return (await RestClient.CreateAsync(manifest, cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -217,7 +217,7 @@ public class GenesetTagClient
         try
         {
 
-            return RestClient.Create(manifest, cancellationToken).Value;
+            return RestClient.Create(manifest, cancellationToken).Value.Value;
         }
         catch (Exception e)
         {

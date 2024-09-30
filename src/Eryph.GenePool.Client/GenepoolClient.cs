@@ -108,6 +108,13 @@ namespace Eryph.GenePool.Client
         }
 
         /// <summary>
+        /// Create a new <see cref="UserClient"/>.
+        /// </summary>
+        /// <returns><see cref="UserClient"/></returns>
+        public virtual UserClient GetUserClient() =>
+            new(_clientConfiguration, Uri);
+
+        /// <summary>
         /// Create a new <see cref="OrganizationClient"/> for the given organization.
         /// </summary>
         /// <param name="organization">The organization as string.</param>
@@ -118,9 +125,25 @@ namespace Eryph.GenePool.Client
         /// <summary>
         /// Create a new <see cref="OrganizationClient"/> for the given organization.
         /// </summary>
-        /// <param name="organization">The organization as <see cref="Organization"/>.</param>
+        /// <param name="organization">The organization as <see cref="OrganizationName"/>.</param>
         /// <returns><see cref="OrganizationClient"/></returns>
         public virtual OrganizationClient GetOrganizationClient(OrganizationName organization) =>
+            new(_clientConfiguration, Uri, organization);
+
+        /// <summary>
+        /// Create a new <see cref="RecycleBinClient"/> for the given organization.
+        /// </summary>
+        /// <param name="organization">The organization as string.</param>
+        /// <returns><see cref="OrganizationClient"/></returns>
+        public virtual RecycleBinClient GetRecycleBinClient(string organization) =>
+            GetRecycleBinClient(OrganizationName.New(organization));
+
+        /// <summary>
+        /// Create a new <see cref="RecycleBinClient"/> for the given organization.
+        /// </summary>
+        /// <param name="organization">The organization as <see cref="OrganizationName"/>.</param>
+        /// <returns><see cref="OrganizationClient"/></returns>
+        public virtual RecycleBinClient GetRecycleBinClient(OrganizationName organization) =>
             new(_clientConfiguration, Uri, organization);
 
         /// <summary>
@@ -135,7 +158,7 @@ namespace Eryph.GenePool.Client
         /// <summary>
         /// Create a new <see cref="ApiKeyClient"/> for the given organization and api key.
         /// </summary>
-        /// <param name="organization">The organization as <see cref="Organization"/></param>
+        /// <param name="organization">The organization as <see cref="OrganizationName"/></param>
         /// <param name="keyId">The id of the api key as <see cref="ApiKeyId"/></param>
         /// <returns><see cref="ApiKeyClient"/></returns>
         public virtual ApiKeyClient GetApiKeyClient(OrganizationName organization, ApiKeyId keyId) =>
@@ -171,8 +194,8 @@ namespace Eryph.GenePool.Client
         /// <summary>
         /// Create a new <see cref="GenesetClient"/> for the given organization and geneset.
         /// </summary>
-        /// <param name="organization">The organization as <see cref="Organization"/>.</param>
-        /// <param name="geneset">The geneset name as <see cref="Geneset"/></param>
+        /// <param name="organization">The organization as <see cref="OrganizationName"/>.</param>
+        /// <param name="geneset">The geneset name as <see cref="GeneSetName"/></param>
         /// <returns><see cref="GenesetClient"/></returns>
         public virtual GenesetClient GetGenesetClient(OrganizationName organization, GeneSetName geneset) =>
             new(_clientConfiguration, Uri, organization, geneset);
@@ -204,7 +227,7 @@ namespace Eryph.GenePool.Client
         /// <summary>
         /// Creates a new gene from a path and uploads it to the gene pool.
         /// </summary>
-        /// <param name="geneset">Geneset for the new gene</param>
+        /// <param name="genesetTag">Geneset tag for the new gene</param>
         /// <param name="path">Path of gene</param>
         /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
         /// <param name="timeout">Timeout for waiting tasks while checking if gene is processed on backend.</param>
@@ -212,7 +235,7 @@ namespace Eryph.GenePool.Client
         /// <returns></returns>
         /// <exception cref="FileNotFoundException"></exception>
         /// <exception cref="InvalidDataException"></exception>
-        public virtual async Task<GetGeneResponse> CreateGeneFromPathAsync(string geneset, string path,
+        public virtual async Task<GetGeneResponse> CreateGeneFromPathAsync(string genesetTag, string path,
             CancellationToken cancellationToken = default, TimeSpan timeout = default,
             IProgress<GeneUploadProgress>? progress = default)
         {
@@ -235,7 +258,7 @@ namespace Eryph.GenePool.Client
 
             var gene = Gene.New(manifestHash);
 
-            var identifier = GeneSetIdentifier.New(geneset);
+            var identifier = GeneSetIdentifier.New(genesetTag);
 
             var geneClient = new GeneClient(_clientConfiguration, Uri, identifier, gene);
 

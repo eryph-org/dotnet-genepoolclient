@@ -2,8 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text.Json;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
@@ -71,7 +69,7 @@ public class GeneClient
                 YamlContent = yamlContent
             };
 
-            return (await RestClient.CreateAsync(body, cancellationToken).ConfigureAwait(false)).Value;
+            return (await RestClient.CreateAsync(body, cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -101,7 +99,7 @@ public class GeneClient
                 YamlContent = yamlContent
             };
 
-            return RestClient.Create(body, cancellationToken).Value;
+            return RestClient.Create(body, cancellationToken).Value.Value;
         }
         catch (Exception e)
         {
@@ -152,7 +150,7 @@ public class GeneClient
         scope.Start();
         try
         {
-            return (await RestClient.GetAsync(_geneset, _gene, cancellationToken).ConfigureAwait(false)).Value;
+            return (await RestClient.GetAsync(_geneset, _gene, cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -169,7 +167,7 @@ public class GeneClient
         scope.Start();
         try
         {
-            return RestClient.Get(_geneset, _gene, cancellationToken).Value;
+            return RestClient.Get(_geneset, _gene, cancellationToken).Value.Value;
         }
         catch (Exception e)
         {
@@ -230,7 +228,7 @@ public class GeneClient
         {
             var parsedPart = GenePart.New(genePart);
             return (await RestClient.GetGenePartUploadUriAsync(_geneset, _gene, parsedPart, cancellationToken)
-                .ConfigureAwait(false)).Value;
+                .ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -248,7 +246,7 @@ public class GeneClient
         try
         {
             var parsedPart = GenePart.New(genePart);
-            return RestClient.GetGenePartUploadUri(_geneset, _gene, parsedPart, cancellationToken).Value;
+            return RestClient.GetGenePartUploadUri(_geneset, _gene, parsedPart, cancellationToken).Value.Value;
         }
         catch (Exception e)
         {

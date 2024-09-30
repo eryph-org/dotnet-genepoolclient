@@ -16,4 +16,7 @@ public class CreateOrganizationBody
     [JsonPropertyName("owner_org_id")]
     public Guid? OrgId { get; set; }
 
+    [JsonPropertyName("owner_org_name")]
+    public string? NewOrgName { get; set; }
+
 }

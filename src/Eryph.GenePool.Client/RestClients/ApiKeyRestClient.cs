@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure;
 using Azure.Core;
 using Azure.Core.Pipeline;
 using Eryph.ConfigModel;
@@ -58,7 +59,7 @@ internal class ApiKeyRestClient
     /// <param name="keyId">The key id of the api key</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-    public async Task<NoResultResponse> DeleteAsync(OrganizationName organization, ApiKeyId keyId, CancellationToken cancellationToken = default)
+    public async Task<Response<NoResultResponse>> DeleteAsync(OrganizationName organization, ApiKeyId keyId, CancellationToken cancellationToken = default)
     {
         if (organization == null)
             throw new ArgumentNullException(nameof(organization));
@@ -72,7 +73,7 @@ internal class ApiKeyRestClient
     /// <param name="keyId">The key id of the api key</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-    public NoResultResponse Delete(OrganizationName organization, ApiKeyId keyId, CancellationToken cancellationToken = default)
+    public Response<NoResultResponse> Delete(OrganizationName organization, ApiKeyId keyId, CancellationToken cancellationToken = default)
     {
         if (organization == null)
         {
@@ -88,7 +89,7 @@ internal class ApiKeyRestClient
     /// <param name="keyId">The key id of the api key</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-    public async Task<SingleResultResponse<ApiKeyResponse>> GetAsync(OrganizationName organization,
+    public async Task<Response<SingleResultResponse<ApiKeyResponse>>> GetAsync(OrganizationName organization,
         ApiKeyId keyId, CancellationToken cancellationToken = default)
     {
         if (organization == null)
@@ -109,7 +110,7 @@ internal class ApiKeyRestClient
     /// <param name="keyId">The key id of the api key</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-    public SingleResultResponse<ApiKeyResponse> Get(OrganizationName organization, ApiKeyId keyId, CancellationToken cancellationToken = default)
+    public Response<SingleResultResponse<ApiKeyResponse>> Get(OrganizationName organization, ApiKeyId keyId, CancellationToken cancellationToken = default)
     {
         if (organization == null)
         {
@@ -156,7 +157,7 @@ internal class ApiKeyRestClient
     /// <param name="organization">The organization where to create the api key</param>
     /// <param name="body"> The CreateApiKeyBody to use. </param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public async Task<SingleResultResponse<ApiKeySecretResponse>> CreateAsync(
+    public async Task<Response<SingleResultResponse<ApiKeySecretResponse>>> CreateAsync(
         OrganizationName organization,
         CreateApiKeyBody? body = null, CancellationToken cancellationToken = default)
     {
@@ -170,7 +171,7 @@ internal class ApiKeyRestClient
     /// <param name="organization">The organization where to create the api key</param>
     /// <param name="body"> The CreateApiKeyBody to use. </param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public SingleResultResponse<ApiKeySecretResponse> Create(
+    public Response<SingleResultResponse<ApiKeySecretResponse>> Create(
         OrganizationName organization,
         CreateApiKeyBody? body = null, CancellationToken cancellationToken = default)
     {

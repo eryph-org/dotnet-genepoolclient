@@ -95,7 +95,7 @@ public class GenesetClient
         scope.Start();
         try
         {
-            return (await RestClient.GetAsync(_organization, _geneset, cancellationToken).ConfigureAwait(false)).Value;
+            return (await RestClient.GetAsync(_organization, _geneset, cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -112,7 +112,7 @@ public class GenesetClient
         scope.Start();
         try
         {
-            return RestClient.Get(_organization, _geneset, cancellationToken).Value;
+            return RestClient.Get(_organization, _geneset, cancellationToken).Value.Value;
         }
         catch (Exception e)
         {
@@ -129,7 +129,7 @@ public class GenesetClient
         scope.Start();
         try
         {
-            return (await RestClient.GetDescriptionAsync(_organization, _geneset, cancellationToken).ConfigureAwait(false)).Value;
+            return (await RestClient.GetDescriptionAsync(_organization, _geneset, cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -146,7 +146,7 @@ public class GenesetClient
         scope.Start();
         try
         {
-            return RestClient.GetDescription(_organization, _geneset, cancellationToken).Value;
+            return RestClient.GetDescription(_organization, _geneset, cancellationToken).Value.Value;
         }
         catch (Exception e)
         {
@@ -221,7 +221,7 @@ public class GenesetClient
                 Metadata = metadata
             };
 
-            return (await RestClient.CreateAsync(body, cancellationToken).ConfigureAwait(false)).Value;
+            return (await RestClient.CreateAsync(body, cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -254,7 +254,7 @@ public class GenesetClient
                 ETag = etag
             };
 
-            return (await RestClient.UpdateAsync(_organization, _geneset, body, cancellationToken).ConfigureAwait(false)).Value;
+            return (await RestClient.UpdateAsync(_organization, _geneset, body, cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -288,7 +288,7 @@ public class GenesetClient
                 Metadata = metadata,
                 ETag = etag
             };
-            return RestClient.Update(_organization, _geneset, body, cancellationToken).Value;
+            return RestClient.Update(_organization, _geneset, body, cancellationToken).Value.Value;
         }
         catch (Exception e)
         {
@@ -320,7 +320,7 @@ public class GenesetClient
                 DescriptionMarkdown = descriptionMarkdown,
                 Metadata = metadata
             };
-            return RestClient.Create(body, cancellationToken).Value;
+            return RestClient.Create(body, cancellationToken).Value.Value;
         }
         catch (Exception e)
         {

@@ -3,6 +3,7 @@ using Azure.Core;
 using System;
 using System.Threading.Tasks;
 using System.Threading;
+using Azure;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.Responses;
 using Eryph.GenePool.Model;
@@ -55,7 +56,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public async Task<NoResultResponse> DeleteAsync(OrganizationName organization, CancellationToken cancellationToken = default)
+        public async Task<Response<NoResultResponse>> DeleteAsync(OrganizationName organization, CancellationToken cancellationToken = default)
         {
             if (organization == null)
                 throw new ArgumentNullException(nameof(organization));
@@ -68,7 +69,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public NoResultResponse Delete(OrganizationName organization, CancellationToken cancellationToken = default)
+        public Response<NoResultResponse> Delete(OrganizationName organization, CancellationToken cancellationToken = default)
         {
             if (organization == null)
             {
@@ -83,7 +84,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public async Task<SingleResultResponse<OrganizationResponse>> GetAsync(OrganizationName organization, CancellationToken cancellationToken = default)
+        public async Task<Response<SingleResultResponse<OrganizationResponse>>> GetAsync(OrganizationName organization, CancellationToken cancellationToken = default)
         {
             if (organization == null)
             {
@@ -98,7 +99,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public SingleResultResponse<OrganizationResponse> Get(OrganizationName organization, CancellationToken cancellationToken = default)
+        public Response<SingleResultResponse<OrganizationResponse>> Get(OrganizationName organization, CancellationToken cancellationToken = default)
         {
             if (organization == null)
             {
@@ -111,57 +112,58 @@ namespace Eryph.GenePool.Client.RestClients
         }
 
 
+        // currently not supported, will be added later
 
-        /// <summary> Updates a organization. </summary>
-        /// <param name="organization"> The organization to update. </param>
-        /// <param name="body"> The UpdateOrganizationBody to use. </param>
-        /// <param name="cancellationToken"> The cancellation token to use. </param>
-        /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public async Task<SingleResultResponse<OrganizationRefResponse>> UpdateAsync(OrganizationName organization,
-            UpdateOrganizationBody? body = null, CancellationToken cancellationToken = default)
-        {
-            if (organization == null)
-            {
-                throw new ArgumentNullException(nameof(organization));
-            }
+        ///// <summary> Updates a organization. </summary>
+        ///// <param name="organization"> The organization to update. </param>
+        ///// <param name="body"> The UpdateOrganizationBody to use. </param>
+        ///// <param name="cancellationToken"> The cancellation token to use. </param>
+        ///// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
+        //public async Task<SingleResultResponse<OrganizationRefResponse>> UpdateAsync(OrganizationName organization,
+        //    UpdateOrganizationBody? body = null, CancellationToken cancellationToken = default)
+        //{
+        //    if (organization == null)
+        //    {
+        //        throw new ArgumentNullException(nameof(organization));
+        //    }
 
-            using var message = CreateRequest(organization, RequestMethod.Patch);
-            if (body != null)
-            {
-                message.Request.Headers.Add("Content-Type", "application/json");
-                var content = new Utf8JsonRequestContent();
-                content.JsonWriter.WriteObjectValue(body);
-                message.Request.Content = content;
-            }
+        //    using var message = CreateRequest(organization, RequestMethod.Patch);
+        //    if (body != null)
+        //    {
+        //        message.Request.Headers.Add("Content-Type", "application/json");
+        //        var content = new Utf8JsonRequestContent();
+        //        content.JsonWriter.WriteObjectValue(body);
+        //        message.Request.Content = content;
+        //    }
 
-            return await _pipeline.SendRequestAsync<SingleResultResponse<OrganizationRefResponse>>(message, cancellationToken).ConfigureAwait(false);
-        }
+        //    return await _pipeline.SendRequestAsync<SingleResultResponse<OrganizationRefResponse>>(message, cancellationToken).ConfigureAwait(false);
+        //}
 
 
-        /// <summary> Updates a organization. </summary>
-        /// <param name="organization"> The organization name</param>
-        /// <param name="body"> The UpdateOrganizationBody to use. </param>
-        /// <param name="cancellationToken"> The cancellation token to use. </param>
-        /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public SingleResultResponse<OrganizationRefResponse> Update(OrganizationName organization, UpdateOrganizationBody? body = null, CancellationToken cancellationToken = default)
-        {
-            if (organization == null)
-            {
-                throw new ArgumentNullException(nameof(organization));
-            }
+        ///// <summary> Updates a organization. </summary>
+        ///// <param name="organization"> The organization name</param>
+        ///// <param name="body"> The UpdateOrganizationBody to use. </param>
+        ///// <param name="cancellationToken"> The cancellation token to use. </param>
+        ///// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
+        //public SingleResultResponse<OrganizationRefResponse> Update(OrganizationName organization, UpdateOrganizationBody? body = null, CancellationToken cancellationToken = default)
+        //{
+        //    if (organization == null)
+        //    {
+        //        throw new ArgumentNullException(nameof(organization));
+        //    }
 
-            using var message = CreateRequest(organization, RequestMethod.Patch);
-            if (body != null)
-            {
-                message.Request.Headers.Add("Content-Type", "application/json");
-                var content = new Utf8JsonRequestContent();
-                content.JsonWriter.WriteObjectValue(body);
-                message.Request.Content = content;
-            }
+        //    using var message = CreateRequest(organization, RequestMethod.Patch);
+        //    if (body != null)
+        //    {
+        //        message.Request.Headers.Add("Content-Type", "application/json");
+        //        var content = new Utf8JsonRequestContent();
+        //        content.JsonWriter.WriteObjectValue(body);
+        //        message.Request.Content = content;
+        //    }
 
-            return _pipeline.SendRequest<SingleResultResponse<OrganizationRefResponse>>(message, cancellationToken);
+        //    return _pipeline.SendRequest<SingleResultResponse<OrganizationRefResponse>>(message, cancellationToken);
 
-        }
+        //}
 
         internal HttpMessage CreateNewOrgRequest(CreateOrganizationBody? body)
         {
@@ -188,7 +190,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <summary> Creates a organization. </summary>
         /// <param name="body"> The CreateOrganizationBody to use. </param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
-        public async Task<SingleResultResponse<OrganizationRefResponse>> CreateAsync(CreateOrganizationBody? body = null, CancellationToken cancellationToken = default)
+        public async Task<Response<SingleResultResponse<OrganizationRefResponse>>> CreateAsync(CreateOrganizationBody? body = null, CancellationToken cancellationToken = default)
         {
 
             using var message = CreateNewOrgRequest(body);
@@ -199,7 +201,7 @@ namespace Eryph.GenePool.Client.RestClients
         /// <summary> Creates a organization. </summary>
         /// <param name="body"> The CreateOrganizationBody to use. </param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
-        public SingleResultResponse<OrganizationRefResponse> Create(CreateOrganizationBody? body = null, CancellationToken cancellationToken = default)
+        public Response<SingleResultResponse<OrganizationRefResponse>> Create(CreateOrganizationBody? body = null, CancellationToken cancellationToken = default)
         {
 
             using var message = CreateNewOrgRequest(body);

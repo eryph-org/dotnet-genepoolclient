@@ -78,7 +78,7 @@ public class ApiKeyClient
         scope.Start();
         try
         {
-            return (await RestClient.GetAsync(_organization, _keyId, cancellationToken).ConfigureAwait(false)).Value;
+            return (await RestClient.GetAsync(_organization, _keyId, cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -95,7 +95,7 @@ public class ApiKeyClient
         scope.Start();
         try
         {
-            return RestClient.Get(_organization, _keyId, cancellationToken).Value;
+            return RestClient.Get(_organization, _keyId, cancellationToken).Value.Value;
         }
         catch (Exception e)
         {

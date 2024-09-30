@@ -4,7 +4,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
-
+using Azure;
 using Eryph.GenePool.Client.Internal;
 
 namespace Eryph.GenePool.Client.RestClients
@@ -44,20 +44,31 @@ namespace Eryph.GenePool.Client.RestClients
 
             using var message = CreateUploadRequest(uri, content);
             await _pipeline.SendAsync(message, cancellationToken).ConfigureAwait(false);
+            CheckResponse(message);
         }
 
 
         /// <summary> Creates a organization. </summary>
         /// <param name="body"> The CreateOrganizationBody to use. </param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
-        public void UploadPart(Uri uri, Stream content, CancellationToken cancellationToken = default)
+        public Response UploadPart(Uri uri, Stream content, CancellationToken cancellationToken = default)
         {
 
             using var message = CreateUploadRequest(uri, content);
             
             _pipeline.Send(message, cancellationToken);
-
+           CheckResponse(message);
+           return message.Response;
         }
 
+        private static Response CheckResponse(HttpMessage message)
+        {
+            if (message.Response.Status != 200)
+            {
+                throw new RequestFailedException(message.Response);
+            }
+
+            return message.Response;
+        }
     }
 }
