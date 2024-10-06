@@ -23,7 +23,7 @@ using Validations = Eryph.GenePool.Model.Validations;
 
 //AnsiConsole.Profile.Capabilities.Interactive = false;
 var genePoolUri = new Uri(Environment.GetEnvironmentVariable("ERYPH_PACKER_GENEPOOL_API") 
-                          ?? "https://eryphgenepoolapistaging.azurewebsites.net/api/");
+                          ?? "https://genepool-api.eryph.io/api/");
 
 var organizationArgument = new Argument<string>("organization", "name of organization.");
 organizationArgument.AddValidation(OrganizationName.NewValidation);
@@ -369,7 +369,7 @@ packCommand.SetHandler(async context =>
                     AnsiConsole.MarkupLineInterpolated($"Gene {packingTask.Packable.GeneName} [green]packed[/]");
 
                 packedGenesetInfo.AddGene(packingTask.Packable.GeneType, packingTask.Packable.GeneName, packedFile,
-                    packingTask.Packable.Architecture);
+                    packingTask.Packable.);
             }
 
             // remove the temporary .pack folder
