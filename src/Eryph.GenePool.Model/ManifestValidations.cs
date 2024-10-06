@@ -74,6 +74,8 @@ public class ManifestValidations
                 splitHash[0] == "sha1"
                     ? HashSha1.NewValidation(splitHash[1]).Map(_ => Unit.Default)
                     : HashSha256.NewValidation(splitHash[1]).Map(_ => Unit.Default)
+            from gChars in guard(splitHash[1].ToSeq().All(c => c is >= 'a' and <= 'f' or >= 'A' and <= 'F' or >= '0' and <= '9'),
+            Validations.BadRequestError("Gene contains invalid characters.")).ToValidation()
 
             select Unit.Default;
     }

@@ -369,7 +369,7 @@ packCommand.SetHandler(async context =>
                     AnsiConsole.MarkupLineInterpolated($"Gene {packingTask.Packable.GeneName} [green]packed[/]");
 
                 packedGenesetInfo.AddGene(packingTask.Packable.GeneType, packingTask.Packable.GeneName, packedFile,
-                    packingTask.Packable.);
+                    packingTask.Packable.Architecture);
             }
 
             // remove the temporary .pack folder
