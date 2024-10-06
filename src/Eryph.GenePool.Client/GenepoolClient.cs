@@ -10,7 +10,9 @@ using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
 using System.Text;
 using Eryph.ConfigModel;
+using Eryph.GenePool.Client.Requests;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Options;
 
 namespace Eryph.GenePool.Client
 {
@@ -237,8 +239,11 @@ namespace Eryph.GenePool.Client
         /// <exception cref="InvalidDataException"></exception>
         public virtual async Task<GetGeneResponse> CreateGeneFromPathAsync(string genesetTag, string path,
             CancellationToken cancellationToken = default, TimeSpan timeout = default,
-            IProgress<GeneUploadProgress>? progress = default)
+            IProgress<GeneUploadProgress>? progress = default,
+            RequestOptions? options = default)
         {
+            options ??= new RequestOptions();
+
             var manifestPath = Path.Combine(path, "gene.json");
             if (!File.Exists(manifestPath))
                 throw new FileNotFoundException("Manifest file not found.", manifestPath);
@@ -263,7 +268,7 @@ namespace Eryph.GenePool.Client
             var geneClient = new GeneClient(_clientConfiguration, Uri, identifier, gene);
 
             return await geneClient.UploadGeneFromPathAsync(
-                path, new Gene(manifestHash), manifest, cancellationToken, timeout, progress).ConfigureAwait(false);
+                path, new Gene(manifestHash), manifest, cancellationToken, timeout, options, progress).ConfigureAwait(false);
         }
 
         private static string GetHashString(byte[] bytes)

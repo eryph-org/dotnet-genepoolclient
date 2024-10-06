@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Eryph.ConfigModel;
+using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.Responses;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model.Responses;
@@ -26,7 +27,13 @@ namespace Eryph.GenePool.Client.Internal.AsyncCollections
             if (async)
             {
                 response = await restClient.ListAsync(organizationName,
-                        genesetName, continuationToken, pageSizeHint, cancellationToken)
+                        genesetName,
+                        new ListRecycleBinRequestOptions
+                        {
+                            ContinuationToken = continuationToken,
+                            PageSizeHint = pageSizeHint
+                        }
+                        , cancellationToken)
                     .ConfigureAwait(false);
 
             }
@@ -34,7 +41,13 @@ namespace Eryph.GenePool.Client.Internal.AsyncCollections
             {
                 // ReSharper disable once MethodHasAsyncOverload
                 response = restClient.List(organizationName,
-                    genesetName, continuationToken, pageSizeHint, cancellationToken);
+                    genesetName,
+                      new ListRecycleBinRequestOptions
+                        {
+                            ContinuationToken = continuationToken,
+                            PageSizeHint = pageSizeHint
+                        }
+                    , cancellationToken);
             }
 
             return Page<GenesetTagResponse>.FromValues(

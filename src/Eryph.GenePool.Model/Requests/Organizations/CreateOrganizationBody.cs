@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
 
-namespace Eryph.GenePool.Model.Requests;
+namespace Eryph.GenePool.Model.Requests.Organizations;
 
 public class CreateOrganizationBody
 {

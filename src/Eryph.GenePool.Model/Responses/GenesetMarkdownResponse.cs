@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json.Serialization;
 
 namespace Eryph.GenePool.Model.Responses;
@@ -6,9 +7,9 @@ public record GenesetDescriptionResponse
 {
 
     [JsonConstructor]
-    public GenesetDescriptionResponse(string Name, OrganizationRefResponse Org, string Geneset,
+    public GenesetDescriptionResponse(GenesetRefResponse GenesetRefResponse,
         string ShortDescription, string Description,
-        string Markdown)
+        string Markdown, string? ETag)
     {
         this.Name = Name;
         this.Org = Org;
@@ -16,6 +17,7 @@ public record GenesetDescriptionResponse
         this.ShortDescription = ShortDescription;
         this.Description = Description;
         this.Markdown = Markdown;
+        this.ETag = ETag;
     }
 
     [JsonPropertyName("name")] public string Name { get; init; }
@@ -27,4 +29,5 @@ public record GenesetDescriptionResponse
     [JsonPropertyName("description")] public string Description { get; init; }
 
     [JsonPropertyName("markdown")] public string Markdown { get; init; }
+    [JsonPropertyName("etag")] public string? ETag { get; init; }
 }

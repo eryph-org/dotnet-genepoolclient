@@ -35,4 +35,6 @@ public class GeneManifestData
     [JsonPropertyName("original_size")]
     public long? OriginalSize { get; set; }
 
+    [JsonPropertyName("arch")]
+    public string? Architecture { get; set; }
 }

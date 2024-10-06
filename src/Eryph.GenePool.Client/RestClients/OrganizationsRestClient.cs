@@ -7,9 +7,10 @@ using Azure;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.Responses;
 using Eryph.GenePool.Model;
-using Eryph.GenePool.Model.Requests;
 using Eryph.GenePool.Model.Responses;
 using Eryph.ConfigModel;
+using Eryph.GenePool.Client.Requests;
+using Eryph.GenePool.Model.Requests.Organizations;
 
 namespace Eryph.GenePool.Client.RestClients
 {
@@ -56,20 +57,25 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public async Task<Response<NoResultResponse>> DeleteAsync(OrganizationName organization, CancellationToken cancellationToken = default)
+        public async Task<Response<NoResultResponse>> DeleteAsync(OrganizationName organization,
+            RequestOptions options,
+            CancellationToken cancellationToken = default)
         {
             if (organization == null)
                 throw new ArgumentNullException(nameof(organization));
 
             
-            return await _pipeline.SendRequestAsync<NoResultResponse>(CreateRequest(organization, RequestMethod.Delete), cancellationToken).ConfigureAwait(false);
+            return await _pipeline.SendRequestAsync<NoResultResponse>(
+                CreateRequest(organization, RequestMethod.Delete), options, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary> Deletes a organization. </summary>
         /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public Response<NoResultResponse> Delete(OrganizationName organization, CancellationToken cancellationToken = default)
+        public Response<NoResultResponse> Delete(OrganizationName organization,
+            RequestOptions options,
+            CancellationToken cancellationToken = default)
         {
             if (organization == null)
             {
@@ -77,6 +83,7 @@ namespace Eryph.GenePool.Client.RestClients
             }
 
             return _pipeline.SendRequest<NoResultResponse>(CreateRequest(organization, RequestMethod.Delete),
+                options,
                 cancellationToken);
         }
 
@@ -84,14 +91,17 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public async Task<Response<SingleResultResponse<OrganizationResponse>>> GetAsync(OrganizationName organization, CancellationToken cancellationToken = default)
+        public async Task<Response<SingleResultResponse<OrganizationResponse>>> GetAsync(
+            OrganizationName organization, RequestOptions options,
+            CancellationToken cancellationToken = default)
         {
             if (organization == null)
             {
                 throw new ArgumentNullException(nameof(organization));
             }
 
-            return await _pipeline.SendRequestAsync<SingleResultResponse<OrganizationResponse>>(CreateRequest(organization, RequestMethod.Get), cancellationToken).ConfigureAwait(false);
+            return await _pipeline.SendRequestAsync<SingleResultResponse<OrganizationResponse>>(
+                CreateRequest(organization, RequestMethod.Get), options, cancellationToken).ConfigureAwait(false);
 
         }
 
@@ -99,7 +109,9 @@ namespace Eryph.GenePool.Client.RestClients
         /// <param name="organization"> The organization name</param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
         /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-        public Response<SingleResultResponse<OrganizationResponse>> Get(OrganizationName organization, CancellationToken cancellationToken = default)
+        public Response<SingleResultResponse<OrganizationResponse>> Get(
+            OrganizationName organization, RequestOptions options,
+            CancellationToken cancellationToken = default)
         {
             if (organization == null)
             {
@@ -107,7 +119,7 @@ namespace Eryph.GenePool.Client.RestClients
             }
 
             return _pipeline.SendRequest<SingleResultResponse<OrganizationResponse>>(
-                CreateRequest(organization, RequestMethod.Get), cancellationToken);
+                CreateRequest(organization, RequestMethod.Get), options, cancellationToken);
 
         }
 
@@ -190,22 +202,26 @@ namespace Eryph.GenePool.Client.RestClients
         /// <summary> Creates a organization. </summary>
         /// <param name="body"> The CreateOrganizationBody to use. </param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
-        public async Task<Response<SingleResultResponse<OrganizationRefResponse>>> CreateAsync(CreateOrganizationBody? body = null, CancellationToken cancellationToken = default)
+        public async Task<Response<SingleResultResponse<OrganizationRefResponse>>> CreateAsync(
+            CreateOrganizationBody body, RequestOptions options
+            , CancellationToken cancellationToken = default)
         {
 
             using var message = CreateNewOrgRequest(body);
-            return await _pipeline.SendRequestAsync<SingleResultResponse<OrganizationRefResponse>>(message, cancellationToken).ConfigureAwait(false);
+            return await _pipeline.SendRequestAsync<SingleResultResponse<OrganizationRefResponse>>(message,
+                options, cancellationToken).ConfigureAwait(false);
         }
 
 
         /// <summary> Creates a organization. </summary>
         /// <param name="body"> The CreateOrganizationBody to use. </param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
-        public Response<SingleResultResponse<OrganizationRefResponse>> Create(CreateOrganizationBody? body = null, CancellationToken cancellationToken = default)
+        public Response<SingleResultResponse<OrganizationRefResponse>> Create(CreateOrganizationBody body, RequestOptions options, CancellationToken cancellationToken = default)
         {
 
             using var message = CreateNewOrgRequest(body);
-            return _pipeline.SendRequest<SingleResultResponse<OrganizationRefResponse>>(message, cancellationToken);
+            return _pipeline.SendRequest<SingleResultResponse<OrganizationRefResponse>>(message,
+                options, cancellationToken);
 
         }
 

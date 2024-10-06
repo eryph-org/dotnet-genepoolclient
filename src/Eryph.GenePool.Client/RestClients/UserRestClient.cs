@@ -7,6 +7,7 @@ using Azure;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.Responses;
 using Eryph.GenePool.Model.Responses;
+using Eryph.GenePool.Client.Requests;
 
 namespace Eryph.GenePool.Client.RestClients
 {
@@ -33,7 +34,7 @@ namespace Eryph.GenePool.Client.RestClients
             _version = version.ToString().ToLowerInvariant();
         }
 
-        internal HttpMessage CreateRequest(bool expandIdentityOrgs, bool expandGenepoolOrgs)
+        internal HttpMessage CreateRequest(GetUserRequestOptions options)
         {
             var message = _pipeline.CreateMessage();
             var request = message.Request;
@@ -42,25 +43,9 @@ namespace Eryph.GenePool.Client.RestClients
             uri.Reset(_endpoint);
             uri.AppendPath(_version, false);
             // ReSharper disable once StringLiteralTypo
+            uri.AppendPath("/user", false);
             uri.AppendPath("/me", false);
-
-            if (expandGenepoolOrgs || expandIdentityOrgs)
-            {
-                var expand = new System.Text.StringBuilder();
-                if (expandGenepoolOrgs)
-                {
-                    expand.Append("genepool_orgs");
-                }
-
-                if (expandIdentityOrgs)
-                {
-                    if(expand.Length>0)
-                        expand.Append(",");
-                    expand.Append("identity_orgs");
-                }
-
-                uri.AppendQuery("expand", expand.ToString());
-            }
+            uri.AddExpandOptions(options.Expand);
 
             request.Uri = uri;
             request.Headers.Add("Accept", "application/json, text/json");
@@ -70,27 +55,25 @@ namespace Eryph.GenePool.Client.RestClients
 
         /// <summary> Get information for current user. </summary>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
-        /// <param name="expandGenepoolOrgs">Gets the genepool organization names that the user is a member of.</param>
-        /// <param name="expandIdentityOrgs">Gets details for identity organizations that the user is a member of.</param>
+        /// <param name="options">Request options</param>
         public async Task<Response<SingleResultResponse<GetMeResponse>>> GetAsync(
-            bool expandGenepoolOrgs = false, bool expandIdentityOrgs = false,
+            GetUserRequestOptions options,
             CancellationToken cancellationToken = default)
         {
-            return await _pipeline.SendRequestAsync<SingleResultResponse<GetMeResponse>>(CreateRequest(
-                expandIdentityOrgs, expandGenepoolOrgs), cancellationToken).ConfigureAwait(false);
+            return await _pipeline.SendRequestAsync<SingleResultResponse<GetMeResponse>>(CreateRequest(options)
+                ,options, cancellationToken).ConfigureAwait(false);
 
         }
 
         /// <summary> Get information for current user. </summary>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
-        /// <param name="expandGenepoolOrgs">Gets the genepool organization names that the user is a member of.</param>
-        /// <param name="expandIdentityOrgs">Gets details for identity organizations that the user is a member of.</param>
+        /// <param name="options">Request options</param>
         public Response<SingleResultResponse<GetMeResponse>> Get(
-            bool expandGenepoolOrgs = false, bool expandIdentityOrgs = false, 
+            GetUserRequestOptions options, 
             CancellationToken cancellationToken = default)
         {
             return _pipeline.SendRequest<SingleResultResponse<GetMeResponse>>(
-                CreateRequest(expandGenepoolOrgs, expandIdentityOrgs), cancellationToken);
+                CreateRequest(options), options, cancellationToken);
 
         }
 

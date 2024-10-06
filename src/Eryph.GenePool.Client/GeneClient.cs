@@ -6,9 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
+using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Requests;
+using Eryph.GenePool.Model.Requests.Genes;
 using Eryph.GenePool.Model.Responses;
 
 namespace Eryph.GenePool.Client;
@@ -54,6 +56,7 @@ public class GeneClient
     public virtual async Task<GeneUploadResponse?> CreateAsync(
         Gene gene,
         GeneManifestData manifest,
+        RequestOptions? options = default, 
         CancellationToken cancellationToken = default,
         string? yamlContent = null)
     {
@@ -69,7 +72,9 @@ public class GeneClient
                 YamlContent = yamlContent
             };
 
-            return (await RestClient.CreateAsync(body, cancellationToken).ConfigureAwait(false)).Value.Value;
+            return (await RestClient.CreateAsync(body,
+                options ?? new RequestOptions(),
+                cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -84,7 +89,9 @@ public class GeneClient
     /// <param name="gene">Gene</param>
     /// <param name="yamlContent">Original yaml content of a gene</param>
     /// <remarks> Creates a project. </remarks>
-    public virtual GeneUploadResponse? Create(Gene gene, GeneManifestData manifest, CancellationToken cancellationToken = default,
+    public virtual GeneUploadResponse? Create(Gene gene, GeneManifestData manifest,
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default,
         string? yamlContent = null)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Create)}");
@@ -99,7 +106,9 @@ public class GeneClient
                 YamlContent = yamlContent
             };
 
-            return RestClient.Create(body, cancellationToken).Value.Value;
+            return RestClient.Create(body,
+                options ?? new RequestOptions(),
+                cancellationToken).Value.Value;
         }
         catch (Exception e)
         {
@@ -110,13 +119,17 @@ public class GeneClient
 
     /// <summary> Deletes a project. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual async Task DeleteAsync(CancellationToken cancellationToken = default)
+    public virtual async Task DeleteAsync(
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Delete)}");
         scope.Start();
         try
         {
-            await RestClient.DeleteAsync(_geneset, _gene, cancellationToken).ConfigureAwait(false);
+            await RestClient.DeleteAsync(_geneset, _gene,
+                options ?? new RequestOptions(),
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e)
         {
@@ -127,13 +140,15 @@ public class GeneClient
 
     /// <summary> Deletes a project. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual void Delete(CancellationToken cancellationToken = default)
+    public virtual void Delete(
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Delete)}");
         scope.Start();
         try
         {
-            RestClient.Delete(_geneset, _gene, cancellationToken);
+            RestClient.Delete(_geneset, _gene, options?? new RequestOptions(), cancellationToken);
         }
         catch (Exception e)
         {
@@ -144,13 +159,17 @@ public class GeneClient
 
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual async Task<GetGeneResponse?> GetAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<GetGeneResponse?> GetAsync(
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
-            return (await RestClient.GetAsync(_geneset, _gene, cancellationToken).ConfigureAwait(false)).Value.Value;
+            return (await RestClient.GetAsync(_geneset, _gene,
+                options ?? new RequestOptions(),
+                cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -161,13 +180,17 @@ public class GeneClient
 
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual GetGeneResponse? Get(CancellationToken cancellationToken = default)
+    public virtual GetGeneResponse? Get(
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
-            return RestClient.Get(_geneset, _gene, cancellationToken).Value.Value;
+            return RestClient.Get(_geneset, _gene,
+                options ?? new RequestOptions(),
+                cancellationToken).Value.Value;
         }
         catch (Exception e)
         {
@@ -178,13 +201,17 @@ public class GeneClient
 
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual bool Exists(CancellationToken cancellationToken = default)
+    public virtual bool Exists(
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
-            var res = RestClient.Get(_geneset, _gene, cancellationToken).Value;
+            var res = RestClient.Get(_geneset, _gene,
+                options ?? new RequestOptions(),
+                cancellationToken).Value;
             return true;
         }
         catch (ErrorResponseException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
@@ -196,13 +223,17 @@ public class GeneClient
 
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual async Task<bool> ExistsAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<bool> ExistsAsync(
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
-            await RestClient.GetAsync(_geneset, _gene, cancellationToken)
+            await RestClient.GetAsync(_geneset, _gene,
+                    options?? new RequestOptions(),
+                    cancellationToken)
                 .ConfigureAwait(false);
             return true;
         }
@@ -227,7 +258,9 @@ public class GeneClient
         try
         {
             var parsedPart = GenePart.New(genePart);
-            return (await RestClient.GetGenePartUploadUriAsync(_geneset, _gene, parsedPart, cancellationToken)
+            return (await RestClient.GetGenePartUploadUriAsync(_geneset, _gene, parsedPart,
+                    new RequestOptions(),
+                    cancellationToken: cancellationToken)
                 .ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
@@ -239,14 +272,18 @@ public class GeneClient
 
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual GenePartUploadUri? GetUploadUri(string genePart, CancellationToken cancellationToken = default)
+    public virtual GenePartUploadUri? GetUploadUri(string genePart,
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(GetUploadUri)}");
         scope.Start();
         try
         {
             var parsedPart = GenePart.New(genePart);
-            return RestClient.GetGenePartUploadUri(_geneset, _gene, parsedPart, cancellationToken).Value.Value;
+            return RestClient.GetGenePartUploadUri(_geneset, _gene, parsedPart,
+                options ?? new RequestOptions(),
+                cancellationToken).Value.Value;
         }
         catch (Exception e)
         {
@@ -257,14 +294,18 @@ public class GeneClient
 
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual async Task ConfirmPartUploadAsync(string genePart, CancellationToken cancellationToken = default)
+    public virtual async Task ConfirmPartUploadAsync(string genePart,
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(ConfirmPartUploadAsync)}");
         scope.Start();
         try
         {
             var parsedPart = GenePart.New(genePart);
-            await RestClient.ConfirmGenePartUploadAsync(_geneset, _gene, parsedPart, cancellationToken)
+            await RestClient.ConfirmGenePartUploadAsync(_geneset, _gene, parsedPart,
+                    options ?? new RequestOptions(),
+                    cancellationToken)
                 .ConfigureAwait(false);
 
         }
@@ -277,14 +318,18 @@ public class GeneClient
 
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual void ConfirmPartUpload(string genePart, CancellationToken cancellationToken = default)
+    public virtual void ConfirmPartUpload(string genePart,
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(ConfirmPartUploadAsync)}");
         scope.Start();
         try
         {
             var parsedPart = GenePart.New(genePart);
-            RestClient.ConfirmGenePartUpload(_geneset, _gene, parsedPart, cancellationToken);
+            RestClient.ConfirmGenePartUpload(_geneset, _gene, parsedPart,
+                options ?? new RequestOptions(),
+                cancellationToken);
         }
         catch (Exception e)
         {
@@ -296,6 +341,7 @@ public class GeneClient
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual void UploadPart(GenePartUploadUri uploadUri, Stream content,
+        RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(ConfirmPartUploadAsync)}");
@@ -304,11 +350,14 @@ public class GeneClient
         {
             var timeLeft = (uploadUri.Expires - DateTimeOffset.UtcNow).TotalSeconds;
             if (timeLeft < 10)
-                uploadUri = GetUploadUri(uploadUri.Part, cancellationToken) ??
+                uploadUri = GetUploadUri(uploadUri.Part,
+                               options, cancellationToken) ??
                             throw new IOException("Failed to refresh upload url.");
 
             UploadClient.UploadPart(uploadUri.UploadUri, content, cancellationToken);
-            RestClient.ConfirmGenePartUpload(_geneset, _gene, GenePart.New(uploadUri.Part), cancellationToken);
+            RestClient.ConfirmGenePartUpload(_geneset, _gene, GenePart.New(uploadUri.Part),
+                options ?? new RequestOptions(),
+                cancellationToken);
         }
         catch (Exception e)
         {
@@ -318,6 +367,7 @@ public class GeneClient
     }
 
     public virtual async Task UploadPartAsync(GenePartUploadUri uploadUri, Stream content,
+        RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(ConfirmPartUploadAsync)}");
@@ -331,6 +381,7 @@ public class GeneClient
 
             await UploadClient.UploadPartAsync(uploadUri.UploadUri, content, cancellationToken).ConfigureAwait(false);
             await RestClient.ConfirmGenePartUploadAsync(_geneset, _gene, GenePart.New(uploadUri.Part),
+                options?? new RequestOptions(),
                 cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e)
@@ -344,7 +395,7 @@ public class GeneClient
         string genePath, 
         GenePartUploadUri[]? uploadUris = default, 
         CancellationToken cancellationToken = default, 
-        IProgress<GeneUploadProgress>? progress = default )
+        IProgress<GeneUploadProgress>? progress = default)
     {
         var stagedParts = geneStatus.UploadStatus?.ConfirmedParts
             .Select(p => p.Split(':')[1]) ?? Array.Empty<string>();
@@ -424,7 +475,7 @@ public class GeneClient
                 }
 
 
-                UploadPart(uploadUri, partStream, cancellationToken);
+                UploadPart(uploadUri, partStream, new RequestOptions(), cancellationToken);
                 uploadedPart = true;
 
                 if (progress != null && progressData!= null)
@@ -448,10 +499,12 @@ public class GeneClient
     Gene gene,
     GeneManifestData manifest,
     CancellationToken cancellationToken = default, TimeSpan timeout = default,
+    RequestOptions? options = default,
     IProgress<GeneUploadProgress>? progress = default)
     {
+        options ??= new RequestOptions();
 
-        var geneExists = await ExistsAsync(cancellationToken).ConfigureAwait(false);
+        var geneExists = await ExistsAsync(options, cancellationToken).ConfigureAwait(false);
         var yamlContentPath = Path.Combine(path, "gene.yaml");
         string? yamlContent = null;
         if(File.Exists(yamlContentPath))
@@ -460,11 +513,11 @@ public class GeneClient
         var uploadUris = Array.Empty<GenePartUploadUri>();
         if (!geneExists)
         {
-            var createResponse = await CreateAsync(gene,manifest, cancellationToken, yamlContent).ConfigureAwait(false);
+            var createResponse = await CreateAsync(gene,manifest, options, cancellationToken, yamlContent).ConfigureAwait(false);
             uploadUris = createResponse?.UploadUris ?? uploadUris;
         }
 
-        var geneStatus = await GetAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("Gene not found.");
+        var geneStatus = await GetAsync(options,cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("Gene not found.");
         if (geneStatus.Available.GetValueOrDefault())
             return geneStatus;
 
@@ -483,7 +536,7 @@ public class GeneClient
         while (!processingTimeout.IsCancellationRequested)
         {
             await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
-            geneStatus = await GetAsync(cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("Gene not found.");
+            geneStatus = await GetAsync(options,cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("Gene not found.");
             if (geneStatus.Available.GetValueOrDefault())
                 return geneStatus;
 

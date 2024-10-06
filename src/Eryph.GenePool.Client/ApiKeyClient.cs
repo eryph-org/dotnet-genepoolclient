@@ -4,10 +4,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
+using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Options;
 
 namespace Eryph.GenePool.Client;
 
@@ -38,13 +40,17 @@ public class ApiKeyClient
 
     /// <summary> Deletes a api key. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual async Task DeleteAsync(CancellationToken cancellationToken = default)
+    public virtual async Task DeleteAsync(
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(ApiKeyClient)}.{nameof(Delete)}");
         scope.Start();
         try
         {
-            await RestClient.DeleteAsync(_organization, _keyId, cancellationToken).ConfigureAwait(false);
+            await RestClient.DeleteAsync(_organization, _keyId,
+                options ?? new RequestOptions(),
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e)
         {
@@ -55,13 +61,17 @@ public class ApiKeyClient
 
     /// <summary> Deletes a api key. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual void Delete(CancellationToken cancellationToken = default)
+    public virtual void Delete(
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(ApiKeyClient)}.{nameof(Delete)}");
         scope.Start();
         try
         {
-            RestClient.Delete(_organization, _keyId, cancellationToken);
+            RestClient.Delete(_organization, _keyId,
+                options ?? new RequestOptions(),
+                cancellationToken);
         }
         catch (Exception e)
         {
@@ -72,13 +82,17 @@ public class ApiKeyClient
 
     /// <summary> Get a api key. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual async Task<ApiKeyResponse?> GetAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<ApiKeyResponse?> GetAsync(
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(ApiKeyClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
-            return (await RestClient.GetAsync(_organization, _keyId, cancellationToken).ConfigureAwait(false)).Value.Value;
+            return (await RestClient.GetAsync(_organization, _keyId,
+                
+                options ?? new RequestOptions(), cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -89,13 +103,16 @@ public class ApiKeyClient
 
     /// <summary> Get a api key. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual ApiKeyResponse? Get(CancellationToken cancellationToken = default)
+    public virtual ApiKeyResponse? Get(
+        RequestOptions? options = default, 
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(ApiKeyClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
-            return RestClient.Get(_organization, _keyId, cancellationToken).Value.Value;
+            return RestClient.Get(_organization, _keyId,
+                options ?? new RequestOptions(), cancellationToken).Value.Value;
         }
         catch (Exception e)
         {
@@ -106,13 +123,16 @@ public class ApiKeyClient
 
     /// <summary> Checks if api key exists. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual bool Exists(CancellationToken cancellationToken = default)
+    public virtual bool Exists(
+        RequestOptions? options = default, 
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(ApiKeyClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
-            _ = RestClient.Get(_organization, _keyId, cancellationToken).Value;
+            _ = RestClient.Get(_organization, _keyId,
+                options ?? new RequestOptions(), cancellationToken).Value;
             return true;
         }
         catch (ErrorResponseException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
@@ -128,13 +148,17 @@ public class ApiKeyClient
 
     /// <summary>Checks if api key exists. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual async Task<bool> ExistsAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<bool> ExistsAsync(
+        RequestOptions? options = default, 
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(ApiKeyClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
-            await RestClient.GetAsync(_organization, _keyId, cancellationToken)
+            await RestClient.GetAsync(_organization, _keyId,
+                    options ?? new RequestOptions(), 
+                    cancellationToken)
                 .ConfigureAwait(false);
             return true;
         }

@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.GenePool.Client.Internal;
+using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model.Responses;
 using JetBrains.Annotations;
@@ -37,17 +38,15 @@ public class UserClient
 
     /// <summary> Get current user information </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    /// <param name="expandGenepoolOrgs">Gets the genepool organization names that the user is a member of.</param>
-    /// <param name="expandIdentityOrgs">Gets details for identity organizations that the user is a member of.</param>
-    public virtual async Task<GetMeResponse?> GetAsync(bool expandGenepoolOrgs= false, bool expandIdentityOrgs= false,
+    /// <param name="options">Request options</param>
+    public virtual async Task<GetMeResponse?> GetAsync(GetUserRequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(UserClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
-            return (await RestClient.GetAsync(
-                expandGenepoolOrgs, expandIdentityOrgs, cancellationToken).ConfigureAwait(false)).Value.Value;
+            return (await RestClient.GetAsync(options ?? new GetUserRequestOptions(), cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -58,18 +57,15 @@ public class UserClient
 
     /// <summary> Get current user information. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    /// <param name="expandGenepoolOrgs">Gets the genepool organization names that the user is a member of.</param>
-    /// <param name="expandIdentityOrgs">Gets details for identity organizations that the user is a member of.</param>
-    public virtual GetMeResponse? Get(
-        bool expandGenepoolOrgs = false, bool expandIdentityOrgs = false,
+    /// <param name="options">Request options</param>
+    public virtual GetMeResponse? Get(GetUserRequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(UserClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
-            return RestClient.Get(
-                expandGenepoolOrgs, expandIdentityOrgs, cancellationToken).Value.Value;
+            return RestClient.Get(options ?? new GetUserRequestOptions(), cancellationToken).Value.Value;
         }
         catch (Exception e)
         {

@@ -12,9 +12,12 @@ public record GenesetResponse
         string ETag,
         bool Public, string ShortDescription, string? Description, bool HasMarkdown,
         Uri DescriptionUri,
+        Uri StatisticsUri,
         IDictionary<string, string> Metadata,
         Uri TagsUri,
-        GenesetTagResponse[]? Tags, string? TagsContinuationToken, Uri? TagsContinuationUri)
+        
+        GenesetTagResponse[]? Tags, string? TagsContinuationToken, Uri? TagsContinuationUri
+        )
     {
         this.Name = Name;
         this.Org = Org;
@@ -25,6 +28,7 @@ public record GenesetResponse
         this.Description = Description;
         this.HasMarkdown = HasMarkdown;
         this.DescriptionUri = DescriptionUri;
+        this.StatisticsUri = StatisticsUri;
         this.Metadata = Metadata;
         this.TagsUri = TagsUri;
         this.Tags = Tags;
@@ -61,5 +65,7 @@ public record GenesetResponse
     [JsonPropertyName("tags")] public GenesetTagResponse[]? Tags { get; init; }
     [JsonPropertyName("tags_continuation_token")] public string? TagsContinuationToken { get; init; }
     [JsonPropertyName("tags_continuation_uri")] public Uri? TagsContinuationUri { get; init; }
+
+    [JsonPropertyName("stats_uri")] public Uri? StatisticsUri { get; init; }
 
 }

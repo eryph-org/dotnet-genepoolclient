@@ -7,6 +7,7 @@ using Azure.Core;
 using Azure.Core.Pipeline;
 using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
+using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.Responses;
 using Eryph.GenePool.Model.Responses;
 
@@ -71,17 +72,22 @@ internal class RecycleBinRestClient
     }
 
     public async Task<Response<NoResultResponse>> DestroyTagsAsync(
-        OrganizationName orgName, GeneSetIdentifier[] genesets, CancellationToken cancellationToken = default)
+        OrganizationName orgName, GeneSetIdentifier[] genesets,
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
     { 
         return await _pipeline.SendRequestAsync<NoResultResponse>(
-            CreateDestroyTagsMessage(orgName, genesets), cancellationToken).ConfigureAwait(false);
+            CreateDestroyTagsMessage(orgName, genesets),
+            options,
+            cancellationToken).ConfigureAwait(false);
     }
 
-    public Response<NoResultResponse> DestroyTags(OrganizationName orgName, GeneSetIdentifier[] genesets, 
+    public Response<NoResultResponse> DestroyTags(OrganizationName orgName, GeneSetIdentifier[] genesets,
+        RequestOptions options,
         CancellationToken cancellationToken = default)
     {
         return _pipeline.SendRequest<NoResultResponse>(
-            CreateDestroyTagsMessage(orgName, genesets), cancellationToken);
+            CreateDestroyTagsMessage(orgName, genesets),options, cancellationToken);
     }
 
     private HttpMessage CreateDestroyTagsMessage(OrganizationName orgName, GeneSetIdentifier[] genesets)
@@ -94,16 +100,20 @@ internal class RecycleBinRestClient
     }
 
     public async Task<Response<ListResultResponse<GenesetTagResponse>>> RestoreTagsAsync(
-        OrganizationName orgName, GeneSetIdentifier[] genesets, CancellationToken cancellationToken = default)
+        OrganizationName orgName, GeneSetIdentifier[] genesets,
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
     {
         return await _pipeline.SendRequestAsync<ListResultResponse<GenesetTagResponse>>(
-            CreateRestoreTagsMessage(orgName, genesets), cancellationToken).ConfigureAwait(false);
+            CreateRestoreTagsMessage(orgName, genesets), options, cancellationToken).ConfigureAwait(false);
     }
 
-    public Response<ListResultResponse<GenesetTagResponse>> RestoreTags(OrganizationName orgName, GeneSetIdentifier[] genesetAndTags, CancellationToken cancellationToken = default)
+    public Response<ListResultResponse<GenesetTagResponse>> RestoreTags(OrganizationName orgName,
+        GeneSetIdentifier[] genesetAndTags, RequestOptions options,
+        CancellationToken cancellationToken = default)
     {
         return _pipeline.SendRequest<ListResultResponse<GenesetTagResponse>>(
-            CreateRestoreTagsMessage(orgName, genesetAndTags), cancellationToken);
+            CreateRestoreTagsMessage(orgName, genesetAndTags), options, cancellationToken);
     }
 
     private HttpMessage CreateRestoreTagsMessage(OrganizationName orgName, GeneSetIdentifier[] genesets)
@@ -115,38 +125,40 @@ internal class RecycleBinRestClient
         return message;
     }
 
-    public async Task<Response<PagedResultResponse<GenesetTagResponse>>> ListAsync(OrganizationName orgName, GeneSetName? genesetName = default, 
-        string? continuationToken = default, int? pageSize = 0, 
+    public async Task<Response<PagedResultResponse<GenesetTagResponse>>> ListAsync(OrganizationName orgName,
+        GeneSetName? genesetName,
+        ListRecycleBinRequestOptions options,
         CancellationToken cancellationToken = default)
     {
 
         return await _pipeline.SendRequestAsync<PagedResultResponse<GenesetTagResponse>>(
-            CreateGetRequest(orgName, genesetName, continuationToken, pageSize), cancellationToken).ConfigureAwait(false);
+            CreateGetRequest(orgName, genesetName, options),options, cancellationToken).ConfigureAwait(false);
 
     }
 
-    public Response<PagedResultResponse<GenesetTagResponse>> List(OrganizationName orgName, GeneSetName? genesetName = default, 
-        string? continuationToken = default, int? pageSize = 0, 
+    public Response<PagedResultResponse<GenesetTagResponse>> List(OrganizationName orgName,
+        GeneSetName? genesetName,
+        ListRecycleBinRequestOptions options,
         CancellationToken cancellationToken = default)
     {
         return _pipeline.SendRequest<PagedResultResponse<GenesetTagResponse>>(
-            CreateGetRequest(orgName, genesetName, continuationToken, pageSize), cancellationToken);
+            CreateGetRequest(orgName, genesetName, options), options, cancellationToken);
 
     }
 
 
-    private HttpMessage CreateGetRequest(OrganizationName orgName, GeneSetName? genesetName, string? continuationToken,
-        int? pageSize)
+    private HttpMessage CreateGetRequest(OrganizationName orgName, GeneSetName? genesetName, 
+        ContinuingListRequestOptions options)
     {
         var message = genesetName == default
             ? CreateOrgRequest(orgName, RequestMethod.Get, "tags")
             : CreateGenesetRequest(orgName, genesetName, "tags", RequestMethod.Get);
 
-        if(!string.IsNullOrWhiteSpace(continuationToken))
-            message.Request.Uri.AppendQuery("continuation_token", continuationToken);
+        if(!string.IsNullOrWhiteSpace(options.ContinuationToken))
+            message.Request.Uri.AppendQuery("continuation_token", options.ContinuationToken);
 
-        if (pageSize.HasValue)
-            message.Request.Uri.AppendQuery("page_size", pageSize.Value.ToString());
+        if (options.PageSizeHint.HasValue)
+            message.Request.Uri.AppendQuery("page_size", options.PageSizeHint.Value.ToString());
 
         return message;
     }

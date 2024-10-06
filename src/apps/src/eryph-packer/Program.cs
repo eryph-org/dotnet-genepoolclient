@@ -292,7 +292,9 @@ packCommand.SetHandler(async context =>
                 var configJson = ConfigModelJsonSerializer.Serialize(catletConfig);
                 await File.WriteAllTextAsync(Path.Combine(packFolder, "catlet.json"), configJson);
                 packableFiles.Add(new PackableFile(Path.Combine(packFolder, "catlet.json"),
-                    "catlet.json", GeneType.Catlet, "catlet", false, catletContent));
+                    "catlet.json", GeneType.Catlet,
+                    Architectures.Any, // catlet is architecture independent
+                    "catlet", false, catletContent));
                 parent = catletConfig.Parent;
             }
 
@@ -300,36 +302,31 @@ packCommand.SetHandler(async context =>
 
             // pack fodder
             AnsiConsole.MarkupLine("Preparing fodder...");
-            
+
             var fodderDir = new DirectoryInfo(Path.Combine(absoluteGenesetPath, "fodder"));
             if (fodderDir.Exists)
             {
-                foreach (var fodderFile in fodderDir.GetFiles("*.*").Where(x =>
-                         {
-                             var extension = Path.GetExtension(x.Name).ToLowerInvariant();
-                             return extension is ".yaml" or ".yml";
-                         }))
+                await AddFodderFromDirectory(fodderDir, Architectures.Any);
+                foreach (var hypervisorDir in fodderDir.GetDirectories())
                 {
-                    if (fodderFile.Length > GeneModelDefaults.MaxYamlSourceBytes)
-                        throw new EryphPackerUserException(
-                            $"Fodder file '{fodderFile.Name}' is too large. Max size is {GeneModelDefaults.MaxYamlSourceBytes / 1024 / 1024} MiB.");
+                    if (string.Equals(hypervisorDir.Name, Hypervisors.HyperV, StringComparison.OrdinalIgnoreCase))
+                    {
+                        await AddFodderFromDirectory(fodderDir, Architectures.HyperVAny);
 
-                    var fodderContent = File.ReadAllText(fodderFile.FullName);
-                    var fodderConfig = DeserializeFodderConfigString(fodderContent);
-                    var validationResult = FodderGeneConfigValidations.ValidateFodderGeneConfig(fodderConfig);
-                    validationResult.ToEither()
-                        .MapLeft(issues => Error.New($"The fodder configuration '{fodderFile.Name}' is invalid.",
-                            Error.Many(issues.Map(i => i.ToError()))))
-                        .IfLeft(e => e.Throw());
-                    var fodderJson = ConfigModelJsonSerializer.Serialize(fodderConfig);
-                    var fodderPackFolder = Path.Combine(packFolder, "fodder");
-                    if (!Directory.Exists(fodderPackFolder))
-                        Directory.CreateDirectory(fodderPackFolder);
+                        foreach (var archDir  in fodderDir.GetDirectories())
+                        {
+                            if (string.Equals(hypervisorDir.Name, Architectures.HyperVAmd64,
+                                    StringComparison.OrdinalIgnoreCase))
+                                await AddFodderFromDirectory(fodderDir, Architectures.HyperVAmd64);
+                            else
+                                AnsiConsole.MarkupLine($"Fodder dir contains [yellow]unknown architecture name '{archDir.Name}'[/]");
+                        }
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLine($"Fodder dir contains [yellow]unknown hypervisor name '{hypervisorDir.Name}'[/]");
 
-                    var fodderJsonFile = Path.Combine(fodderPackFolder, $"{fodderConfig.Name}.json");
-                    await File.WriteAllTextAsync(fodderJsonFile, fodderJson);
-                    packableFiles.Add(new PackableFile(fodderJsonFile,
-                        $"{fodderConfig.Name}.json", GeneType.Fodder, fodderConfig.Name, false, fodderContent));
+                    }
                 }
             }
 
@@ -371,7 +368,8 @@ packCommand.SetHandler(async context =>
                 if (!isInteractive)
                     AnsiConsole.MarkupLineInterpolated($"Gene {packingTask.Packable.GeneName} [green]packed[/]");
 
-                packedGenesetInfo.AddGene(packingTask.Packable.GeneType, packingTask.Packable.GeneName, packedFile);
+                packedGenesetInfo.AddGene(packingTask.Packable.GeneType, packingTask.Packable.GeneName, packedFile,
+                    packingTask.Packable.Architecture);
             }
 
             // remove the temporary .pack folder
@@ -379,6 +377,39 @@ packCommand.SetHandler(async context =>
                 Directory.Delete(packFolder, true);
 
             return packedGenesetInfo;
+
+            async Task AddFodderFromDirectory(DirectoryInfo directory, string architecture)
+            {
+                foreach (var fodderFile in directory.GetFiles("*.*").Where(x =>
+                         {
+                             var extension = Path.GetExtension(x.Name).ToLowerInvariant();
+                             return extension is ".yaml" or ".yml";
+                         }))
+                {
+                    if (fodderFile.Length > GeneModelDefaults.MaxYamlSourceBytes)
+                        throw new EryphPackerUserException(
+                            $"Fodder file '{fodderFile.Name}' is too large. Max size is {GeneModelDefaults.MaxYamlSourceBytes / 1024 / 1024} MiB.");
+
+                    var fodderContent = File.ReadAllText(fodderFile.FullName);
+                    var fodderConfig = DeserializeFodderConfigString(fodderContent);
+                    var validationResult = FodderGeneConfigValidations.ValidateFodderGeneConfig(fodderConfig);
+                    validationResult.ToEither()
+                        .MapLeft(issues => Error.New($"The fodder configuration '{fodderFile.Name}' is invalid.",
+                            Error.Many(issues.Map(i => i.ToError()))))
+                        .IfLeft(e => e.Throw());
+                    var fodderJson = ConfigModelJsonSerializer.Serialize(fodderConfig);
+                    var fodderPackFolder = Path.Combine(packFolder, "fodder");
+                    if (!Directory.Exists(fodderPackFolder))
+                        Directory.CreateDirectory(fodderPackFolder);
+
+                    var fodderJsonFile = Path.Combine(fodderPackFolder, $"{fodderConfig.Name}.json");
+                    await File.WriteAllTextAsync(fodderJsonFile, fodderJson);
+                    packableFiles.Add(new PackableFile(fodderJsonFile,
+                        $"{fodderConfig.Name}.json", GeneType.Fodder,
+                        architecture,
+                        fodderConfig.Name!, false, fodderContent));
+                }
+            }
 
             static CatletConfig DeserializeCatletConfigString(string configString)
             {
@@ -451,21 +482,21 @@ pushCommand.SetHandler(async context =>
                     genesetInfo.ManifestData.Description,
                     markdownContent, 
                     genesetInfo.ManifestData.Metadata,
-                    token
+                    cancellationToken: token
                 );
             }
             else
             {
                 statusContext.Status = $"Updating geneset {genesetInfo.GenesetName}";
                 statusContext.Refresh();
-                var geneset = await genesetClient.GetAsync(token);
+                var geneset = await genesetClient.GetAsync(cancellationToken: token);
                 await genesetClient.UpdateAsync(geneset?.Public ?? genesetInfo.ManifestData.Public,
                     genesetInfo.ManifestData.ShortDescription,
                     genesetInfo.ManifestData.Description,
                     markdownContent,
                     genesetInfo.ManifestData.Metadata,
                     geneset?.ETag,
-                    token
+                    cancellationToken: token
                 );
             }
 
@@ -577,7 +608,7 @@ pushCommand.SetHandler(async context =>
         .SpinnerStyle(Style.Parse("green bold"))
         .StartAsync($"Creating geneset tag {genesetTagInfo.GenesetTagName}", async statusContext =>
         {
-            await tagClient.CreateAsync(genesetTagInfo.ManifestData, token);
+            await tagClient.CreateAsync(genesetTagInfo.ManifestData, cancellationToken: token);
 
         });
 
@@ -611,7 +642,7 @@ createApiKeyCommand.SetHandler(async (context) =>
         .SpinnerStyle(Style.Parse("green bold"))
         .StartAsync("Creating api key", async _ =>
         {
-            var apiKeyResponse = await orgClient.CreateApiKeyAsync(keyName, permissions, token);
+            var apiKeyResponse = await orgClient.CreateApiKeyAsync(keyName, permissions, cancellationToken: token);
             var apiKeyResponseJson =
                 JsonSerializer.Serialize(apiKeyResponse, new JsonSerializerOptions(GeneModelDefaults.SerializerOptions)
                 {
@@ -648,7 +679,7 @@ deleteApiKeyCommand.SetHandler(async (context) =>
         .SpinnerStyle(Style.Parse("green bold"))
         .StartAsync("Deleting api key", async _ =>
         {
-            await apiKeyClient.DeleteAsync(token);
+            await apiKeyClient.DeleteAsync(cancellationToken: token);
         });
 
 });

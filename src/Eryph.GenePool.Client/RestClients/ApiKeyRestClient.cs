@@ -6,9 +6,10 @@ using Azure.Core;
 using Azure.Core.Pipeline;
 using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
+using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.Responses;
 using Eryph.GenePool.Model;
-using Eryph.GenePool.Model.Requests;
+using Eryph.GenePool.Model.Requests.ApiKeys;
 using Eryph.GenePool.Model.Responses;
 
 namespace Eryph.GenePool.Client.RestClients;
@@ -57,23 +58,30 @@ internal class ApiKeyRestClient
     /// <summary> Deletes a api key. </summary>
     /// <param name="organization"> The organization of the api key</param>
     /// <param name="keyId">The key id of the api key</param>
+    /// <param name="options">Request options</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-    public async Task<Response<NoResultResponse>> DeleteAsync(OrganizationName organization, ApiKeyId keyId, CancellationToken cancellationToken = default)
+    public async Task<Response<NoResultResponse>> DeleteAsync(OrganizationName organization, ApiKeyId keyId,
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
     {
         if (organization == null)
             throw new ArgumentNullException(nameof(organization));
 
 
-        return await _pipeline.SendRequestAsync<NoResultResponse>(CreateRequest(organization, keyId, RequestMethod.Delete), cancellationToken).ConfigureAwait(false);
+        return await _pipeline.SendRequestAsync<NoResultResponse>(CreateRequest(organization, keyId, 
+            RequestMethod.Delete), options, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary> Deletes a api key. </summary>
     /// <param name="organization"> The organization of the api key</param>
     /// <param name="keyId">The key id of the api key</param>
+    /// <param name="options">Request options</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-    public Response<NoResultResponse> Delete(OrganizationName organization, ApiKeyId keyId, CancellationToken cancellationToken = default)
+    public Response<NoResultResponse> Delete(OrganizationName organization, ApiKeyId keyId,
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
     {
         if (organization == null)
         {
@@ -81,16 +89,20 @@ internal class ApiKeyRestClient
         }
 
         return _pipeline.SendRequest<NoResultResponse>(CreateRequest(organization, keyId, RequestMethod.Delete),
+            options,
             cancellationToken);
     }
 
     /// <summary> Get a api key. </summary>
     /// <param name="organization"> The organization of the api key</param>
     /// <param name="keyId">The key id of the api key</param>
+    /// <param name="options">Request options</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
     public async Task<Response<SingleResultResponse<ApiKeyResponse>>> GetAsync(OrganizationName organization,
-        ApiKeyId keyId, CancellationToken cancellationToken = default)
+        ApiKeyId keyId,
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
     {
         if (organization == null)
         {
@@ -101,16 +113,22 @@ internal class ApiKeyRestClient
             throw new ArgumentNullException(nameof(keyId));
         }
 
-        return await _pipeline.SendRequestAsync<SingleResultResponse<ApiKeyResponse>>(CreateRequest(organization, keyId, RequestMethod.Get), cancellationToken).ConfigureAwait(false);
+        return await _pipeline.SendRequestAsync<SingleResultResponse<ApiKeyResponse>>(
+            CreateRequest(organization, keyId, RequestMethod.Get), 
+            options,
+            cancellationToken).ConfigureAwait(false);
 
     }
 
     /// <summary> Get a organization. </summary>
     /// <param name="organization"> The organization of the api key</param>
     /// <param name="keyId">The key id of the api key</param>
+    /// <param name="options">Request options</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <exception cref="ArgumentNullException"> <paramref name="organization"/> is null. </exception>
-    public Response<SingleResultResponse<ApiKeyResponse>> Get(OrganizationName organization, ApiKeyId keyId, CancellationToken cancellationToken = default)
+    public Response<SingleResultResponse<ApiKeyResponse>> Get(OrganizationName organization, ApiKeyId keyId,
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
     {
         if (organization == null)
         {
@@ -123,7 +141,9 @@ internal class ApiKeyRestClient
         }
 
         return _pipeline.SendRequest<SingleResultResponse<ApiKeyResponse>>(
-            CreateRequest(organization, keyId,  RequestMethod.Get), cancellationToken);
+            CreateRequest(organization, keyId,  RequestMethod.Get),
+            options,
+            cancellationToken);
 
     }
 
@@ -156,28 +176,37 @@ internal class ApiKeyRestClient
     /// <summary> Creates a api key. </summary>
     /// <param name="organization">The organization where to create the api key</param>
     /// <param name="body"> The CreateApiKeyBody to use. </param>
+    /// <param name="options">Request options</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public async Task<Response<SingleResultResponse<ApiKeySecretResponse>>> CreateAsync(
         OrganizationName organization,
-        CreateApiKeyBody? body = null, CancellationToken cancellationToken = default)
+        CreateApiKeyBody body,
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
     {
 
         using var message = CreateNewApiKeyRequest(organization, body);
-        return await _pipeline.SendRequestAsync<SingleResultResponse<ApiKeySecretResponse>>(message, cancellationToken).ConfigureAwait(false);
+        return await _pipeline.SendRequestAsync<SingleResultResponse<ApiKeySecretResponse>>(
+            message, options, cancellationToken).ConfigureAwait(false);
     }
 
 
     /// <summary> Creates a api key. </summary>
     /// <param name="organization">The organization where to create the api key</param>
     /// <param name="body"> The CreateApiKeyBody to use. </param>
+    /// <param name="options">Request options</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public Response<SingleResultResponse<ApiKeySecretResponse>> Create(
         OrganizationName organization,
-        CreateApiKeyBody? body = null, CancellationToken cancellationToken = default)
+        CreateApiKeyBody body,
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
     {
 
         using var message = CreateNewApiKeyRequest(organization,body);
-        return _pipeline.SendRequest<SingleResultResponse<ApiKeySecretResponse>>(message, cancellationToken);
+        return _pipeline.SendRequest<SingleResultResponse<ApiKeySecretResponse>>(message,
+            options,
+            cancellationToken);
 
     }
 

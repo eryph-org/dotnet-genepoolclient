@@ -3,9 +3,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
+using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Requests;
+using Eryph.GenePool.Model.Requests.ApiKeys;
+using Eryph.GenePool.Model.Requests.Organizations;
 using Eryph.GenePool.Model.Responses;
 using JetBrains.Annotations;
 
@@ -109,6 +112,7 @@ public class OrganizationClient
     /// <remarks> Creates a project. </remarks>
     public virtual async Task<OrganizationRefResponse?> CreateAsync(Guid genepoolOrgId,
         Guid ownerOrgId, string? newOrgName = default,
+        RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(CreateAsync)}");
@@ -123,7 +127,9 @@ public class OrganizationClient
                 NewOrgName = newOrgName
             };
 
-            return (await RestClient.CreateAsync(body, cancellationToken).ConfigureAwait(false)).Value.Value;
+            return (await RestClient.CreateAsync(body,
+                options ?? new RequestOptions(),
+                cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -140,6 +146,7 @@ public class OrganizationClient
     /// <remarks> Creates a project. </remarks>
     public virtual OrganizationRefResponse? Create(Guid genepoolOrgId,
         Guid ownerOrgId, string? newOrgName = default,
+        RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Create)}");
@@ -153,7 +160,9 @@ public class OrganizationClient
                 OrgId = ownerOrgId,
                 NewOrgName = newOrgName
             };
-            return RestClient.Create(body, cancellationToken).Value.Value;
+            return RestClient.Create(body,
+                options ?? new RequestOptions(),
+                cancellationToken).Value.Value;
         }
         catch (Exception e)
         {
@@ -164,13 +173,17 @@ public class OrganizationClient
 
     /// <summary> Deletes a organization. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual async Task DeleteAsync(CancellationToken cancellationToken = default)
+    public virtual async Task DeleteAsync(
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Delete)}");
         scope.Start();
         try
         {
-            await RestClient.DeleteAsync(_organization, cancellationToken).ConfigureAwait(false);
+            await RestClient.DeleteAsync(_organization,
+                options ?? new RequestOptions(), 
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e)
         {
@@ -181,13 +194,15 @@ public class OrganizationClient
 
     /// <summary> Deletes a organization. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual void Delete(CancellationToken cancellationToken = default)
+    public virtual void Delete(RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Delete)}");
         scope.Start();
         try
         {
-            RestClient.Delete(_organization, cancellationToken);
+            RestClient.Delete(_organization,
+                options ?? new RequestOptions(), cancellationToken);
         }
         catch (Exception e)
         {
@@ -198,13 +213,16 @@ public class OrganizationClient
 
     /// <summary> Get a organization. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual async Task<OrganizationResponse?> GetAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<OrganizationResponse?> GetAsync(
+        RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
-            return (await RestClient.GetAsync(_organization, cancellationToken).ConfigureAwait(false)).Value.Value;
+            return (await RestClient.GetAsync(_organization,
+                options ?? new RequestOptions(), cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -215,13 +233,16 @@ public class OrganizationClient
 
     /// <summary> Get a organization. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual OrganizationResponse? Get(CancellationToken cancellationToken = default)
+    public virtual OrganizationResponse? Get(
+        RequestOptions? options = default, CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(Get)}");
         scope.Start();
         try
         {
-            return RestClient.Get(_organization, cancellationToken).Value.Value;
+            return RestClient.Get(_organization,
+                options ?? new RequestOptions(), 
+                cancellationToken).Value.Value;
         }
         catch (Exception e)
         {
@@ -295,8 +316,9 @@ public class OrganizationClient
     public virtual Task<ApiKeySecretResponse?> CreateApiKeyAsync(
         string name,
         string[] permissions,
+        RequestOptions? options = default,
         CancellationToken cancellationToken = default) =>
-        CreateApiKeyAsync(ApiKeyName.New(name), permissions, cancellationToken);
+        CreateApiKeyAsync(ApiKeyName.New(name), permissions, options, cancellationToken);
 
     /// <summary>
     /// Creates a new api key for the organization.
@@ -308,6 +330,7 @@ public class OrganizationClient
     public virtual async Task<ApiKeySecretResponse?> CreateApiKeyAsync(
         ApiKeyName name,
         string[] permissions,
+        RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(CreateApiKey)}");
@@ -326,7 +349,9 @@ public class OrganizationClient
                 _clientConfiguration.Version);
 
 
-            return (await apiKeyRestClient.CreateAsync(_organization, body, cancellationToken).ConfigureAwait(false)).Value.Value;
+            return (await apiKeyRestClient.CreateAsync(_organization, body,
+                options?? new RequestOptions(),
+                cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
         {
@@ -345,8 +370,9 @@ public class OrganizationClient
     public virtual ApiKeySecretResponse? CreateApiKey(
         string name,
         string[] permissions,
+        RequestOptions? options = default,
         CancellationToken cancellationToken = default) =>
-        CreateApiKey(ApiKeyName.New(name), permissions, cancellationToken);
+        CreateApiKey(ApiKeyName.New(name), permissions, options, cancellationToken);
 
     /// <summary>
     /// Creates a new api key for the organization.
@@ -358,6 +384,7 @@ public class OrganizationClient
     public virtual ApiKeySecretResponse? CreateApiKey(
         ApiKeyName name,
         string[] permissions,
+        RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(CreateApiKey)}");
@@ -376,7 +403,7 @@ public class OrganizationClient
                 _clientConfiguration.Version);
 
 
-            return apiKeyRestClient.Create(_organization, body, cancellationToken).Value.Value;
+            return apiKeyRestClient.Create(_organization, body, options, cancellationToken).Value.Value;
         }
         catch (Exception e)
         {

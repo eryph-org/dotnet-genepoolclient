@@ -6,6 +6,7 @@ using Azure;
 using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.Internal.AsyncCollections;
+using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model.Responses;
 using JetBrains.Annotations;
@@ -47,6 +48,7 @@ public class RecycleBinClient
     /// <param name="genesets">List of geneset tags to be deleted.</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual async Task DestroyTagsAsync(GeneSetIdentifier[] genesets,
+        RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(RecycleBinClient)}.{nameof(DestroyTags)}");
@@ -55,7 +57,9 @@ public class RecycleBinClient
         {
             await RestClient.DestroyTagsAsync(
                 _organization,
-                genesets, cancellationToken).ConfigureAwait(false);
+                genesets,
+                options ?? new RequestOptions(),
+                cancellationToken).ConfigureAwait(false);
 
         }
         catch (Exception e)
@@ -69,6 +73,7 @@ public class RecycleBinClient
     /// <param name="genesets">List of geneset tags to be deleted.</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual void DestroyTags(GeneSetIdentifier[] genesets,
+        RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(RecycleBinClient)}.{nameof(DestroyTags)}");
@@ -77,7 +82,9 @@ public class RecycleBinClient
         {
             RestClient.DestroyTags(
                 _organization,
-                genesets, cancellationToken);
+                genesets,
+                options ?? new RequestOptions(),
+                cancellationToken);
         }
         catch (Exception e)
         {
@@ -90,6 +97,7 @@ public class RecycleBinClient
     /// <param name="genesets">List of geneset tags to be restored.</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual async Task<IEnumerable<GenesetTagResponse>?> RestoreTagsAsync(GeneSetIdentifier[] genesets,
+        RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(RecycleBinClient)}.{nameof(RestoreTags)}");
@@ -98,7 +106,8 @@ public class RecycleBinClient
         {
             return (await RestClient.RestoreTagsAsync(
                 _organization,
-                genesets, cancellationToken).ConfigureAwait(false)).Value.Values;
+                genesets,
+                options ?? new RequestOptions(), cancellationToken).ConfigureAwait(false)).Value.Values;
         }
         catch (Exception e)
         {
@@ -111,6 +120,7 @@ public class RecycleBinClient
     /// <param name="genesets">List of geneset tags to be restored.</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual IEnumerable<GenesetTagResponse>? RestoreTags(GeneSetIdentifier[] genesets,
+        RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(RecycleBinClient)}.{nameof(RestoreTags)}");
@@ -119,7 +129,9 @@ public class RecycleBinClient
         {
             return RestClient.RestoreTags(
                 _organization,
-                genesets, cancellationToken).Value.Values;
+                genesets,
+                options ?? new RequestOptions(),
+                cancellationToken).Value.Values;
         }
         catch (Exception e)
         {

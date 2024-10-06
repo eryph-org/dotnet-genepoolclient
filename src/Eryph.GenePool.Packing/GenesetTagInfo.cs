@@ -154,7 +154,7 @@ public class GenesetTagInfo
 
     }
 
-    public void AddGene(GeneType geneType, string name, string hash)
+    public void AddGene(GeneType geneType, string name, string hash, string architecture)
     {
         EnsureCreatedAndLoaded();
 
@@ -169,13 +169,13 @@ public class GenesetTagInfo
                 RemoveExistingGene(_manifestData.VolumeGenes.FirstOrDefault(x => x.Name == name)?.Hash, hash);
 
                 _manifestData.VolumeGenes = _manifestData.VolumeGenes.Where(x => x.Name != name)
-                    .Append(new GeneReferenceData { Name = name, Hash = hash }).ToArray();
+                    .Append(new GeneReferenceData { Name = name, Hash = hash, Architecture = architecture}).ToArray();
                 break;
             case GeneType.Fodder:
                 _manifestData.FodderGenes ??= Array.Empty<GeneReferenceData>();
                 RemoveExistingGene(_manifestData.FodderGenes.FirstOrDefault(x => x.Name == name)?.Hash, hash);
                 _manifestData.FodderGenes = _manifestData.FodderGenes.Where(x => x.Name != name)
-                    .Append(new GeneReferenceData { Name = name, Hash = hash }).ToArray();
+                    .Append(new GeneReferenceData { Name = name, Hash = hash, Architecture = architecture}).ToArray();
 
                 break;
             default:

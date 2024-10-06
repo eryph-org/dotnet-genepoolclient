@@ -21,7 +21,9 @@ public static class VMExport
             token.ThrowIfCancellationRequested();
 
             files.Add(new PackableFile(vhdFile.FullName, vhdFile.Name,
-                GeneType.Volume, Path.GetFileNameWithoutExtension(vhdFile.Name), true, null));
+                GeneType.Volume, 
+                Architectures.HyperVAmd64,
+                Path.GetFileNameWithoutExtension(vhdFile.Name), true, null));
         }
         
         return (vmPlan, files);
