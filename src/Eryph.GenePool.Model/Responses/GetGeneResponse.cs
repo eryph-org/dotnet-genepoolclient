@@ -7,9 +7,13 @@ namespace Eryph.GenePool.Model.Responses;
 public record GetGeneResponse
 {
     [JsonConstructor]
-    public GetGeneResponse(GenesetRefResponse? GenesetTag, string Gene, Uri? Uri, GeneManifestData Manifest, 
-        bool? Available, DateTimeOffset? DownloadExpires, GenePartDownloadUri[]? DownloadUris, GeneUploadStatusResponse? UploadStatus,
-        Uri? ContentUri, GetGeneContentResponse? Content)
+    public GetGeneResponse(GenesetRefResponse? GenesetTag, 
+        string Gene, Uri? Uri, GeneManifestData? Manifest, 
+        bool? Available, DateTimeOffset? DownloadExpires, 
+        GenePartDownloadUri[]? DownloadUris, 
+        GeneUploadStatusResponse? UploadStatus,
+        Uri? ContentUri, 
+        GetGeneContentResponse? Content)
     {
         this.GenesetTag = GenesetTag;
         this.Gene = Gene;
@@ -33,15 +37,8 @@ public record GetGeneResponse
     [JsonPropertyName("uri")]
     public Uri? Uri { get; init; }
 
-
-    [JsonPropertyName("content_uri")]
-    public Uri? ContentUri { get; init; }
-
-    [JsonPropertyName("content")]
-    public GetGeneContentResponse? Content { get; init; }
-
     [JsonPropertyName("manifest")]
-    public GeneManifestData Manifest { get; init; }
+    public GeneManifestData? Manifest { get; init; }
 
     [JsonPropertyName("available")]
     public bool? Available { get; init; }
@@ -55,5 +52,13 @@ public record GetGeneResponse
 
     [JsonPropertyName("upload_status")]
     public GeneUploadStatusResponse? UploadStatus { get; init; }
+
+
+    [JsonPropertyName("content_uri")]
+    public Uri? ContentUri { get; init; }
+
+    [JsonPropertyName("content")]
+    public GetGeneContentResponse? Content { get; init; }
+
 
 }

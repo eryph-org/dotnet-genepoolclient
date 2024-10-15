@@ -8,12 +8,4 @@ public record GenePartUploadUri([property: JsonPropertyName("part")] string Part
     [property: JsonPropertyName("upload_uri")]
     Uri UploadUri,
     [property: JsonPropertyName("expires")]
-    DateTimeOffset Expires)
-{
-    public void Deconstruct(out string part, out Uri uploadUri, out DateTimeOffset expires)
-    {
-        part = Part;
-        uploadUri = UploadUri;
-        expires = Expires;
-    }
-}
+    DateTimeOffset Expires);
