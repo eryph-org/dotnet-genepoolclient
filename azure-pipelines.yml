@@ -33,9 +33,8 @@ jobs:
       custom: 'tool'
       arguments: 'install --global azuresigntool'
 
-  - task: UseGitVersion@5
-    inputs:
-      versionSpec: '5.x'
+  - task: gitversion/setup@3
+  - task: gitversion/execute@3
 
   - task: DotNetCoreCLI@2
     displayName: dotnet restore
@@ -65,7 +64,7 @@ jobs:
       command: 'publish'
       publishWebProjects: false
       projects: '**/apps/**/*-packer/*.csproj'
-      arguments: '--runtime win7-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\packer_build /p:SignHash=$(signHash)'
+      arguments: '--runtime win8-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\packer_build /p:SignHash=$(signHash)'
       zipAfterPublish: false
       
   - task: CmdLine@2
