@@ -12,6 +12,6 @@ public class HashSha256 : EryphName<HashSha256>
                          allowHyphens: false,
                          allowUnderscores: false,
                          allowSpaces: false)
-                     | Validations<GeneName>.ValidateLength(value, 64, 64));
+                     | Validations<HashSha256>.ValidateLength(value, 64, 64));
     }
 }
