@@ -68,7 +68,7 @@ namespace Eryph.GenePool.Model.Tests
         }
 
         [Fact]
-        public void ValidateMarkdownContentSize_ToLong_ReturnsFail()
+        public void ValidateMarkdownContentSize_TooLong_ReturnsFail()
         {
             var chars = new string('a', GeneModelDefaults.MaxGenesetMarkdownBytes+1);
             var result = Validations.ValidateMarkdownContentSize(chars);
