@@ -9,7 +9,6 @@ using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
 using JetBrains.Annotations;
-using Microsoft.Extensions.Options;
 
 namespace Eryph.GenePool.Client;
 

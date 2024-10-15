@@ -97,7 +97,7 @@ namespace Eryph.GenePool.Model.Tests
                 .ToList()
                 .ForEach(i => keys.Add(i.ToString(), i.ToString()));
 
-            var result = Validations.ValidateMetadata(keys);
+            var result = Validations.ValidateMetadata(true,keys);
 
             result.Should().BeFail().Which.Should().SatisfyRespectively(
                 error => error.Message.Should()
@@ -111,7 +111,7 @@ namespace Eryph.GenePool.Model.Tests
             var key = new string('a', GeneModelDefaults.MaxMetadataKeyLength+1);
             keys.Add(key, "a");
 
-            var result = Validations.ValidateMetadata(keys);
+            var result = Validations.ValidateMetadata(true, keys);
 
             result.Should().BeFail().Which.Should().SatisfyRespectively(
                 error => error.Message.Should()
@@ -126,7 +126,7 @@ namespace Eryph.GenePool.Model.Tests
             var value = new string('a', GeneModelDefaults.MaxMetadataValueLength + 1);
             keys.Add("key", value);
 
-            var result = Validations.ValidateMetadata(keys);
+            var result = Validations.ValidateMetadata(true, keys);
 
             result.Should().BeFail().Which.Should().SatisfyRespectively(
                 error => error.Message.Should()

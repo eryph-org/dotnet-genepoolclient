@@ -89,7 +89,7 @@ public class GenesetTagClient
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual async Task<GenesetTagResponse?> GetAsync(
-        RequestOptions? options = default,
+        GetGenesetTagRequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
@@ -97,7 +97,7 @@ public class GenesetTagClient
         try
         {
             return (await RestClient.GetAsync(_identifier,
-                options ?? new RequestOptions(),
+                options ?? new GetGenesetTagRequestOptions(),
                 cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
@@ -110,7 +110,7 @@ public class GenesetTagClient
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual GenesetTagResponse? Get(
-        RequestOptions? options = default,
+        GetGenesetTagRequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
@@ -118,7 +118,7 @@ public class GenesetTagClient
         try
         {
             return RestClient.Get(_identifier,
-                options ?? new RequestOptions(),
+                options ?? new GetGenesetTagRequestOptions(),
                 cancellationToken).Value.Value;
         }
         catch (Exception e)
@@ -171,7 +171,7 @@ public class GenesetTagClient
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual bool Exists(
-        RequestOptions? options = default,
+        GetGenesetTagRequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
@@ -179,7 +179,7 @@ public class GenesetTagClient
         try
         {
             var res = RestClient.Get(_identifier,
-                options ?? new RequestOptions(), 
+                options ?? new GetGenesetTagRequestOptions(), 
                 cancellationToken).Value;
             return true;
         }
@@ -196,7 +196,7 @@ public class GenesetTagClient
 
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public virtual async Task<bool> ExistsAsync(RequestOptions? options = default, 
+    public virtual async Task<bool> ExistsAsync(GetGenesetTagRequestOptions? options = default, 
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
@@ -204,7 +204,7 @@ public class GenesetTagClient
         try
         {
             await RestClient.GetAsync(_identifier,
-                    options ?? new RequestOptions(), 
+                    options ?? new GetGenesetTagRequestOptions(), 
                     cancellationToken)
                 .ConfigureAwait(false);
             return true;

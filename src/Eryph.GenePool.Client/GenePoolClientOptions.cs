@@ -6,30 +6,6 @@ using Eryph.GenePool.Client.Credentials;
 
 namespace Eryph.GenePool.Client;
 
-
-public class UploadClientOptions : ClientOptions
-{
-    public HttpPipeline Build()
-    {
-        var pipelineOptions = new HttpPipelineOptions(this)
-        {
-            // PerCallPolicies = { new  },
-            //// needed *after* core applies the user agent; can't have that without going per-retry
-            //PerRetryPolicies = { StorageTelemetryPolicy.Shared },
-            //ResponseClassifier = classifier,
-            //RequestFailedDetailsParser = new StorageRequestFailedDetailsParser()
-        };
-
-        return HttpPipelineBuilder.Build(pipelineOptions);
-    }
-
-    /// <summary>
-    /// Configures how many threads should be used to upload a single gene.
-    /// Default is 2.
-    /// </summary>
-    public int MaxParallelThreads { get; set; } = 2;
-}
-
 /// <summary>
 /// Provides the client configuration options for connecting to Azure Blob
 /// Storage.
@@ -48,20 +24,22 @@ public class GenePoolClientOptions : ClientOptions
     }
 
     public ServiceVersion Version { get; }
-    
-    public Uri Endpoint { get; }
+    public bool StagingAuthority { get; }
 
-    public string[] Scopes { get; set; } = new[]
-    {
+    public Uri Endpoint { get; }
+    
+    public string[] Scopes { get; set; } =
+    [
         ScopeNames.OrgReadWrite, ScopeNames.GenesetReadWrite
-    };
+    ];
 
     public string? HardwareId { get; set; }
 
-    public GenePoolClientOptions(ServiceVersion version = LatestVersion, string endpoint = DefaultEndpoint)
+    public GenePoolClientOptions(ServiceVersion version = LatestVersion, string endpoint = DefaultEndpoint, bool stagingAuthority = false)
     {
         Version = version;
         Endpoint = new Uri(endpoint);
+        StagingAuthority = stagingAuthority;
         AddHeadersAndQueryParameters();
     }
 
@@ -123,6 +101,8 @@ public class GenePoolClientOptions : ClientOptions
 
     private string BuildScopes()
     {
-        return string.Join(" ", Scopes.Select(scopeName => $"https://dbosoftb2cstaging.onmicrosoft.com/bf5f63a8-7bd1-4c01-aadb-08dee019cec1/{scopeName}"));
+        return string.Join(" ", Scopes.Select(scopeName =>
+            StagingAuthority ? $"https://dbosoftb2cstaging.onmicrosoft.com/bf5f63a8-7bd1-4c01-aadb-08dee019cec1/{scopeName}"
+            : $"https://dbosoftb2c.onmicrosoft.com/eryph-genepool/{scopeName}" ));
     }
 }

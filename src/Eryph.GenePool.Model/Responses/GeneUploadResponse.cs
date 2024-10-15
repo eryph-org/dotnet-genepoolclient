@@ -2,24 +2,14 @@ using System.Text.Json.Serialization;
 
 namespace Eryph.GenePool.Model.Responses;
 
-public record GeneUploadResponse
+[method: JsonConstructor]
+public record GeneUploadResponse(
+    [property: JsonPropertyName("geneset")]
+    string Geneset,
+    [property: JsonPropertyName("gene")] string Gene,
+    [property: JsonPropertyName("upload_uris")]
+    GenePartUploadUri[] UploadUris)
 {
-    [JsonConstructor]
-    public GeneUploadResponse(string Geneset, string Gene, GenePartUploadUri[] UploadUris)
-    {
-        this.Geneset = Geneset;
-        this.Gene = Gene;
-        this.UploadUris = UploadUris;
-    }
-
-    [JsonPropertyName("geneset")]
-    public string Geneset { get; init; }
-
-    [JsonPropertyName("gene")] public string Gene { get; init; }
-
-    [JsonPropertyName("upload_uris")]
-    public GenePartUploadUri[] UploadUris { get; init; }
-
     public void Deconstruct(out string geneset, out string gene, out GenePartUploadUri[] uploadUris)
     {
         geneset = Geneset;

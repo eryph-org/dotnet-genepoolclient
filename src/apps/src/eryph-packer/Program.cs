@@ -10,6 +10,7 @@ using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Yaml;
 using Eryph.GenePool.Client;
+using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Packing;
 using Eryph.Packer;
@@ -23,7 +24,14 @@ using Validations = Eryph.GenePool.Model.Validations;
 
 //AnsiConsole.Profile.Capabilities.Interactive = false;
 var genePoolUri = new Uri(Environment.GetEnvironmentVariable("ERYPH_PACKER_GENEPOOL_API") 
-                          ?? "https://genepool-api.eryph.io/api/");
+                          ?? "https://genepool-api.eryph.io");
+
+var stagingAuthority = Environment.GetEnvironmentVariable("ERYPH_PACKER_AUTHORITY") == "staging";
+
+var clientOptions = new GenePoolClientOptions(GenePoolClientOptions.ServiceVersion.V1,
+    genePoolUri.ToString(), 
+    stagingAuthority);
+
 
 var organizationArgument = new Argument<string>("organization", "name of organization.");
 organizationArgument.AddValidation(OrganizationName.NewValidation);
@@ -120,7 +128,7 @@ createApiKeyCommand.AddArgument(organizationArgument);
 apiKeyCommand.Add(createApiKeyCommand);
 var keyNameArgument = new Argument<string>("name", "name of the api key");
 var permissionsArgument = new Argument<string[]>("permissions",
-    () => new []{ "Geneset.ReadWrite" }, description: "permissions of the api key");
+    () => ["Geneset.ReadWrite"], description: "permissions of the api key");
 createApiKeyCommand.AddArgument(keyNameArgument);
 createApiKeyCommand.AddArgument(permissionsArgument);
 
@@ -211,33 +219,30 @@ addVMCommand.SetHandler(async context =>
     var token = context.GetCancellationToken();
     var genesetTagInfo = PrepareGeneSetTagCommand(context);
     var vmExportDir = context.ParseResult.GetValueForArgument(vmExportArgument);
-    var metadata = new Dictionary<string, string>();
-    var metadataFile = new FileInfo(Path.Combine(vmExportDir.FullName, "metadata.json"));
-    if (metadataFile.Exists)
-    {
-        try
-        {
-            await using var metadataStream = metadataFile.OpenRead();
-            var newMetadata = await JsonSerializer.DeserializeAsync<Dictionary<string, string>>(metadataStream, GeneModelDefaults.SerializerOptions) 
-                              ?? metadata;
-            genesetTagInfo.JoinMetadata(newMetadata);
 
-        }
-        catch (Exception ex)
-        {
-            throw new Exception("failed to read metadata.json file included in exported vm", ex);
-        }
-    }
+    // find the root of the exported vm
+    vmExportDir = VMExport.FindExportRootDir(vmExportDir);
+
 
     var absolutePackPath = Path.GetFullPath(genesetTagInfo.GetGenesetPath());
     var (config, packableFiles) = VMExport.ExportToPackable(vmExportDir, token);
+    VMExport.ReadMetadata(vmExportDir, genesetTagInfo);
 
+    var catletGenerated = false;
     if (config != null)
     {
         var configYaml = CatletConfigYamlSerializer.Serialize(config);
         var catletYamlFilePath = Path.Combine(absolutePackPath, "catlet.yaml");
-        await File.WriteAllTextAsync(catletYamlFilePath, configYaml);
+
+        if (configYaml != "{}") // do not serialize empty file
+        {
+            await File.WriteAllTextAsync(catletYamlFilePath, configYaml);
+            catletGenerated = true;
+        }
     }
+
+    if(!catletGenerated)
+        AnsiConsole.MarkupLine("[yellow]Catlet config is empty.[/]. You will have to a catlet.yaml file to the geneset.");
 
     ResetPackableFolder(absolutePackPath);
     WritePackableFiles(packableFiles, absolutePackPath);
@@ -456,12 +461,12 @@ pushCommand.SetHandler(async context =>
         {
             statusContext.Status = "Authenticated to genepool.";
             statusContext.Refresh();
-            return await AuthProvider.GetCredential(apiKey);
+            return await AuthProvider.GetCredential(apiKey, stagingAuthority);
         });
 
     var genePoolClient = credential.ApiKey != null
-        ? new GenePoolClient(genePoolUri, credential.ApiKey)
-        : new GenePoolClient(genePoolUri, credential.Token!);
+        ? new GenePoolClient(genePoolUri, credential.ApiKey, clientOptions)
+        : new GenePoolClient(genePoolUri, credential.Token!, clientOptions);
 
     var genesetClient = genePoolClient.GetGenesetClient(genesetTagInfo.Organization, genesetTagInfo.Id);
     var tagClient = genesetClient.GetGenesetTagClient(genesetTagInfo.Tag);
@@ -489,7 +494,9 @@ pushCommand.SetHandler(async context =>
             {
                 statusContext.Status = $"Updating geneset {genesetInfo.GenesetName}";
                 statusContext.Refresh();
-                var geneset = await genesetClient.GetAsync(cancellationToken: token);
+                var geneset = await genesetClient.GetAsync(
+                    new GetGenesetRequestOptions{ NoCache = true},
+                    cancellationToken: token);
                 await genesetClient.UpdateAsync(geneset?.Public ?? genesetInfo.ManifestData.Public,
                     genesetInfo.ManifestData.ShortDescription,
                     genesetInfo.ManifestData.Description,
@@ -600,7 +607,7 @@ pushCommand.SetHandler(async context =>
                         $"{baseDescription}upload completed";
                     progressTask?.StopTask();
                 }
-            };
+            }
         });
 
     await AnsiConsole.Status()
@@ -630,11 +637,11 @@ createApiKeyCommand.SetHandler(async (context) =>
         {
             statusContext.Status = "Authenticated to genepool.";
             statusContext.Refresh();
-            return await AuthProvider.GetCredential(null);
+            return await AuthProvider.GetCredential(null, stagingAuthority);
         });
 
 
-    var genePoolClient = new GenePoolClient(genePoolUri, credential.Token!);
+    var genePoolClient = new GenePoolClient(genePoolUri, credential.Token!, clientOptions);
     var orgClient = genePoolClient.GetOrganizationClient(organization);
 
     var apiKeyResponseJson = await AnsiConsole.Status()
@@ -667,11 +674,11 @@ deleteApiKeyCommand.SetHandler(async (context) =>
         {
             statusContext.Status = "Authenticated to genepool.";
             statusContext.Refresh();
-            return await AuthProvider.GetCredential(null);
+            return await AuthProvider.GetCredential(null, stagingAuthority);
         });
 
 
-    var genePoolClient = new GenePoolClient(genePoolUri, credential.Token!);
+    var genePoolClient = new GenePoolClient(genePoolUri, credential.Token!, clientOptions);
     var apiKeyClient = genePoolClient.GetApiKeyClient(organization, keyId);
 
     await AnsiConsole.Status()
@@ -702,7 +709,7 @@ commandLineBuilder.UseExceptionHandler((ex, context) =>
         var error = eex.ToError();
 
         Grid createGrid() => new Grid()
-            .AddColumn(new GridColumn() { Width = 2 })
+            .AddColumn(new GridColumn { Width = 2 })
             .AddColumn();
 
         Grid addRow(Grid grid, IRenderable renderable) =>
@@ -768,10 +775,10 @@ async Task<List<PackableFile>> ReadPackableFiles(string genesetPath)
     if (File.Exists(Path.Combine(packFolder, "packable.json")))
     {
         var packableJson = await File.ReadAllTextAsync(Path.Combine(packFolder, "packable.json"));
-        return JsonSerializer.Deserialize<List<PackableFile>>(packableJson, GeneModelDefaults.SerializerOptions) ?? new List<PackableFile>();
+        return JsonSerializer.Deserialize<List<PackableFile>>(packableJson, GeneModelDefaults.SerializerOptions) ?? [];
     }
 
-    return new List<PackableFile>();
+    return [];
 }
 
 GenesetTagInfo PrepareGeneSetTagCommand(InvocationContext context)
@@ -802,11 +809,4 @@ void WriteJson(string json)
 {
     // Wrap the JsonText in Rows to ensure a line break at the end
     AnsiConsole.Write(new Rows(new JsonText(json).StringColor(Color.Teal)));
-}
-
-public struct GeneUploadTask
-{
-    public string GeneName { get; set; }
-    public int No { get; set; }
-    public int Total { get; set; }
 }

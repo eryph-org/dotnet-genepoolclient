@@ -54,6 +54,32 @@ internal class GenesetTagRestClient
         return message;
     }
 
+
+
+    internal HttpMessage CreateGetRequest(GeneSetIdentifier identifier, GetGenesetTagRequestOptions options, string path = "tag")
+    {
+        var message = _pipeline.CreateMessage();
+        var request = message.Request;
+        request.Method = RequestMethod.Get;
+        var uri = new RawRequestUriBuilder();
+        uri.Reset(_endpoint);
+        uri.AppendPath(_version, false);
+        uri.AppendPath("/genesets/", false);
+        uri.AppendPath(identifier.Organization.Value, false);
+        uri.AppendPath("/", false);
+        uri.AppendPath(identifier.GeneSet.Value, false);
+        uri.AppendPath($"/{path}/", false);
+        uri.AppendPath(identifier.Tag.Value, false);
+
+        if (options.NoCache)
+            uri.AppendQuery("no_cache", "true");
+
+        uri.AddExpandOptions(options.Expand);
+        request.Uri = uri;
+        request.Headers.Add("Accept", "application/json, text/json");
+        return message;
+    }
+
     public async Task<Response<NoResultResponse>> DeleteAsync(GeneSetIdentifier geneset,
         RequestOptions options,
         CancellationToken cancellationToken = default)
@@ -72,21 +98,22 @@ internal class GenesetTagRestClient
     }
 
     public async Task<Response<SingleResultResponse<GenesetTagResponse>>> GetAsync(GeneSetIdentifier geneset,
-        RequestOptions options,
+        GetGenesetTagRequestOptions options,
         CancellationToken cancellationToken = default)
     {
         return await _pipeline.SendRequestAsync<SingleResultResponse<GenesetTagResponse>>(
-            CreateRequest(geneset, RequestMethod.Get),
+            CreateGetRequest(geneset, options),
             options, cancellationToken).ConfigureAwait(false);
 
     }
 
     public Response<SingleResultResponse<GenesetTagResponse>> Get(GeneSetIdentifier geneset,
-        RequestOptions options,
+        GetGenesetTagRequestOptions options,
         CancellationToken cancellationToken = default)
     {
+
         return _pipeline.SendRequest<SingleResultResponse<GenesetTagResponse>>(
-            CreateRequest(geneset, RequestMethod.Get), options, cancellationToken);
+            CreateGetRequest(geneset, options), options, cancellationToken);
 
     }
 

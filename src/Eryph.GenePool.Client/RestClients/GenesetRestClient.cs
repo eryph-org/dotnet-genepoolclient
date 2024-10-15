@@ -8,7 +8,6 @@ using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.Responses;
-using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Requests.Genesets;
 using Eryph.GenePool.Model.Responses;
 
@@ -37,6 +36,7 @@ internal class GenesetRestClient
     }
 
     internal HttpMessage CreateRequest(OrganizationName organization, GeneSetName geneset, RequestMethod method,
+        RequestOptions options,
         string? path = null)
     {
         var message = _pipeline.CreateMessage();
@@ -55,16 +55,48 @@ internal class GenesetRestClient
             uri.AppendPath($"/{path}/", false);
         }
         request.Uri = uri;
+
         request.Headers.Add("Accept", "application/json, text/json");
         return message;
     }
+
+    internal HttpMessage CreateGetRequest(OrganizationName organization, GeneSetName geneset,
+        GetGenesetRequestOptions options,
+        string? path = null)
+    {
+        var message = _pipeline.CreateMessage();
+        var request = message.Request;
+        request.Method = RequestMethod.Get;
+        var uri = new RawRequestUriBuilder();
+        uri.Reset(_endpoint);
+        uri.AppendPath(_version, false);
+        uri.AppendPath("/genesets/", false);
+        uri.AppendPath(organization.Value, false);
+        uri.AppendPath("/", false);
+        uri.AppendPath(geneset.Value, false);
+
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            uri.AppendPath($"/{path}/", false);
+        }
+
+        uri.AddExpandOptions(options.Expand);
+        request.Uri = uri;
+
+        if (options.NoCache)
+            request.Uri.AppendQuery("no_cache", "true");
+        request.Headers.Add("Accept", "application/json, text/json");
+        return message;
+    }
+
+
 
     public async Task<Response<NoResultResponse>> DeleteAsync(OrganizationName organization, GeneSetName geneset,
         RequestOptions options,
         CancellationToken cancellationToken = default)
     {
         return await _pipeline.SendRequestAsync<NoResultResponse>(
-            CreateRequest(organization, geneset, RequestMethod.Delete),
+            CreateRequest(organization, geneset, RequestMethod.Delete, options),
             options,
             cancellationToken).ConfigureAwait(false);
     }
@@ -74,28 +106,29 @@ internal class GenesetRestClient
         CancellationToken cancellationToken = default)
     {
 
-        return _pipeline.SendRequest<NoResultResponse>(CreateRequest(organization, geneset, RequestMethod.Delete),
+        return _pipeline.SendRequest<NoResultResponse>(CreateRequest(organization, geneset, RequestMethod.Delete,
+                options),
             options,
             cancellationToken);
     }
 
     public async Task<Response<SingleResultResponse<GenesetResponse>>> GetAsync(OrganizationName organization, 
-        GeneSetName geneset, RequestOptions options,
+        GeneSetName geneset, GetGenesetRequestOptions options,
         CancellationToken cancellationToken = default)
     {
         return await _pipeline.SendRequestAsync<SingleResultResponse<GenesetResponse>>(
-            CreateRequest(organization,geneset, RequestMethod.Get),
+            CreateGetRequest(organization,geneset, options),
             options,
             cancellationToken).ConfigureAwait(false);
 
     }
 
-    public Response<SingleResultResponse<GenesetResponse>> Get(OrganizationName organization, GeneSetName geneset, 
-        RequestOptions options,
+    public Response<SingleResultResponse<GenesetResponse>> Get(OrganizationName organization, GeneSetName geneset,
+        GetGenesetRequestOptions options,
         CancellationToken cancellationToken = default)
     {
         return _pipeline.SendRequest<SingleResultResponse<GenesetResponse>>(
-            CreateRequest(organization, geneset, RequestMethod.Get),options, cancellationToken);
+            CreateGetRequest(organization, geneset, options),options, cancellationToken);
 
     }
 
@@ -104,7 +137,7 @@ internal class GenesetRestClient
         CancellationToken cancellationToken = default)
     {
         return await _pipeline.SendRequestAsync<SingleResultResponse<GenesetDescriptionResponse>>(
-            CreateRequest(organization, geneset, RequestMethod.Get, "description"),
+            CreateRequest(organization, geneset, RequestMethod.Get, options, "description"),
             options, cancellationToken).ConfigureAwait(false);
 
     }
@@ -114,7 +147,7 @@ internal class GenesetRestClient
         CancellationToken cancellationToken = default)
     {
         return _pipeline.SendRequest<SingleResultResponse<GenesetDescriptionResponse>>(
-            CreateRequest(organization, geneset, RequestMethod.Get, "description"), 
+            CreateRequest(organization, geneset, RequestMethod.Get, options, "description"), 
             options,
             cancellationToken);
 
@@ -140,7 +173,7 @@ internal class GenesetRestClient
         return message;
     }
 
-    /// <summary> Creates a organization. </summary>
+    /// <summary> Creates an organization. </summary>
     /// <param name="body"> The UpdateProjectBody to use. </param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public async Task<Response<SingleResultResponse<GenesetRefResponse>>> CreateAsync(NewGenesetRequestBody body,
@@ -154,7 +187,7 @@ internal class GenesetRestClient
     }
 
 
-    /// <summary> Creates a organization. </summary>
+    /// <summary> Creates an organization. </summary>
     /// <param name="body"> The CreateOrganizationBody to use. </param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public Response<SingleResultResponse<GenesetRefResponse>> Create(NewGenesetRequestBody body,

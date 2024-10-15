@@ -127,28 +127,28 @@ internal class RecycleBinRestClient
 
     public async Task<Response<PagedResultResponse<GenesetTagResponse>>> ListAsync(OrganizationName orgName,
         GeneSetName? genesetName,
-        ListRecycleBinRequestOptions options,
+        ContinuingRequestOptions<ListRecycleBinRequestOptions> options,
         CancellationToken cancellationToken = default)
     {
 
         return await _pipeline.SendRequestAsync<PagedResultResponse<GenesetTagResponse>>(
-            CreateGetRequest(orgName, genesetName, options),options, cancellationToken).ConfigureAwait(false);
+            CreateListRequest(orgName, genesetName, options),options.RequestOptions, cancellationToken).ConfigureAwait(false);
 
     }
 
     public Response<PagedResultResponse<GenesetTagResponse>> List(OrganizationName orgName,
         GeneSetName? genesetName,
-        ListRecycleBinRequestOptions options,
+        ContinuingRequestOptions<ListRecycleBinRequestOptions> options,
         CancellationToken cancellationToken = default)
     {
         return _pipeline.SendRequest<PagedResultResponse<GenesetTagResponse>>(
-            CreateGetRequest(orgName, genesetName, options), options, cancellationToken);
+            CreateListRequest(orgName, genesetName, options), options.RequestOptions, cancellationToken);
 
     }
 
 
-    private HttpMessage CreateGetRequest(OrganizationName orgName, GeneSetName? genesetName, 
-        ContinuingListRequestOptions options)
+    private HttpMessage CreateListRequest(OrganizationName orgName, GeneSetName? genesetName, 
+        ContinuingRequestOptions<ListRecycleBinRequestOptions> options)
     {
         var message = genesetName == default
             ? CreateOrgRequest(orgName, RequestMethod.Get, "tags")

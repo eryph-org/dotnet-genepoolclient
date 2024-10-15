@@ -4,15 +4,14 @@ using Microsoft.Identity.Client;
 
 namespace Eryph.GenePool.Client;
 
-internal class MsalPublicClient : MsalClientBase<IPublicClientApplication>
+internal class MsalPublicClient(
+    string authorityUri,
+    string? clientId,
+    string redirectUrl,
+    TokenCredentialOptions? options)
+    : MsalClientBase<IPublicClientApplication>(authorityUri, clientId, options?.TokenCachePersistenceOptions)
 {
-    internal string RedirectUrl { get; }
-
-    public MsalPublicClient(string authorityUri, string? clientId, string redirectUrl, TokenCredentialOptions? options)
-        : base(authorityUri, clientId, options?.TokenCachePersistenceOptions)
-    {
-        RedirectUrl = redirectUrl;
-    }
+    internal string RedirectUrl { get; } = redirectUrl;
 
     protected override ValueTask<IPublicClientApplication> CreateClientAsync(bool async, CancellationToken cancellationToken)
     {
@@ -83,6 +82,7 @@ internal class MsalPublicClient : MsalClientBase<IPublicClientApplication>
             builder.WithLoginHint(loginHint);
         }
 
+        // ReSharper disable once InvertIf
         if (browserOptions != null)
         {
             if (browserOptions.UseEmbeddedWebView.HasValue)

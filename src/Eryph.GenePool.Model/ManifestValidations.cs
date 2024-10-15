@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using Dbosoft.Functional.Validations;
+﻿using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
 using LanguageExt;
 using LanguageExt.Common;
@@ -22,7 +20,7 @@ public class ManifestValidations
                | ValidateProperty(manifest, m=>m.CatletGene, ValidateGeneHash, path)
                | ValidateList(manifest, m=>m.VolumeGenes, ValidateGeneReference, path, 0, 100)
                | ValidateList(manifest, m=>m.FodderGenes, ValidateGeneReference, path,0, 100)
-               | ValidateProperty(manifest, m=> m.Metadata, Validations.ValidateMetadata, path);
+               | ValidateProperty(manifest, m=> m.Metadata, Validations.ValidateGenesetTagMetadata, path);
     }
 
     public static Validation<ValidationIssue, Unit> ValidateGenesetManifest(GenesetManifestData manifest, string path = "")
@@ -32,7 +30,7 @@ public class ManifestValidations
                | ValidateProperty(manifest, m => m.ShortDescription, Validations.ValidateGenesetShortDescription, path, true)
                | ValidateProperty(manifest, m => m.Description, Validations.ValidateGenesetDescription, path)
                | ValidateProperty(manifest, m => m.DescriptionMarkdown, Validations.ValidateMarkdownContentSize, path)
-               | ValidateProperty(manifest, m => m.Metadata, Validations.ValidateMetadata, path);
+               | ValidateProperty(manifest, m => m.Metadata, Validations.ValidateGenesetMetadata, path);
     }
 
     public static Validation<ValidationIssue, Unit> ValidateGeneManifest(GeneManifestData manifest, string path = "")
@@ -95,34 +93,4 @@ public class ManifestValidations
     }
 
 
-}
-
-public static class GeneValidations
-{
-    public static Validation<Error, Unit> ValidateGeneType(string geneTypeString)
-    {
-        var enumNames = Enum.GetNames(typeof(GeneType)).Select(x => x.ToLowerInvariant()).ToArray();
-
-        return
-            from gNull in guard(notEmpty(geneTypeString), Validations.BadRequestError("Gene type is empty")).ToValidation()
-            from gVal in guard(enumNames.Contains(geneTypeString.ToLowerInvariant()),
-                Validations.BadRequestError($"Gene type has to be one of {string.Join(", ", enumNames)}")).ToValidation()
-            select Unit.Default;
-
-    }
-
-    public static Validation<Error, Unit> ValidateGeneFormat(string formatString)
-    {
-        return
-            from gNull in guard(notEmpty(formatString), Validations.BadRequestError("Gene format is empty")).ToValidation()
-            from gVal in guard(string.Equals(formatString, "xz") || string.Equals(formatString, "gz"),
-                Validations.BadRequestError($"Gene format has to be 'gz' or 'xz'")).ToValidation()
-            select Unit.Default;
-    }
-
-    public static Validation<Error, Unit> ValidateGeneFileName(string filename)
-    {
-        return ConfigModel.Validations.ValidateFileName(filename, "filename")
-            .Map(_ => Unit.Default);
-    }
 }

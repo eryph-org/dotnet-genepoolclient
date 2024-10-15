@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using LanguageExt;
 using LanguageExt.Common;
@@ -49,7 +50,17 @@ public static class Validations
         return Unit.Default;
     }
 
-    public static Validation<Error, Unit> ValidateMetadata(IDictionary<string, string>? metadata)
+    public static Validation<Error, Unit> ValidateGenesetMetadata(IDictionary<string, string>? metadata)
+    {
+        return ValidateMetadata(true, metadata);
+    }
+
+    public static Validation<Error, Unit> ValidateGenesetTagMetadata(IDictionary<string, string>? metadata)
+    {
+        return ValidateMetadata(false, metadata);
+    }
+
+    public static Validation<Error, Unit> ValidateMetadata(bool geneset, IDictionary<string, string>? metadata)
     {
         if (metadata == null)
             return Unit.Default;
@@ -66,6 +77,73 @@ public static class Validations
             if (kv.Value.Length > GeneModelDefaults.MaxMetadataValueLength)
                 return BadRequestError(
                     $"Metadata value for key '{kv.Key}' is too long. Max length of values is {GeneModelDefaults.MaxMetadataValueLength}.");
+
+            // Check for reserved keys
+            if (kv.Key.StartsWith("_"))
+            {
+                if (geneset)
+                {
+                    if (!KnownGenesetMetadataKeys.AllKeys.Contains(kv.Key))
+                        return BadRequestError(
+                            $"Metadata key '{kv.Key}' is not allowed: key names with underscore are reserved.");
+
+                    switch (kv.Key)
+                    {
+                        case KnownGenesetMetadataKeys.Categories:
+                        {
+                            var names = kv.Value.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                            if (names.Length > GeneModelDefaults.MaxCategoryCount)
+                                return BadRequestError(
+                                    $"Too many categories. Only up to {GeneModelDefaults.MaxCategoryCount} categories are allowed.");
+                            foreach (var name in names)
+                            {
+                                if (!CategoryNames.AllKeys.Contains(name))
+                                    return BadRequestError($"Category '{name}' is not allowed.");
+                            }
+
+                            break;
+                        }
+                        case KnownGenesetMetadataKeys.OsTypes:
+                        {
+                            var names = kv.Value.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                            foreach (var name in names)
+                            {
+                                if (!OsTypeNames.AllKeys.Contains(name))
+                                    return BadRequestError($"OS type '{name}' is not allowed.");
+                            }
+
+                            break;
+                        }
+                        case KnownGenesetMetadataKeys.Tags:
+                        {
+                            var names = kv.Value.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                            if (names.Length > GeneModelDefaults.MaxTagCount)
+                                return BadRequestError(
+                                    $"Too many tags. Only up to {GeneModelDefaults.MaxTagCount} tags are allowed.");
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    if (!KnownGenesetTagMetadataKeys.AllKeys.Contains(kv.Key))
+                        return BadRequestError(
+                            $"Metadata key '{kv.Key}' is not allowed: key names with underscore are reserved.");
+
+                    switch (kv.Key)
+                    {
+
+                        case KnownGenesetTagMetadataKeys.OsType:
+                        {
+                            if (!OsTypeNames.AllKeys.Contains(kv.Value))
+                                return BadRequestError($"OS type '{kv.Value}' is not allowed.");
+
+                            break;
+                        }
+                    }
+
+                }
+            }
         }
 
         return Unit.Default;

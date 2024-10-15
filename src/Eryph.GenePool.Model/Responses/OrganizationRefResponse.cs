@@ -3,18 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace Eryph.GenePool.Model.Responses;
 
-public record OrganizationRefResponse
+[method: JsonConstructor]
+public record OrganizationRefResponse([property: JsonPropertyName("id")] Guid Id, [property: JsonPropertyName("name")] string Name, [property: JsonPropertyName("uri")] Uri Uri)
 {
-    [JsonConstructor]
-    public OrganizationRefResponse(string Name, Uri Uri)
-    {
-        this.Name = Name;
-        this.Uri = Uri;
-    }
-
-    [JsonPropertyName("name")] public string Name { get; init; }
-    [JsonPropertyName("uri")] public Uri Uri { get; init; }
-
     public void Deconstruct(out string name, out Uri uri)
     {
         name = Name;

@@ -7,8 +7,6 @@ using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.RestClients;
-using Eryph.GenePool.Model;
-using Eryph.GenePool.Model.Requests;
 using Eryph.GenePool.Model.Requests.Genesets;
 using Eryph.GenePool.Model.Responses;
 
@@ -100,7 +98,7 @@ public class GenesetClient
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual async Task<GenesetResponse?> GetAsync(
-        RequestOptions? options = default,
+        GetGenesetRequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
@@ -108,7 +106,7 @@ public class GenesetClient
         try
         {
             return (await RestClient.GetAsync(_organization, _geneset,
-                options ?? new RequestOptions(),
+                options ?? new GetGenesetRequestOptions(),
                 cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
@@ -121,7 +119,7 @@ public class GenesetClient
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual GenesetResponse? Get(
-        RequestOptions? options = default,
+        GetGenesetRequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
@@ -129,7 +127,7 @@ public class GenesetClient
         try
         {
             return RestClient.Get(_organization, _geneset,
-                options ?? new RequestOptions(),     
+                options ?? new GetGenesetRequestOptions(),     
                 cancellationToken).Value.Value;
         }
         catch (Exception e)
@@ -183,7 +181,7 @@ public class GenesetClient
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual bool Exists(
-        RequestOptions? options = default, 
+        GetGenesetRequestOptions? options = default, 
             CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
@@ -191,7 +189,7 @@ public class GenesetClient
         try
         {
             _ = RestClient.Get(_organization, _geneset,
-                options ?? new RequestOptions(), cancellationToken).Value;
+                options ?? new GetGenesetRequestOptions(), cancellationToken).Value;
             return true;
         }
         catch (ErrorResponseException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
@@ -208,7 +206,7 @@ public class GenesetClient
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual async Task<bool> ExistsAsync(
-        RequestOptions? options = default, 
+        GetGenesetRequestOptions? options = default, 
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
@@ -216,7 +214,7 @@ public class GenesetClient
         try
         {
             await RestClient.GetAsync(_organization, _geneset,
-                    options ?? new RequestOptions(),
+                    options ?? new GetGenesetRequestOptions(),
                     cancellationToken)
                 .ConfigureAwait(false);
             return true;
@@ -244,7 +242,7 @@ public class GenesetClient
         scope.Start();
         try
         {
-            var body = new NewGenesetRequestBody()
+            var body = new NewGenesetRequestBody
             {
                 Geneset = $"{_organization}/{_geneset}",
                 Public = isPublic,
@@ -279,7 +277,7 @@ public class GenesetClient
         scope.Start();
         try
         {
-            var body = new GenesetUpdateRequestBody()
+            var body = new GenesetUpdateRequestBody
             {
 
                 Public = isPublic,
@@ -318,7 +316,7 @@ public class GenesetClient
         scope.Start();
         try
         {
-            var body = new GenesetUpdateRequestBody()
+            var body = new GenesetUpdateRequestBody
             {
                 Public = isPublic,
                 ShortDescription = shortDescription,
@@ -353,7 +351,7 @@ public class GenesetClient
         scope.Start();
         try
         {
-            var body = new NewGenesetRequestBody()
+            var body = new NewGenesetRequestBody
             {
                 Geneset = $"{_organization}/{_geneset}",
                 Public = isPublic,

@@ -1,145 +1,143 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 
-namespace Eryph.GenePool.Client.Internal
+namespace Eryph.GenePool.Client.Internal;
+
+public readonly struct DiagnosticScope : IDisposable
 {
-    public readonly struct DiagnosticScope : IDisposable
-    {
-        private const string AzureSdkScopeLabel = "az.sdk.scope";
-        internal const string OpenTelemetrySchemaAttribute = "az.schema_url";
-        internal const string OpenTelemetrySchemaVersion = "https://opentelemetry.io/schemas/1.17.0";
-        private static readonly object AzureSdkScopeValue = bool.TrueString;
+    private const string AzureSdkScopeLabel = "az.sdk.scope";
+    internal const string OpenTelemetrySchemaAttribute = "az.schema_url";
+    internal const string OpenTelemetrySchemaVersion = "https://opentelemetry.io/schemas/1.17.0";
+    private static readonly object AzureSdkScopeValue = bool.TrueString;
 
-        private readonly ActivityAdapter? _activityAdapter;
-        private readonly bool _suppressNestedClientActivities;
+    private readonly ActivityAdapter? _activityAdapter;
+    private readonly bool _suppressNestedClientActivities;
 
-        [RequiresUnreferencedCode("The diagnosticSourceArgs are used in a call to DiagnosticSource.Write, all necessary properties need to be preserved on the type being passed in using DynamicDependency attributes.")]
+    [RequiresUnreferencedCode("The diagnosticSourceArgs are used in a call to DiagnosticSource.Write, all necessary properties need to be preserved on the type being passed in using DynamicDependency attributes.")]
 #if NETCOREAPP2_1
         internal DiagnosticScope(string scopeName, DiagnosticListener source, object? diagnosticSourceArgs, object? activitySource, ActivityKind kind, bool suppressNestedClientActivities)
 #else
-        internal DiagnosticScope(string scopeName, DiagnosticListener source, object? diagnosticSourceArgs, ActivitySource? activitySource, System.Diagnostics.ActivityKind kind, bool suppressNestedClientActivities)
+    internal DiagnosticScope(string scopeName, DiagnosticListener source, object? diagnosticSourceArgs, ActivitySource? activitySource, System.Diagnostics.ActivityKind kind, bool suppressNestedClientActivities)
 #endif
-        {
-            // ActivityKind.Internal and Client both can represent public API calls depending on the SDK
+    {
+        // ActivityKind.Internal and Client both can represent public API calls depending on the SDK
 #if NETCOREAPP2_1
             _suppressNestedClientActivities = (kind == ActivityKind.Client || kind == ActivityKind.Internal) ? suppressNestedClientActivities : false;
 #else
-            _suppressNestedClientActivities = (kind == ActivityKind.Client || kind == System.Diagnostics.ActivityKind.Internal) ? suppressNestedClientActivities : false;
+        _suppressNestedClientActivities = kind 
+            is ActivityKind.Client or System.Diagnostics.ActivityKind.Internal && suppressNestedClientActivities;
 #endif
 
-            // outer scope presence is enough to suppress any inner scope, regardless of inner scope configuation.
-            bool hasListeners;
+        // outer scope presence is enough to suppress any inner scope, regardless of inner scope configuation.
+        // ReSharper disable once JoinDeclarationAndInitializer
+        bool hasListeners;
 #if NETCOREAPP2_1
             hasListeners = ActivityExtensions.ActivitySourceHasListeners(activitySource);
 #else
-            hasListeners = activitySource?.HasListeners() ?? false;
+        hasListeners = activitySource?.HasListeners() ?? false;
 #endif
-            IsEnabled = source.IsEnabled() || hasListeners;
+        IsEnabled = source.IsEnabled() || hasListeners;
 
-            if (_suppressNestedClientActivities)
-            {
-                IsEnabled &= !AzureSdkScopeValue.Equals(Activity.Current?.GetCustomProperty(AzureSdkScopeLabel));
-            }
-
-            _activityAdapter = IsEnabled ? new ActivityAdapter(
-                                                    activitySource: activitySource,
-                                                    diagnosticSource: source,
-                                                    activityName: scopeName,
-                                                    kind: kind,
-                                                    diagnosticSourceArgs: diagnosticSourceArgs) : null;
-        }
-
-        public bool IsEnabled { get; }
-
-        public void AddAttribute(string name, string value)
+        if (_suppressNestedClientActivities)
         {
-            _activityAdapter?.AddTag(name, value);
+            IsEnabled &= !AzureSdkScopeValue.Equals(Activity.Current?.GetCustomProperty(AzureSdkScopeLabel));
         }
 
-        public void AddIntegerAttribute(string name, int value)
-        {
-            _activityAdapter?.AddTag(name, value);
-        }
+        _activityAdapter = IsEnabled ? new ActivityAdapter(
+            activitySource: activitySource,
+            diagnosticSource: source,
+            activityName: scopeName,
+            kind: kind,
+            diagnosticSourceArgs: diagnosticSourceArgs) : null;
+    }
 
-        public void AddAttribute<T>(string name,
+    public bool IsEnabled { get; }
+
+    public void AddAttribute(string name, string value)
+    {
+        _activityAdapter?.AddTag(name, value);
+    }
+
+    public void AddIntegerAttribute(string name, int value)
+    {
+        _activityAdapter?.AddTag(name, value);
+    }
+
+    public void AddAttribute<T>(string name,
 #if AZURE_NULLABLE
             [AllowNull]
 #endif
-            T value)
-        {
-            AddAttribute(name, value, static v => Convert.ToString(v, CultureInfo.InvariantCulture) ?? string.Empty);
-        }
+        T value)
+    {
+        AddAttribute(name, value, static v => Convert.ToString(v, CultureInfo.InvariantCulture) ?? string.Empty);
+    }
 
-        public void AddAttribute<T>(string name, T value, Func<T, string> format)
-        {
-            if (_activityAdapter != null)
-            {
-                var formattedValue = format(value);
-                _activityAdapter.AddTag(name, formattedValue);
-            }
-        }
+    public void AddAttribute<T>(string name, T value, Func<T, string> format)
+    {
+        if (_activityAdapter == null) return;
+        var formattedValue = format(value);
+        _activityAdapter.AddTag(name, formattedValue);
+    }
 
-        /// <summary>
-        /// Adds a link to the scope. This must be called before <see cref="Start"/> has been called for the DiagnosticScope.
-        /// </summary>
-        /// <param name="traceparent">The traceparent for the link.</param>
-        /// <param name="tracestate">The tracestate for the link.</param>
-        /// <param name="attributes">Optional attributes to associate with the link.</param>
-        public void AddLink(string traceparent, string? tracestate, IDictionary<string, string>? attributes = null)
-        {
-            _activityAdapter?.AddLink(traceparent, tracestate, attributes);
-        }
+    /// <summary>
+    /// Adds a link to the scope. This must be called before <see cref="Start"/> has been called for the DiagnosticScope.
+    /// </summary>
+    /// <param name="traceparent">The traceparent for the link.</param>
+    /// <param name="tracestate">The tracestate for the link.</param>
+    /// <param name="attributes">Optional attributes to associate with the link.</param>
+    public void AddLink(string traceparent, string? tracestate, IDictionary<string, string>? attributes = null)
+    {
+        _activityAdapter?.AddLink(traceparent, tracestate, attributes);
+    }
 
-        public void Start()
-        {
-            Activity? started = _activityAdapter?.Start();
-            started?.SetCustomProperty(AzureSdkScopeLabel, AzureSdkScopeValue);
-        }
+    public void Start()
+    {
+        var started = _activityAdapter?.Start();
+        started?.SetCustomProperty(AzureSdkScopeLabel, AzureSdkScopeValue);
+    }
 
-        public void SetDisplayName(string displayName)
-        {
-            _activityAdapter?.SetDisplayName(displayName);
-        }
+    public void SetDisplayName(string displayName)
+    {
+        _activityAdapter?.SetDisplayName(displayName);
+    }
 
-        public void SetStartTime(DateTime dateTime)
-        {
-            _activityAdapter?.SetStartTime(dateTime);
-        }
+    public void SetStartTime(DateTime dateTime)
+    {
+        _activityAdapter?.SetStartTime(dateTime);
+    }
 
-        /// <summary>
-        /// Sets the trace context for the current scope.
-        /// </summary>
-        /// <param name="traceparent">The trace parent to set for the current scope.</param>
-        /// <param name="tracestate">The trace state to set for the current scope.</param>
-        public void SetTraceContext(string traceparent, string? tracestate = default)
-        {
-            _activityAdapter?.SetTraceContext(traceparent, tracestate);
-        }
+    /// <summary>
+    /// Sets the trace context for the current scope.
+    /// </summary>
+    /// <param name="traceparent">The trace parent to set for the current scope.</param>
+    /// <param name="tracestate">The trace state to set for the current scope.</param>
+    public void SetTraceContext(string traceparent, string? tracestate = default)
+    {
+        _activityAdapter?.SetTraceContext(traceparent, tracestate);
+    }
 
-        public void Dispose()
-        {
-            // Reverse the Start order
-            _activityAdapter?.Dispose();
-        }
+    public void Dispose()
+    {
+        // Reverse the Start order
+        _activityAdapter?.Dispose();
+    }
 
-        /// <summary>
-        /// Marks the scope as failed.
-        /// </summary>
-        /// <param name="exception">The exception to associate with the failed scope.</param>
-        [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The Exception being passed into this method has public properties preserved on the inner method MarkFailed." +
-            "The public property System.Exception.TargetSite.get is not compatible with trimming and produces a warning when preserving all public properties. Since we do not use this property, and" +
-            "neither does Application Insights, we can suppress the warning coming from the inner method.")]
-        public void Failed(Exception? exception = default)
-        {
-            _activityAdapter?.MarkFailed(exception);
-        }
+    /// <summary>
+    /// Marks the scope as failed.
+    /// </summary>
+    /// <param name="exception">The exception to associate with the failed scope.</param>
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The Exception being passed into this method has public properties preserved on the inner method MarkFailed." +
+        "The public property System.Exception.TargetSite.get is not compatible with trimming and produces a warning when preserving all public properties. Since we do not use this property, and" +
+        "neither does Application Insights, we can suppress the warning coming from the inner method.")]
+    public void Failed(Exception? exception = default)
+    {
+        _activityAdapter?.MarkFailed(exception);
+    }
 
 #if NETCOREAPP2_1
         /// <summary>
@@ -175,94 +173,90 @@ namespace Eryph.GenePool.Client.Internal
         }
 #endif
 
-        private class DiagnosticActivity : Activity
-        {
+    private class DiagnosticActivity(string operationName) : Activity(operationName)
+    {
 #pragma warning disable 109 // extra new modifier
-            public new IEnumerable<Activity> Links { get; set; } = Array.Empty<Activity>();
+        public new IEnumerable<Activity> Links { get; set; } = Array.Empty<Activity>();
 #pragma warning restore 109
+    }
 
-            public DiagnosticActivity(string operationName) : base(operationName)
-            {
-            }
-        }
-
-        private class ActivityAdapter : IDisposable
-        {
+    private class ActivityAdapter : IDisposable
+    {
 #if NETCOREAPP2_1
             private readonly object? _activitySource;
 #else
-            private readonly ActivitySource? _activitySource;
+        private readonly ActivitySource? _activitySource;
 #endif
-            private readonly DiagnosticSource _diagnosticSource;
-            private readonly string _activityName;
+        private readonly DiagnosticSource _diagnosticSource;
+        private readonly string _activityName;
 #if NETCOREAPP2_1
             private readonly ActivityKind _kind;
 #else
-            private readonly System.Diagnostics.ActivityKind _kind;
+        private readonly System.Diagnostics.ActivityKind _kind;
 #endif
-            private readonly object? _diagnosticSourceArgs;
+        private readonly object? _diagnosticSourceArgs;
 
-            private Activity? _currentActivity;
-            private Activity? _sampleOutActivity;
+        private Activity? _currentActivity;
+        private Activity? _sampleOutActivity;
 
 #if NETCOREAPP2_1
             private ICollection<KeyValuePair<string,object>>? _tagCollection;
 #else
-            private ActivityTagsCollection? _tagCollection;
+        private ActivityTagsCollection? _tagCollection;
 #endif
-            private DateTimeOffset _startTime;
-            private List<Activity>? _links;
-            private string? _traceparent;
-            private string? _tracestate;
-            private string? _displayName;
+        private DateTimeOffset _startTime;
+        private List<Activity>? _links;
+        private string? _traceparent;
+        private string? _tracestate;
+        private string? _displayName;
 
 #if NETCOREAPP2_1
             public ActivityAdapter(object? activitySource, DiagnosticSource diagnosticSource, string activityName, ActivityKind kind, object? diagnosticSourceArgs)
 #else
-            public ActivityAdapter(ActivitySource? activitySource, DiagnosticSource diagnosticSource, string activityName, System.Diagnostics.ActivityKind kind, object? diagnosticSourceArgs)
+        public ActivityAdapter(ActivitySource? activitySource, DiagnosticSource diagnosticSource, string activityName, System.Diagnostics.ActivityKind kind, object? diagnosticSourceArgs)
 #endif
-            {
-                _activitySource = activitySource;
-                _diagnosticSource = diagnosticSource;
-                _activityName = activityName;
-                _kind = kind;
-                _diagnosticSourceArgs = diagnosticSourceArgs;
-            }
+        {
+            _activitySource = activitySource;
+            _diagnosticSource = diagnosticSource;
+            _activityName = activityName;
+            _kind = kind;
+            _diagnosticSourceArgs = diagnosticSourceArgs;
+        }
 
-            public void AddTag(string name, object value)
+        public void AddTag(string name, object value)
+        {
+            if (_currentActivity == null)
             {
-                if (_currentActivity == null)
-                {
-                    // Activity is not started yet, add the value to the collection
-                    // that is going to be passed to StartActivity
+                // Activity is not started yet, add the value to the collection
+                // that is going to be passed to StartActivity
 #if NETCOREAPP2_1
                     _tagCollection ??= ActivityExtensions.CreateTagsCollection() ?? new List<KeyValuePair<string, object>>();
                     _tagCollection?.Add(new KeyValuePair<string, object>(name, value!));
 #else
-                    _tagCollection ??= new ActivityTagsCollection();
-                    _tagCollection.Add(name, value!);
+                _tagCollection ??= new ActivityTagsCollection();
+                _tagCollection.Add(name, value!);
 #endif
-                }
-                else
-                {
+            }
+            else
+            {
 #if NETCOREAPP2_1
                     _currentActivity?.AddObjectTag(name, value);
 #else
-                    _currentActivity?.AddTag(name, value);
+                _currentActivity?.AddTag(name, value);
 #endif
-                }
             }
+        }
 
 #if NETCOREAPP2_1
             private IList? GetActivitySourceLinkCollection()
 #else
-            private List<ActivityLink>? GetActivitySourceLinkCollection()
+        private List<ActivityLink>? GetActivitySourceLinkCollection()
 #endif
+        {
+            if (_links == null)
             {
-                if (_links == null)
-                {
-                    return null;
-                }
+                return null;
+            }
 
 #if NETCOREAPP2_1
                 var linkCollection = ActivityExtensions.CreateLinkCollection();
@@ -271,11 +265,11 @@ namespace Eryph.GenePool.Client.Internal
                     return null;
                 }
 #else
-                var linkCollection = new List<ActivityLink>();
+            var linkCollection = new List<ActivityLink>();
 #endif
 
-                foreach (var activity in _links)
-                {
+            foreach (var activity in _links)
+            {
 #if NETCOREAPP2_1
                     ICollection<KeyValuePair<string,object>>? linkTagsCollection =  ActivityExtensions.CreateTagsCollection();
                     if (linkTagsCollection != null)
@@ -292,174 +286,173 @@ namespace Eryph.GenePool.Client.Internal
                         linkCollection.Add(link);
                     }
 #else
-                    ActivityTagsCollection linkTagsCollection = new();
-                    foreach (var tag in activity.Tags)
-                    {
-                        linkTagsCollection.Add(tag.Key, tag.Value!);
-                    }
+                ActivityTagsCollection linkTagsCollection = new();
+                foreach (var tag in activity.Tags)
+                {
+                    linkTagsCollection.Add(tag.Key, tag.Value!);
+                }
 
-                    var contextWasParsed = ActivityContext.TryParse(activity.ParentId!, activity.TraceStateString, out var context);
-                    if (contextWasParsed)
-                    {
-                        var link = new ActivityLink(context, linkTagsCollection);
-                        linkCollection.Add(link);
-                    }
+                var contextWasParsed = ActivityContext.TryParse(activity.ParentId!, activity.TraceStateString, out var context);
+                if (!contextWasParsed) continue;
+
+                var link = new ActivityLink(context, linkTagsCollection);
+                linkCollection.Add(link);
 #endif
             }
 
-                return linkCollection;
-            }
+            return linkCollection;
+        }
 
-            public void AddLink(string traceparent, string? tracestate, IDictionary<string, string>? attributes)
-            {
-                var linkedActivity = new Activity("LinkedActivity");
-                linkedActivity.SetParentId(traceparent);
+        public void AddLink(string traceparent, string? tracestate, IDictionary<string, string>? attributes)
+        {
+            var linkedActivity = new Activity("LinkedActivity");
+            linkedActivity.SetParentId(traceparent);
 #if NETCOREAPP2_1
                 linkedActivity.SetW3CFormat();
                 linkedActivity.SetTraceState(tracestate);
 #else
-                linkedActivity.SetIdFormat(ActivityIdFormat.W3C);
-                linkedActivity.TraceStateString = tracestate;
+            linkedActivity.SetIdFormat(ActivityIdFormat.W3C);
+            linkedActivity.TraceStateString = tracestate;
 #endif
 
-                if (attributes != null)
+            if (attributes != null)
+            {
+                foreach (var kvp in attributes)
                 {
-                    foreach (var kvp in attributes)
-                    {
-                        linkedActivity.AddTag(kvp.Key, kvp.Value);
-                    }
+                    linkedActivity.AddTag(kvp.Key, kvp.Value);
                 }
-
-                _links ??= new List<Activity>();
-                _links.Add(linkedActivity);
             }
 
-            [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicMethods, typeof(Activity))]
-            [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicMethods, typeof(DiagnosticActivity))]
-            public Activity? Start()
+            _links ??= [];
+            _links.Add(linkedActivity);
+        }
+
+        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicMethods, typeof(Activity))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicMethods, typeof(DiagnosticActivity))]
+        public Activity? Start()
+        {
+            _currentActivity = StartActivitySourceActivity();
+            if (_currentActivity != null)
             {
-                _currentActivity = StartActivitySourceActivity();
-                if (_currentActivity != null)
-                {
 #if NETCOREAPP2_1
                     if (!_currentActivity.GetIsAllDataRequested())
 #else
-                    if (!_currentActivity.IsAllDataRequested)
+                if (!_currentActivity.IsAllDataRequested)
 #endif
-                    {
-                        _sampleOutActivity = _currentActivity;
-                        _currentActivity = null;
-
-                        return null;
-                    }
-
-                    _currentActivity.AddTag(OpenTelemetrySchemaAttribute, OpenTelemetrySchemaVersion);
-                }
-                else
                 {
-                    if (!_diagnosticSource.IsEnabled(_activityName, _diagnosticSourceArgs))
-                    {
-                        return null;
-                    }
+                    _sampleOutActivity = _currentActivity;
+                    _currentActivity = null;
 
-                    switch (_kind)
-                    {
-                        case ActivityKind.Internal:
-                            AddTag("kind", "internal");
-                            break;
-                        case ActivityKind.Server:
-                            AddTag("kind", "server");
-                            break;
-                        case ActivityKind.Client:
-                            AddTag("kind", "client");
-                            break;
-                        case ActivityKind.Producer:
-                            AddTag("kind", "producer");
-                            break;
-                        case ActivityKind.Consumer:
-                            AddTag("kind", "consumer");
-                            break;
-                    }
+                    return null;
+                }
 
-                    _currentActivity = new DiagnosticActivity(_activityName)
-                    {
-                        Links = (IEnumerable<Activity>?)_links ?? Array.Empty<Activity>(),
-                    };
+                _currentActivity.AddTag(OpenTelemetrySchemaAttribute, OpenTelemetrySchemaVersion);
+            }
+            else
+            {
+                if (!_diagnosticSource.IsEnabled(_activityName, _diagnosticSourceArgs))
+                {
+                    return null;
+                }
+
+                switch (_kind)
+                {
+                    case ActivityKind.Internal:
+                        AddTag("kind", "internal");
+                        break;
+                    case ActivityKind.Server:
+                        AddTag("kind", "server");
+                        break;
+                    case ActivityKind.Client:
+                        AddTag("kind", "client");
+                        break;
+                    case ActivityKind.Producer:
+                        AddTag("kind", "producer");
+                        break;
+                    case ActivityKind.Consumer:
+                        AddTag("kind", "consumer");
+                        break;
+                }
+
+                _currentActivity = new DiagnosticActivity(_activityName)
+                {
+                    Links = (IEnumerable<Activity>?)_links ?? Array.Empty<Activity>(),
+                };
 #if NETCOREAPP2_1
                     _currentActivity.SetW3CFormat();
 #else
-                    _currentActivity.SetIdFormat(ActivityIdFormat.W3C);
+                _currentActivity.SetIdFormat(ActivityIdFormat.W3C);
 #endif
 
-                    if (_startTime != default)
-                    {
-                        _currentActivity.SetStartTime(_startTime.UtcDateTime);
-                    }
+                if (_startTime != default)
+                {
+                    _currentActivity.SetStartTime(_startTime.UtcDateTime);
+                }
 
-                    if (_tagCollection != null)
+                if (_tagCollection != null)
+                {
+                    foreach (var tag in _tagCollection)
                     {
-                        foreach (var tag in _tagCollection)
-                        {
 #if NETCOREAPP2_1
                             _currentActivity.AddObjectTag(tag.Key, tag.Value);
 #else
-                            _currentActivity.AddTag(tag.Key, tag.Value);
+                        _currentActivity.AddTag(tag.Key, tag.Value);
 #endif
-                        }
                     }
+                }
 
-                    if (_traceparent != null)
-                    {
-                        _currentActivity.SetParentId(_traceparent);
-                    }
+                if (_traceparent != null)
+                {
+                    _currentActivity.SetParentId(_traceparent);
+                }
 
-                    if (_tracestate != null)
-                    {
+                if (_tracestate != null)
+                {
 #if NETCOREAPP2_1
                         _currentActivity.SetTraceState(_tracestate);
 #else
-                        _currentActivity.TraceStateString = _tracestate;
+                    _currentActivity.TraceStateString = _tracestate;
 #endif
-                    }
-
-                    _currentActivity.Start();
                 }
 
-                WriteStartEvent();
+                _currentActivity.Start();
+            }
 
-                if (_displayName != null)
-                {
+            WriteStartEvent();
+
+            if (_displayName != null)
+            {
 #if NETCOREAPP2_1
                     _currentActivity?.SetDisplayName(_displayName);
 #else
-                    _currentActivity.DisplayName = _displayName;
+                _currentActivity.DisplayName = _displayName;
 #endif
-                }
-
-                return _currentActivity;
             }
 
-            [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The values being passed into Write have the commonly used properties being preserved with DynamicDependency on the ActivityAdapter.Start() method, or the responsibility is on the user of this struct since the struct constructor is marked with RequiresUnreferencedCode.")]
-            private void WriteStartEvent()
-            {
-                _diagnosticSource.Write(_activityName + ".Start", _diagnosticSourceArgs ?? _currentActivity);
-            }
+            return _currentActivity;
+        }
 
-            public void SetDisplayName(string displayName)
+        [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The values being passed into Write have the commonly used properties being preserved with DynamicDependency on the ActivityAdapter.Start() method, or the responsibility is on the user of this struct since the struct constructor is marked with RequiresUnreferencedCode.")]
+        private void WriteStartEvent()
+        {
+            _diagnosticSource.Write(_activityName + ".Start", _diagnosticSourceArgs ?? _currentActivity);
+        }
+
+        public void SetDisplayName(string displayName)
+        {
+            _displayName = displayName;
+            if (_currentActivity != null)
             {
-                _displayName = displayName;
-                if (_currentActivity != null)
-                {
 #if NETCOREAPP2_1
                     _currentActivity.SetDisplayName(_displayName);
 #else
-                    _currentActivity.DisplayName = _displayName;
+                _currentActivity.DisplayName = _displayName;
 #endif
-                }
             }
+        }
 
-            private Activity? StartActivitySourceActivity()
-            {
+        private Activity? StartActivitySourceActivity()
+        {
 #if NETCOREAPP2_1
                 return ActivityExtensions.ActivitySourceStartActivity(
                     _activitySource,
@@ -471,37 +464,37 @@ namespace Eryph.GenePool.Client.Internal
                     traceparent: _traceparent,
                     tracestate: _tracestate);
 #else
-                if (_activitySource == null)
-                {
-                    return null;
-                }
-                ActivityContext context;
-                if (_traceparent != null)
-                {
-                    context = ActivityContext.Parse(_traceparent, _tracestate);
-                }
-                else
-                {
-                    context = new ActivityContext();
-                }
-                var activity = _activitySource.StartActivity(_activityName, _kind, context, _tagCollection, GetActivitySourceLinkCollection()!, _startTime);
-                return activity;
+            if (_activitySource == null)
+            {
+                return null;
+            }
+            ActivityContext context;
+            if (_traceparent != null)
+            {
+                context = ActivityContext.Parse(_traceparent, _tracestate);
+            }
+            else
+            {
+                context = new ActivityContext();
+            }
+            var activity = _activitySource.StartActivity(_activityName, _kind, context, _tagCollection, GetActivitySourceLinkCollection()!, _startTime);
+            return activity;
 #endif
-            }
+        }
 
-            public void SetStartTime(DateTime startTime)
-            {
-                _startTime = startTime;
-                _currentActivity?.SetStartTime(startTime);
-            }
+        public void SetStartTime(DateTime startTime)
+        {
+            _startTime = startTime;
+            _currentActivity?.SetStartTime(startTime);
+        }
 
-            [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The Exception being passed into this method has the commonly used properties being preserved with DynamicallyAccessedMemberTypes.")]
-            public void MarkFailed<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(T exception)
+        [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The Exception being passed into this method has the commonly used properties being preserved with DynamicallyAccessedMemberTypes.")]
+        public void MarkFailed<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(T exception)
+        {
+            if (exception != null)
             {
-                if (exception != null)
-                {
-                    _diagnosticSource?.Write(_activityName + ".Exception", exception);
-                }
+                _diagnosticSource?.Write(_activityName + ".Exception", exception);
+            }
 
 #if NETCOREAPP2_1
                 if (ActivityExtensions.SupportsActivitySource())
@@ -512,31 +505,31 @@ namespace Eryph.GenePool.Client.Internal
 #if NET6_0_OR_GREATER // SetStatus is only defined in NET 6 or greater
                 _currentActivity?.SetStatus(ActivityStatusCode.Error, exception?.ToString());
 #endif
+        }
+
+        public void SetTraceContext(string traceparent, string? tracestate)
+        {
+            if (_currentActivity != null)
+            {
+                throw new InvalidOperationException("Traceparent can not be set after the activity is started.");
+            }
+            _traceparent = traceparent;
+            _tracestate = tracestate;
+        }
+
+        [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode", Justification = "The class constructor is marked with RequiresUnreferencedCode.")]
+        public void Dispose()
+        {
+            var activity = _currentActivity ?? _sampleOutActivity;
+            if (activity == null)
+            {
+                return;
             }
 
-            public void SetTraceContext(string traceparent, string? tracestate)
-            {
-                if (_currentActivity != null)
-                {
-                    throw new InvalidOperationException("Traceparent can not be set after the activity is started.");
-                }
-                _traceparent = traceparent;
-                _tracestate = tracestate;
-            }
+            if (activity.Duration == TimeSpan.Zero)
+                activity.SetEndTime(DateTime.UtcNow);
 
-            [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode", Justification = "The class constructor is marked with RequiresUnreferencedCode.")]
-            public void Dispose()
-            {
-                var activity = _currentActivity ?? _sampleOutActivity;
-                if (activity == null)
-                {
-                    return;
-                }
-
-                if (activity.Duration == TimeSpan.Zero)
-                    activity.SetEndTime(DateTime.UtcNow);
-
-                _diagnosticSource.Write(_activityName + ".Stop", _diagnosticSourceArgs);
+            _diagnosticSource.Write(_activityName + ".Stop", _diagnosticSourceArgs);
 
 #if NETCOREAPP2_1
                 if (!activity.TryDispose())
@@ -544,11 +537,11 @@ namespace Eryph.GenePool.Client.Internal
                     activity.Stop();
                 }
 #else
-                activity.Dispose();
+            activity.Dispose();
 #endif
-            }
         }
     }
+}
 
 #if NETCOREAPP2_1
 #pragma warning disable SA1507 // File can not contain multiple types
@@ -1049,4 +1042,3 @@ namespace Eryph.GenePool.Client.Internal
 #else
 #pragma warning disable SA1507 // File can not contain multiple types
 #endif
-}

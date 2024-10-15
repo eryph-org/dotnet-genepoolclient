@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure;
 using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
+using Eryph.GenePool.Client.Internal.AsyncCollections;
 using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model;
-using Eryph.GenePool.Model.Requests;
 using Eryph.GenePool.Model.Requests.ApiKeys;
 using Eryph.GenePool.Model.Requests.Organizations;
 using Eryph.GenePool.Model.Responses;
@@ -119,7 +120,7 @@ public class OrganizationClient
         scope.Start();
         try
         {
-            var body = new CreateOrganizationBody()
+            var body = new CreateOrganizationBody
             {
                 Id = genepoolOrgId,
                 Name = _organization.Value,
@@ -153,7 +154,7 @@ public class OrganizationClient
         scope.Start();
         try
         {
-            var body = new CreateOrganizationBody()
+            var body = new CreateOrganizationBody
             {
                 Id = genepoolOrgId,
                 Name = _organization.Value,
@@ -403,7 +404,45 @@ public class OrganizationClient
                 _clientConfiguration.Version);
 
 
-            return apiKeyRestClient.Create(_organization, body, options, cancellationToken).Value.Value;
+            return apiKeyRestClient.Create(_organization, body, options ?? new RequestOptions(), cancellationToken).Value.Value;
+        }
+        catch (Exception e)
+        {
+            scope.Failed(e);
+            throw;
+        }
+    }
+
+    public virtual AsyncPageable<GenesetResponse> ListGenesetsAsync(
+        ListGenesetsRequestOptions? options = default,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(ListGenesets)}");
+        scope.Start();
+        try
+        {
+            return new GenesetsAsyncCollection(RestClient, _organization,
+                options ?? new ListGenesetsRequestOptions()
+            ).ToAsyncCollection(cancellationToken);
+        }
+        catch (Exception e)
+        {
+            scope.Failed(e);
+            throw;
+        }
+    }
+
+    public virtual Pageable<GenesetResponse> ListGenesets(
+        ListGenesetsRequestOptions? options = default,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(OrganizationClient)}.{nameof(ListGenesets)}");
+        scope.Start();
+        try
+        {
+            return new GenesetsAsyncCollection(RestClient, _organization,
+                    options ?? new ListGenesetsRequestOptions())
+                .ToSyncCollection(cancellationToken);
         }
         catch (Exception e)
         {

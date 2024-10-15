@@ -32,7 +32,19 @@ public static class GenePacker
         var targetStream = new GenePackerStream(new DirectoryInfo(tempDir), ChunkSize);
         try
         {
-            await CompressAsync(targetStream, file.FullPath, file.ExtremeCompression, progress, token);
+            var format = file.ExtremeCompression ? "xz" : "gz";
+
+            if (!file.ExtremeCompression && originalSize < GeneModelDefaults.MinCompressionBytes)
+            {
+                await using var sourceStream = new FileStream(file.FullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                await sourceStream.CopyToAsync(targetStream, token);
+                format = "plain";
+            }
+            else
+            {
+                await CompressAsync(targetStream, file.FullPath, file.ExtremeCompression, progress, token);
+
+            }
             await targetStream.DisposeAsync();
 
             progress?.Report(new GenePackerProgress(originalSize, originalSize));
@@ -44,7 +56,7 @@ public static class GenePacker
                 Name = file.GeneName,
                 Size = targetStream.Length,
                 OriginalSize = originalSize,
-                Format = file.ExtremeCompression ? "xz" : "gz",
+                Format = format,
                 Parts = targetStream.GetChunks().ToArray(),
                 Type = file.GeneType.ToString().ToLowerInvariant(),
                 Architecture = file.Architecture,
@@ -144,7 +156,7 @@ public static class GenePacker
 
         _isNativeInitialized = true;
 
-        string libDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes");
+        var libDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes");
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             libDir = Path.Combine(libDir, "win-");
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))

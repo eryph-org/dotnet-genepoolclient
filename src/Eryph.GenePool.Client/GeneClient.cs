@@ -9,7 +9,6 @@ using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model;
-using Eryph.GenePool.Model.Requests;
 using Eryph.GenePool.Model.Requests.Genes;
 using Eryph.GenePool.Model.Responses;
 
@@ -64,7 +63,7 @@ public class GeneClient
         scope.Start();
         try
         {
-            var body = new NewGeneRequestBody()
+            var body = new NewGeneRequestBody
             {
                 Gene = gene.Value,
                 Geneset = _geneset.Value,
@@ -98,7 +97,7 @@ public class GeneClient
         scope.Start();
         try
         {
-            var body = new NewGeneRequestBody()
+            var body = new NewGeneRequestBody
             {
                 Gene = gene.Value,
                 Geneset = _geneset.Value,
@@ -400,7 +399,7 @@ public class GeneClient
         var stagedParts = geneStatus.UploadStatus?.ConfirmedParts
             .Select(p => p.Split(':')[1]) ?? Array.Empty<string>();
 
-        var partsRequired = (geneStatus.Manifest.Parts ?? Array.Empty<string>())
+        var partsRequired = (geneStatus.Manifest.Parts ?? [])
             .Select(p => p.Split(':')[1]).Except(stagedParts).ToArray();
 
         var uploadedPart = false;
@@ -417,7 +416,7 @@ public class GeneClient
             totalMissingSize += new FileInfo(partPath).Length;
         }
 
-        var totalUploadedCount = 0;
+        const int totalUploadedCount = 0;
         var totalUploadedSize = 0L;
 
         Parallel.ForEach(partsRequired, new ParallelOptions
@@ -443,7 +442,7 @@ public class GeneClient
 
                 if (progress != null)
                 {
-                    progressData = new GeneUploadProgress()
+                    progressData = new GeneUploadProgress
                     {
                         Part = part,
                         FilePath = partPath,
@@ -478,13 +477,11 @@ public class GeneClient
                 UploadPart(uploadUri, partStream, new RequestOptions(), cancellationToken);
                 uploadedPart = true;
 
-                if (progress != null && progressData!= null)
-                {
-                    Interlocked.Add(ref totalUploadedSize, streamProgressBytes);
-                    progressData.TotalUploadedSize = totalUploadedSize;
-                    progressData.Uploaded = true;
-                    progress.Report(progressData);
-                }
+                if (progress == null || progressData == null) return;
+                Interlocked.Add(ref totalUploadedSize, streamProgressBytes);
+                progressData.TotalUploadedSize = totalUploadedSize;
+                progressData.Uploaded = true;
+                progress.Report(progressData);
             }
             catch (ErrorResponseException ex) when (ex.Response.StatusCode == HttpStatusCode.Conflict)
             {

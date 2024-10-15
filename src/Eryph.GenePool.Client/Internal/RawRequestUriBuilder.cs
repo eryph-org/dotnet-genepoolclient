@@ -1,73 +1,73 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-#nullable enable
-
 using System;
 using System.Globalization;
 using Azure.Core;
 
-namespace Eryph.GenePool.Client.Internal
+namespace Eryph.GenePool.Client.Internal;
+
+internal class RawRequestUriBuilder: RequestUriBuilder
 {
-    internal class RawRequestUriBuilder: RequestUriBuilder
+    private const string SchemeSeparator = "://";
+    private const char HostSeparator = '/';
+    private const char PortSeparator = ':';
+    private static readonly char[] HostOrPort = [HostSeparator, PortSeparator];
+    private const char QueryBeginSeparator = '?';
+    private const char QueryContinueSeparator = '&';
+    private const char QueryValueSeparator = '=';
+
+    private RawWritingPosition? _position;
+
+    private static void GetQueryParts(ReadOnlySpan<char> queryUnparsed, out ReadOnlySpan<char> name, out ReadOnlySpan<char> value)
     {
-        private const string SchemeSeparator = "://";
-        private const char HostSeparator = '/';
-        private const char PortSeparator = ':';
-        private static readonly char[] HostOrPort = { HostSeparator, PortSeparator };
-        private const char QueryBeginSeparator = '?';
-        private const char QueryContinueSeparator = '&';
-        private const char QueryValueSeparator = '=';
-
-        private RawWritingPosition? _position;
-
-        private static void GetQueryParts(ReadOnlySpan<char> queryUnparsed, out ReadOnlySpan<char> name, out ReadOnlySpan<char> value)
+        var separatorIndex = queryUnparsed.IndexOf(QueryValueSeparator);
+        if (separatorIndex == -1)
         {
-            int separatorIndex = queryUnparsed.IndexOf(QueryValueSeparator);
-            if (separatorIndex == -1)
+            name = queryUnparsed;
+            value = ReadOnlySpan<char>.Empty;
+        }
+        else
+        {
+            name = queryUnparsed[..separatorIndex];
+            value = queryUnparsed[(separatorIndex + 1)..];
+        }
+    }
+
+    public void AppendRaw(string value, bool escape)
+    {
+        AppendRaw(value.AsSpan(), escape);
+    }
+
+    private void AppendRaw(ReadOnlySpan<char> value, bool escape)
+    {
+        if (_position == null)
+        {
+            if (HasQuery)
             {
-                name = queryUnparsed;
-                value = ReadOnlySpan<char>.Empty;
+                _position = RawWritingPosition.Query;
+            }
+            else if (HasPath)
+            {
+                _position = RawWritingPosition.Path;
+            }
+            else if (!string.IsNullOrEmpty(Host))
+            {
+                _position = RawWritingPosition.Host;
             }
             else
             {
-                name = queryUnparsed.Slice(0, separatorIndex);
-                value = queryUnparsed.Slice(separatorIndex + 1);
+                _position = RawWritingPosition.Scheme;
             }
         }
 
-        public void AppendRaw(string value, bool escape)
+        while (!value.IsEmpty)
         {
-            AppendRaw(value.AsSpan(), escape);
-        }
-
-        private void AppendRaw(ReadOnlySpan<char> value, bool escape)
-        {
-            if (_position == null)
+            switch (_position)
             {
-                if (HasQuery)
+                case RawWritingPosition.Scheme:
                 {
-                    _position = RawWritingPosition.Query;
-                }
-                else if (HasPath)
-                {
-                    _position = RawWritingPosition.Path;
-                }
-                else if (!string.IsNullOrEmpty(Host))
-                {
-                    _position = RawWritingPosition.Host;
-                }
-                else
-                {
-                    _position = RawWritingPosition.Scheme;
-                }
-            }
-
-            while (!value.IsEmpty)
-            {
-                if (_position == RawWritingPosition.Scheme)
-                {
-                    int separator = value.IndexOf(SchemeSeparator.AsSpan(), StringComparison.InvariantCultureIgnoreCase);
+                    var separator = value.IndexOf(SchemeSeparator.AsSpan(), StringComparison.InvariantCultureIgnoreCase);
                     if (separator == -1)
                     {
                         Scheme += value.ToString();
@@ -75,16 +75,18 @@ namespace Eryph.GenePool.Client.Internal
                     }
                     else
                     {
-                        Scheme += value.Slice(0, separator).ToString();
+                        Scheme += value[..separator].ToString();
                         // TODO: Find a better way to map schemes to default ports
                         Port = string.Equals(Scheme, "https", StringComparison.OrdinalIgnoreCase) ? 443 : 80;
-                        value = value.Slice(separator + SchemeSeparator.Length);
+                        value = value[(separator + SchemeSeparator.Length)..];
                         _position = RawWritingPosition.Host;
                     }
+
+                    break;
                 }
-                else if (_position == RawWritingPosition.Host)
+                case RawWritingPosition.Host:
                 {
-                    int separator = value.IndexOfAny(HostOrPort);
+                    var separator = value.IndexOfAny(HostOrPort);
                     if (separator == -1)
                     {
                         if (!HasPath)
@@ -101,14 +103,16 @@ namespace Eryph.GenePool.Client.Internal
                     }
                     else
                     {
-                        Host += value.Slice(0, separator).ToString();
+                        Host += value[..separator].ToString();
                         _position = value[separator] == HostSeparator ? RawWritingPosition.Path : RawWritingPosition.Port;
-                        value = value.Slice(separator + 1);
+                        value = value[(separator + 1)..];
                     }
+
+                    break;
                 }
-                else if (_position == RawWritingPosition.Port)
+                case RawWritingPosition.Port:
                 {
-                    int separator = value.IndexOf(HostSeparator);
+                    var separator = value.IndexOf(HostSeparator);
                     if (separator == -1)
                     {
 #if NETCOREAPP2_1_OR_GREATER
@@ -123,16 +127,17 @@ namespace Eryph.GenePool.Client.Internal
 #if NETCOREAPP2_1_OR_GREATER
                         Port = int.Parse(value.Slice(0, separator), NumberStyles.Integer, CultureInfo.InvariantCulture);
 #else
-                        Port = int.Parse(value.Slice(0, separator).ToString(), CultureInfo.InvariantCulture);
+                        Port = int.Parse(value[..separator].ToString(), CultureInfo.InvariantCulture);
 #endif
-                        value = value.Slice(separator + 1);
+                        value = value[(separator + 1)..];
                     }
                     // Port cannot be split (like Host), so always transition to Path when Port is parsed
                     _position = RawWritingPosition.Path;
+                    break;
                 }
-                else if (_position == RawWritingPosition.Path)
+                case RawWritingPosition.Path:
                 {
-                    int separator = value.IndexOf(QueryBeginSeparator);
+                    var separator = value.IndexOf(QueryBeginSeparator);
                     if (separator == -1)
                     {
                         AppendPath(value, escape);
@@ -140,17 +145,19 @@ namespace Eryph.GenePool.Client.Internal
                     }
                     else
                     {
-                        AppendPath(value.Slice(0, separator), escape);
-                        value = value.Slice(separator + 1);
+                        AppendPath(value[..separator], escape);
+                        value = value[(separator + 1)..];
                         _position = RawWritingPosition.Query;
                     }
+
+                    break;
                 }
-                else if (_position == RawWritingPosition.Query)
+                case RawWritingPosition.Query:
                 {
-                    int separator = value.IndexOf(QueryContinueSeparator);
+                    var separator = value.IndexOf(QueryContinueSeparator);
                     if (separator == 0)
                     {
-                        value = value.Slice(1);
+                        value = value[1..];
                     }
                     else if (separator == -1)
                     {
@@ -160,33 +167,35 @@ namespace Eryph.GenePool.Client.Internal
                     }
                     else
                     {
-                        GetQueryParts(value.Slice(0, separator), out var queryName, out var queryValue);
+                        GetQueryParts(value[..separator], out var queryName, out var queryValue);
                         AppendQuery(queryName, queryValue, escape);
-                        value = value.Slice(separator + 1);
+                        value = value[(separator + 1)..];
                     }
+
+                    break;
                 }
             }
         }
+    }
 
-        private enum RawWritingPosition
+    private enum RawWritingPosition
+    {
+        Scheme,
+        Host,
+        Port,
+        Path,
+        Query
+    }
+
+    public void AppendRawNextLink(string nextLink, bool escape)
+    {
+        // If it is an absolute link, we use the nextLink as the entire url
+        if (nextLink.StartsWith(Uri.UriSchemeHttp, StringComparison.InvariantCultureIgnoreCase))
         {
-            Scheme,
-            Host,
-            Port,
-            Path,
-            Query
+            Reset(new Uri(nextLink));
+            return;
         }
 
-        public void AppendRawNextLink(string nextLink, bool escape)
-        {
-            // If it is an absolute link, we use the nextLink as the entire url
-            if (nextLink.StartsWith(Uri.UriSchemeHttp, StringComparison.InvariantCultureIgnoreCase))
-            {
-                Reset(new Uri(nextLink));
-                return;
-            }
-
-            AppendRaw(nextLink, escape);
-        }
+        AppendRaw(nextLink, escape);
     }
 }

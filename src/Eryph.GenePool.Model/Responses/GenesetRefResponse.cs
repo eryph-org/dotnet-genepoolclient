@@ -3,18 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace Eryph.GenePool.Model.Responses;
 
-public record GenesetRefResponse
+[method: JsonConstructor]
+public record GenesetRefResponse([property: JsonPropertyName("name")] string Name, [property: JsonPropertyName("uri")] Uri? Uri)
 {
-    [JsonConstructor]
-    public GenesetRefResponse(string Name, Uri? Uri)
-    {
-        this.Name = Name;
-        this.Uri = Uri;
-    }
-
-    [JsonPropertyName("name")] public string Name { get; init; }
-    [JsonPropertyName("uri")] public Uri? Uri { get; init; }
-
     public void Deconstruct(out string name, out Uri? uri)
     {
         name = Name;

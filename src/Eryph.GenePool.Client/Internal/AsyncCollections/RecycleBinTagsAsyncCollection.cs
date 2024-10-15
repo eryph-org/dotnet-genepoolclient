@@ -8,53 +8,55 @@ using Eryph.GenePool.Client.Responses;
 using Eryph.GenePool.Client.RestClients;
 using Eryph.GenePool.Model.Responses;
 
-namespace Eryph.GenePool.Client.Internal.AsyncCollections
+namespace Eryph.GenePool.Client.Internal.AsyncCollections;
+
+internal class RecycleBinTagsAsyncCollection(
+    RecycleBinRestClient restClient,
+    OrganizationName organizationName,
+    GeneSetName? genesetName, 
+    ListRecycleBinRequestOptions options)
+    : CollectionEnumerator<GenesetTagResponse>
 {
-    internal class RecycleBinTagsAsyncCollection(
-        RecycleBinRestClient restClient,
-        OrganizationName organizationName,
-        GeneSetName? genesetName)
-        : CollectionEnumerator<GenesetTagResponse>
+
+    public override async ValueTask<Page<GenesetTagResponse>> GetNextPageAsync(
+        string? continuationToken,
+        int? pageSizeHint,
+        bool async,
+        CancellationToken cancellationToken)
     {
-
-        public override async ValueTask<Page<GenesetTagResponse>> GetNextPageAsync(
-            string? continuationToken,
-            int? pageSizeHint,
-            bool async,
-            CancellationToken cancellationToken)
+        Response<PagedResultResponse<GenesetTagResponse>> response;
+        if (async)
         {
-            Response<PagedResultResponse<GenesetTagResponse>> response;
-            if (async)
-            {
-                response = await restClient.ListAsync(organizationName,
-                        genesetName,
-                        new ListRecycleBinRequestOptions
-                        {
-                            ContinuationToken = continuationToken,
-                            PageSizeHint = pageSizeHint
-                        }
-                        , cancellationToken)
-                    .ConfigureAwait(false);
-
-            }
-            else
-            {
-                // ReSharper disable once MethodHasAsyncOverload
-                response = restClient.List(organizationName,
+            response = await restClient.ListAsync(organizationName,
                     genesetName,
-                      new ListRecycleBinRequestOptions
-                        {
-                            ContinuationToken = continuationToken,
-                            PageSizeHint = pageSizeHint
-                        }
-                    , cancellationToken);
-            }
+                    new ContinuingRequestOptions<ListRecycleBinRequestOptions>
+                    {
+                        ContinuationToken = continuationToken,
+                        PageSizeHint = pageSizeHint,
+                        RequestOptions = options
+                    }
+                    , cancellationToken)
+                .ConfigureAwait(false);
 
-            return Page<GenesetTagResponse>.FromValues(
-                response.Value.Values?.ToList() ?? [],
-                response.Value.ContinuationToken,
-                response.GetRawResponse());
+        }
+        else
+        {
+            // ReSharper disable once MethodHasAsyncOverload
+            response = restClient.List(organizationName,
+                genesetName,
+                new ContinuingRequestOptions<ListRecycleBinRequestOptions>
+                {
+                    ContinuationToken = continuationToken,
+                    PageSizeHint = pageSizeHint,
+                    RequestOptions = options
+                }
+                , cancellationToken);
         }
 
+        return Page<GenesetTagResponse>.FromValues(
+            response.Value.Values?.ToList() ?? [],
+            response.Value.ContinuationToken,
+            response.GetRawResponse());
     }
+
 }

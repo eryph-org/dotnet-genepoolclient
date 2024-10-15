@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Eryph.GenePool.Model;
+﻿using Eryph.GenePool.Model;
 using System.Text.Json;
 using Error = LanguageExt.Common.Error;
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -128,7 +127,7 @@ public class GenesetTagInfo
     {
         EnsureCreatedAndLoaded();
 
-        _ = Validations.ValidateMetadata(newMetadata).ToEither().MapLeft(Error.Many).IfLeft(l => l.Throw());
+        _ = Validations.ValidateMetadata(false, newMetadata).ToEither().MapLeft(Error.Many).IfLeft(l => l.Throw());
 
         _manifestData.Metadata ??= new Dictionary<string, string>();
 
@@ -165,14 +164,14 @@ public class GenesetTagInfo
                 _manifestData.CatletGene = hash;
                 break;
             case GeneType.Volume:
-                _manifestData.VolumeGenes ??= Array.Empty<GeneReferenceData>();
+                _manifestData.VolumeGenes ??= [];
                 RemoveExistingGene(_manifestData.VolumeGenes.FirstOrDefault(x => x.Name == name)?.Hash, hash);
 
                 _manifestData.VolumeGenes = _manifestData.VolumeGenes.Where(x => x.Name != name)
                     .Append(new GeneReferenceData { Name = name, Hash = hash, Architecture = architecture}).ToArray();
                 break;
             case GeneType.Fodder:
-                _manifestData.FodderGenes ??= Array.Empty<GeneReferenceData>();
+                _manifestData.FodderGenes ??= [];
                 RemoveExistingGene(_manifestData.FodderGenes.FirstOrDefault(x => x.Name == name)?.Hash, hash);
                 _manifestData.FodderGenes = _manifestData.FodderGenes.Where(x => x.Name != name)
                     .Append(new GeneReferenceData { Name = name, Hash = hash, Architecture = architecture}).ToArray();

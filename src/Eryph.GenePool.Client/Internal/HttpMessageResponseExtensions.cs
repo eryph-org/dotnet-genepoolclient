@@ -68,22 +68,19 @@ internal static class HttpMessageResponseExtensions
 
     private static void ThrowOnInvalidContent(Response response)
     {
-        if (response.ContentStream == null || response.Headers.ContentLength== 0)
+        if (response.ContentStream != null && response.Headers.ContentLength != 0) return;
+        var errorResponse = new ErrorResponse
         {
-            var errorResponse = new ErrorResponse
-            {
-                StatusCode = (HttpStatusCode)response.Status,
-                StatusCodeString = response.ReasonPhrase,
-                ResponseType = ResponseType.Error,
-                ResponseTypeString = "error"
-            };
+            StatusCode = (HttpStatusCode)response.Status,
+            StatusCodeString = response.ReasonPhrase,
+            ResponseType = ResponseType.Error,
+            ResponseTypeString = "error"
+        };
 
-            throw new ErrorResponseException(errorResponse,
-                response.IsError
-                    ? $"Request failed with status code {response.Status} {response.ReasonPhrase}"
-                    : $"Content missing for successful response.");
-
-        }
+        throw new ErrorResponseException(errorResponse,
+            response.IsError
+                ? $"Request failed with status code {response.Status} {response.ReasonPhrase}"
+                : $"Content missing for successful response.");
 
 
     }

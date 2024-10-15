@@ -144,13 +144,16 @@ public class RecycleBinClient
     /// <param name="geneSetName">Optional name of geneset to query only for given geneset.</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual AsyncPageable<GenesetTagResponse> ListAsync(GeneSetName? geneSetName = default,
+        ListRecycleBinRequestOptions? options = default,
      CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(RecycleBinClient)}.{nameof(List)}");
         scope.Start();
         try
         {
-            return new RecycleBinTagsAsyncCollection(RestClient, _organization, geneSetName).ToAsyncCollection(cancellationToken);
+            return new RecycleBinTagsAsyncCollection(RestClient, _organization, geneSetName, 
+                options ?? new ListRecycleBinRequestOptions()
+                ).ToAsyncCollection(cancellationToken);
         }
         catch (Exception e)
         {
@@ -163,13 +166,15 @@ public class RecycleBinClient
     /// <param name="geneSetName">Optional name of geneset to query only for given geneset.</param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual Pageable<GenesetTagResponse> List(GeneSetName? geneSetName = default,
+        ListRecycleBinRequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(RecycleBinClient)}.{nameof(ListAsync)}");
         scope.Start();
         try
         {
-            return new RecycleBinTagsAsyncCollection(RestClient, _organization, geneSetName)
+            return new RecycleBinTagsAsyncCollection(RestClient, _organization, geneSetName,
+                options ?? new ListRecycleBinRequestOptions())
                 .ToSyncCollection(cancellationToken);
         }
         catch (Exception e)

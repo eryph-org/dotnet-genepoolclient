@@ -1,7 +1,8 @@
 ﻿using System.CommandLine;
-using Eryph.GenePool.Client.Internal;
 using LanguageExt;
 using LanguageExt.Common;
+
+namespace Eryph.Packer;
 
 public static class CommandValidationExtensions
 {
@@ -15,7 +16,7 @@ public static class CommandValidationExtensions
             var value = result.GetValueOrDefault<T>();
             var validation = validator(value);
             var either = validation.ToEither().MapLeft(Error.Many).Map(_ => value);
-            either.IfLeft(l => result.ErrorMessage = $"Invalid argument <{argument.Name}>: {l.Message}");
+            either.IfLeft(l => result.ErrorMessage = $"Invalid argument <{argument.Name}>: {ErrorHelper.PrintError(l)}");
 
         } );
 

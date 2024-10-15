@@ -156,7 +156,9 @@ public class AuthenticationRecord
     {
         var authProfile = new AuthenticationRecord();
 
-        using var doc = async ? await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false) : JsonDocument.Parse(stream);
+        using var doc = async ? await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false) : 
+            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+            JsonDocument.Parse(stream);
 
         foreach (var prop in doc.RootElement.EnumerateObject())
         {

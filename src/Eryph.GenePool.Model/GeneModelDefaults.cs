@@ -29,14 +29,17 @@ namespace Eryph.GenePool.Model
         public static Version LatestGenesetManifestVersion = new(1, 0);
         public static Version LatestGenesetTagManifestVersion = new(1, 1);
 
-        public static int MaxYamlSourceBytes = 2 * 1024 * 1024;
-        public static int MaxGenesetMarkdownBytes = 2 * 1024 * 1024;
+        public const int MaxYamlSourceBytes = 2 * 1024 * 1024;
+        public const int MaxGenesetMarkdownBytes = 2 * 1024 * 1024;
 
         // consider max bytes used for storing geneset and gene metadata when
         // changing these values - technical max is (key + value) * count * 4 (utf-8)
-        public static int MaxMetadataKeyLength = 40;
-        public static int MaxMetadataKeyCount = 50;
-        public static int MaxMetadataValueLength = 500;
+        public const int MaxMetadataKeyLength = 40;
+        public const int MaxMetadataKeyCount = 50;
+        public const int MaxMetadataValueLength = 500;
+        public const int MinCompressionBytes = 2 * 1024;
 
+        public const int MaxCategoryCount = 3;
+        public static int MaxTagCount = 3;
     }
 }

@@ -10,7 +10,7 @@ namespace Eryph.GenePool.Client;
 public class BrowserCustomizationOptions
 {
     /// <summary>
-    /// Specifies if the public client application should used an embedded web browser
+    /// Specifies if the public client application should use an embedded web browser
     /// or the system default browser
     /// </summary>
     public bool? UseEmbeddedWebView { get; set; }

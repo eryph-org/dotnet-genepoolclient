@@ -121,7 +121,7 @@ public class GenesetInfo
     public void JoinMetadata(Dictionary<string, string> newMetadata)
     {
         EnsureCreatedAndLoaded();
-        _ = Validations.ValidateMetadata(newMetadata).ToEither().MapLeft(Error.Many).IfLeft(l => l.Throw());
+        _ = Validations.ValidateMetadata(true,newMetadata).ToEither().MapLeft(Error.Many).IfLeft(l => l.Throw());
 
         _manifestData.Metadata ??= new Dictionary<string, string>();
 

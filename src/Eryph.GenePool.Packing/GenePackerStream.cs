@@ -16,7 +16,7 @@ internal sealed class GenePackerStream : Stream
     private readonly long _chunkSize;
     private bool _isDisposed;
     private long _totalBytes;
-    private readonly List<string> _chunks = new();
+    private readonly List<string> _chunks = [];
     private FileStream? _currentChunk;
     private readonly IncrementalHash _incrementalHash;
 
