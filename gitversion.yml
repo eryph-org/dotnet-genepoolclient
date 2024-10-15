@@ -1,2 +1,2 @@
 assembly-versioning-scheme: MajorMinorPatch
-workflow: gitflow
+workflow: GitHubFlow/v1
