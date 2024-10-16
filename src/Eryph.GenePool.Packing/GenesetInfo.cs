@@ -96,7 +96,11 @@ public class GenesetInfo
 
         if (!File.Exists(Path.Combine(GetGenesetPath(), "geneset.json")))
         {
-            _manifestData = new GenesetManifestData { Geneset = GenesetName };
+            _manifestData = new GenesetManifestData
+            {
+                Geneset = GenesetName,
+                Version = GeneModelDefaults.LatestGenesetManifestVersion.ToString()
+            };
             Write();
         }
     }
@@ -116,6 +120,8 @@ public class GenesetInfo
         _loaded = true;
         var path = GetGenesetPath();
         _manifestData = ReadManifestFromPath(path, GenesetName);
+        _manifestData.Version ??= "1.0";
+
     }
 
     public void JoinMetadata(Dictionary<string, string> newMetadata)

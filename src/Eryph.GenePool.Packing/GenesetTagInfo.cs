@@ -96,7 +96,8 @@ public class GenesetTagInfo
 
         if (!File.Exists(Path.Combine(GetGenesetPath(), "geneset-tag.json")))
         {
-            _manifestData = new GenesetTagManifestData { Version = GeneModelDefaults.LatestGenesetTagManifestVersion.ToString(),
+            _manifestData = new GenesetTagManifestData { 
+                Version = GeneModelDefaults.LatestGenesetTagManifestVersion.ToString(),
                 Geneset = GenesetTagName };
             Write();
         }

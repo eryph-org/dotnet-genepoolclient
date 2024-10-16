@@ -26,7 +26,7 @@ namespace Eryph.GenePool.Model
         }
 
         public static Version LatestGeneManifestVersion = new (1, 1);
-        public static Version LatestGenesetManifestVersion = new(1, 0);
+        public static Version LatestGenesetManifestVersion = new(1, 1);
         public static Version LatestGenesetTagManifestVersion = new(1, 1);
 
         public const int MaxYamlSourceBytes = 2 * 1024 * 1024;
