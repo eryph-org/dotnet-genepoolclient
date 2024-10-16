@@ -12,7 +12,8 @@ public class HashSha1 : EryphName<HashSha1>
                          allowHyphens: false,
                          allowUnderscores: false,
                          allowSpaces: false)
-                     | Validations<HashSha1>.ValidateLength(value, 40, 40));
+                     | Validations<HashSha1>.ValidateLength(value, 40, 40)
+                     | GeneValidations.ValidateHashCharacters(value));
 
     }
 }

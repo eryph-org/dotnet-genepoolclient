@@ -320,13 +320,13 @@ packCommand.SetHandler(async context =>
                     {
                         await AddFodderFromDirectory(fodderDir, Architectures.HyperVAny);
 
-                        foreach (var archDir  in fodderDir.GetDirectories())
+                        foreach (var processorDir  in hypervisorDir.GetDirectories())
                         {
-                            if (string.Equals(hypervisorDir.Name, Architectures.HyperVAmd64,
+                            if (string.Equals(processorDir.Name, ProcessorTypes.Amd64,
                                     StringComparison.OrdinalIgnoreCase))
-                                await AddFodderFromDirectory(fodderDir, Architectures.HyperVAmd64);
+                                await AddFodderFromDirectory(processorDir, Architectures.HyperVAmd64);
                             else
-                                AnsiConsole.MarkupLine($"Fodder dir contains [yellow]unknown architecture name '{archDir.Name}'[/]");
+                                AnsiConsole.MarkupLine($"Fodder dir contains [yellow]unknown processor type name '{processorDir.Name}'[/]");
                         }
                     }
                     else
@@ -353,14 +353,14 @@ packCommand.SetHandler(async context =>
 
             var packingTasks = packableFiles.Select(pf => (
                 Packable: pf,
-                ProgressTask: progressContext.AddTask($"Packing gene {pf.GeneName}", autoStart: false)
+                ProgressTask: progressContext.AddTask($"Packing gene {pf.GeneName} (arch: {pf.Architecture})", autoStart: false)
                 )).ToList();
 
             // this will pack all genes in .packed folder
             foreach (var packingTask in packingTasks)
             {
                 if (!isInteractive)
-                    AnsiConsole.MarkupLineInterpolated($"Packing gene {packingTask.Packable.GeneName}...");
+                    AnsiConsole.MarkupLineInterpolated($"Packing gene {packingTask.Packable.GeneName} (arch: {packingTask.Packable.Architecture})...");
 
                 packingTask.ProgressTask.StartTask();
                 var progress = new Progress<GenePackerProgress>();
@@ -373,7 +373,7 @@ packCommand.SetHandler(async context =>
                 packingTask.ProgressTask.StopTask();
                 
                 if (!isInteractive)
-                    AnsiConsole.MarkupLineInterpolated($"Gene {packingTask.Packable.GeneName} [green]packed[/]");
+                    AnsiConsole.MarkupLineInterpolated($"Gene {packingTask.Packable.GeneName} (arch: {packingTask.Packable.Architecture}) [green]packed[/]");
 
                 packedGenesetInfo.AddGene(packingTask.Packable.GeneType, packingTask.Packable.GeneName, packedFile,
                     packingTask.Packable.Architecture);

@@ -16,7 +16,7 @@ public static class CommandValidationExtensions
             var value = result.GetValueOrDefault<T>();
             var validation = validator(value);
             var either = validation.ToEither().MapLeft(Error.Many).Map(_ => value);
-            either.IfLeft(l => result.ErrorMessage = $"Invalid argument <{argument.Name}>: {ErrorHelper.PrintError(l)}");
+            either.IfLeft(l => result.ErrorMessage = $"Invalid argument <{argument.Name}>:\n{ErrorHelper.PrintError(l)}");
 
         } );
 
@@ -37,7 +37,7 @@ public static class CommandValidationExtensions
 
             var validation = validator(value);
             var either = validation.ToEither().MapLeft(Error.Many).Map(_ => value);
-            either.IfLeft(l => result.ErrorMessage = $"Invalid option {option.Name}: {l.Message}");
+            either.IfLeft(l => result.ErrorMessage = $"Invalid option {option.Name}:\n{ErrorHelper.PrintError(l)}");
 
         });
 

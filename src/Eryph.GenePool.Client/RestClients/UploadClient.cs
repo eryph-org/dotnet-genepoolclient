@@ -58,7 +58,7 @@ internal class UploadClient
 
     private static Response CheckResponse(HttpMessage message)
     {
-        if (message.Response.Status != 200)
+        if (message.Response.IsError)
         {
             throw new RequestFailedException(message.Response);
         }

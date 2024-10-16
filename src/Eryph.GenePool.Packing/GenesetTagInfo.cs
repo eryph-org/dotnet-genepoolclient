@@ -166,15 +166,15 @@ public class GenesetTagInfo
                 break;
             case GeneType.Volume:
                 _manifestData.VolumeGenes ??= [];
-                RemoveExistingGene(_manifestData.VolumeGenes.FirstOrDefault(x => x.Name == name)?.Hash, hash);
+                RemoveExistingGene(_manifestData.VolumeGenes.FirstOrDefault(x => x.Name == name && x.Architecture == architecture)?.Hash, hash);
 
-                _manifestData.VolumeGenes = _manifestData.VolumeGenes.Where(x => x.Name != name)
+                _manifestData.VolumeGenes = _manifestData.VolumeGenes.Where(x => x.Name != name || x.Architecture != architecture)
                     .Append(new GeneReferenceData { Name = name, Hash = hash, Architecture = architecture}).ToArray();
                 break;
             case GeneType.Fodder:
                 _manifestData.FodderGenes ??= [];
-                RemoveExistingGene(_manifestData.FodderGenes.FirstOrDefault(x => x.Name == name)?.Hash, hash);
-                _manifestData.FodderGenes = _manifestData.FodderGenes.Where(x => x.Name != name)
+                RemoveExistingGene(_manifestData.FodderGenes.FirstOrDefault(x => x.Name == name && x.Architecture == architecture)?.Hash, hash);
+                _manifestData.FodderGenes = _manifestData.FodderGenes.Where(x => x.Name != name || x.Architecture != architecture)
                     .Append(new GeneReferenceData { Name = name, Hash = hash, Architecture = architecture}).ToArray();
 
                 break;

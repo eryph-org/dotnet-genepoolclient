@@ -36,4 +36,10 @@ public static class GeneValidations
         return ConfigModel.Validations.ValidateFileName(filename, "filename")
             .Map(_ => Unit.Default);
     }
+
+    public static Validation<Error, string> ValidateHashCharacters(string candidate) =>
+        from gChars in Prelude.guard(
+            candidate.ToSeq().All(c => c is >= 'a' and <= 'f' or >= 'A' and <= 'F' or >= '0' and <= '9'),
+            Validations.BadRequestError("Invalid characters for a hash string.")).ToValidation()
+        select candidate;
 }
