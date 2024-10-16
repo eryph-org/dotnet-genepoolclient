@@ -68,8 +68,18 @@ public static class Validations
         if (metadata.Keys.Count > GeneModelDefaults.MaxMetadataKeyCount)
             return BadRequestError($"Metadata is too large. Only up to {GeneModelDefaults.MaxMetadataKeyCount} keys are allowed.");
 
+        var index = 0;
         foreach (var kv in metadata)
         {
+            index++; // 1-based index, used to avoid passing illegal key string to error message
+            var validateKey = ValidateNoControlChars(kv.Key, $"Metadata key {index}");
+            if (validateKey.IsFail)
+                return validateKey.FailAsEnumerable().First();
+
+            var validateValue = ValidateNoControlChars(kv.Value, $"Metadata value for key '{kv.Key}'");
+            if (validateValue.IsFail)
+                return validateValue.FailAsEnumerable().First();
+
             if (kv.Key.Length > GeneModelDefaults.MaxMetadataKeyLength)
                 return BadRequestError(
                     $"Metadata key '{kv.Key[..10]}..' is too long. Max length of keys is {GeneModelDefaults.MaxMetadataKeyLength}.");
@@ -149,6 +159,17 @@ public static class Validations
         return Unit.Default;
     }
 
+    public static Validation<Error, Option<string>> ValidateNoControlChars(string? text, string fieldName)
+    {
+        if (text == null)
+            return Option<string>.None;
+
+        if (text.ToArray().Any(char.IsControl))
+            return BadRequestError(
+                $"{fieldName} contains control characters. These characters are not permitted.");
+        return Some(text);
+    }
+
     public static Validation<Error, Option<string>> ValidateGenesetDescription(string? description)
     {
         if (description == null)
@@ -157,7 +178,9 @@ public static class Validations
         if (description.Length > 200)
             return BadRequestError(
                 "Description is too long (max. 200 chars). Use markdown description for longer content.");
-        return Some(description);
+
+        return from _ in ValidateNoControlChars(description, "description")
+               select Some(description);
     }
 
     public static Validation<Error, Option<string>> ValidateGenesetShortDescription(string? description)
@@ -168,7 +191,8 @@ public static class Validations
         if (description.Length > 90)
             return BadRequestError(
                 "Short description is too long (max. 90 chars allowed).");
-        return Some(description);
+        return from _ in ValidateNoControlChars(description, "short description")
+               select Some(description);
     }
 
     public static Validation<Error, Unit> ValidateVersionString(string? version)
