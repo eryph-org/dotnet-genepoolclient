@@ -177,6 +177,11 @@ initGenesetTagCommand.SetHandler(context =>
     if(genesetTagInfo.Exists())
         throw new EryphPackerUserException("Geneset tag is already initialized");
 
+    var genesetInfo = new GenesetInfo(genesetName, ".");
+    if(!genesetInfo.Exists())
+        throw new EryphPackerUserException($"Geneset is not initialized. Initialize the geneset first with geneset init {genesetInfo.GenesetName}");
+
+
     genesetTagInfo.Create();
     AnsiConsole.WriteLine("Geneset tag was initialized:");
     WriteJson(genesetTagInfo.ToString());
