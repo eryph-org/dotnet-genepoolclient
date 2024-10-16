@@ -163,11 +163,8 @@ initGenesetCommand.SetHandler( context =>
 
     }
     genesetInfo.SetMarkdownFile("readme.md");
-
     genesetInfo.SetIsPublic(isPublic);
-
-    if (!string.IsNullOrWhiteSpace(description))
-        genesetInfo.SetShortDescription(description);
+    genesetInfo.SetShortDescription(!string.IsNullOrWhiteSpace(description) ? description : genesetInfo.Id);
 
     AnsiConsole.WriteLine("Geneset was initialized:");
     WriteJson(genesetInfo.ToString());
