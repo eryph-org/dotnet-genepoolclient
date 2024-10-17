@@ -318,7 +318,7 @@ packCommand.SetHandler(async context =>
                 {
                     if (string.Equals(hypervisorDir.Name, Hypervisors.HyperV, StringComparison.OrdinalIgnoreCase))
                     {
-                        await AddFodderFromDirectory(fodderDir, Architectures.HyperVAny);
+                        await AddFodderFromDirectory(hypervisorDir, Architectures.HyperVAny);
 
                         foreach (var processorDir  in hypervisorDir.GetDirectories())
                         {
