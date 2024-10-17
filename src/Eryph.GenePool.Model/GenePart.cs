@@ -12,6 +12,7 @@ public class GenePart : EryphName<GenePart>
                          allowUnderscores: false,
                          allowDots: false,
                          allowSpaces: false)
-                     | Validations<GenePart>.ValidateLength(value, 40, 40));
+                     | Validations<GenePart>.ValidateLength(value, 40, 40)
+                     | GeneValidations.ValidateHashCharacters(value));
     }
 }
