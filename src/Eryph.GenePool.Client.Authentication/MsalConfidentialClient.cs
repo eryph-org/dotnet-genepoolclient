@@ -4,18 +4,17 @@ using Microsoft.Identity.Client;
 
 namespace Eryph.GenePool.Client;
 
-internal class MsalConfidentialClient : MsalClientBase<IConfidentialClientApplication>
+internal class MsalConfidentialClient(
+    string authorityUri,
+    string? clientId,
+    string clientSecret,
+    string? redirectUrl,
+    TokenCredentialOptions? options)
+    : MsalClientBase<IConfidentialClientApplication>(authorityUri, clientId, options?.TokenCachePersistenceOptions)
 {
-    internal readonly string ClientSecret;
+    internal readonly string ClientSecret = clientSecret;
 
-    internal string? RedirectUrl { get; }
-
-    public MsalConfidentialClient(string authorityUri, string? clientId, string clientSecret, string? redirectUrl, TokenCredentialOptions? options)
-        : base(authorityUri, clientId, options?.TokenCachePersistenceOptions)
-    {
-        ClientSecret = clientSecret;
-        RedirectUrl = redirectUrl;
-    }
+    internal string? RedirectUrl { get; } = redirectUrl;
 
     protected override ValueTask<IConfidentialClientApplication> CreateClientAsync(bool async, CancellationToken cancellationToken)
     {

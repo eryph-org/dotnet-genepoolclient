@@ -1,7 +1,6 @@
-using Eryph.GenePool.Model;
 using System.Text.Json.Serialization;
 
-namespace Eryph.GenePool.Model.Requests;
+namespace Eryph.GenePool.Model.Requests.Genes;
 
 public class NewGeneRequestBody
 {
@@ -9,7 +8,17 @@ public class NewGeneRequestBody
 
     public string? Geneset { get; set; }
 
+    [JsonPropertyName("gene")]
+
+    public string? Gene { get; set; }
+
+
     [JsonPropertyName("manifest")]
 
     public GeneManifestData? Manifest { get; set; }
+
+    [JsonPropertyName("yaml_content")]
+    public string? YamlContent { get; set; }
+
+
 }

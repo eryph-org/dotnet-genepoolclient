@@ -5,6 +5,9 @@ namespace Eryph.GenePool.Model;
 
 public class GenesetManifestData
 {
+    [JsonPropertyName("version")]
+    public string? Version { get; set; }
+
     [JsonPropertyName("geneset")]
     public string? Geneset { get; set; }
 
@@ -13,6 +16,9 @@ public class GenesetManifestData
 
     [JsonPropertyName("short_description")]
     public string? ShortDescription { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
 
     [JsonPropertyName("description_markdown")]
     public string? DescriptionMarkdown { get; set; }

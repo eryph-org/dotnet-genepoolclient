@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Client.Extensions.Msal;
@@ -70,7 +69,7 @@ internal class MsalCacheHelperWrapper
     /// <returns>UTF-8 byte array of the unencrypted token cache</returns>
     public virtual byte[] LoadUnencryptedTokenCache()
     {
-        return _helper?.LoadUnencryptedTokenCache() ?? Array.Empty<byte>();
+        return _helper?.LoadUnencryptedTokenCache() ?? [];
     }
 
     /// <summary>

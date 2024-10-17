@@ -1,13 +1,6 @@
 ﻿namespace Eryph.GenePool.Client.Credentials;
 
-public class ApiKeyCredential
+public class ApiKeyCredential(string apiKey)
 {
-    public string ApiKey { get; }
-
-
-    public ApiKeyCredential(string apiKey)
-    {
-        ApiKey = apiKey;
-    }
-
+    public string ApiKey { get; } = apiKey;
 }

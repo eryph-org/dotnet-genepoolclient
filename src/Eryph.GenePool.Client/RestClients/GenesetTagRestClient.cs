@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure;
 using Azure.Core;
 using Azure.Core.Pipeline;
 using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
+using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.Responses;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
@@ -52,42 +54,85 @@ internal class GenesetTagRestClient
         return message;
     }
 
-    public async Task<NoResultResponse> DeleteAsync(GeneSetIdentifier geneset, CancellationToken cancellationToken = default)
+
+
+    internal HttpMessage CreateGetRequest(GeneSetIdentifier identifier, GetGenesetTagRequestOptions options, string path = "tag")
     {
-        return await _pipeline.SendRequestAsync<NoResultResponse>(CreateRequest(geneset, RequestMethod.Delete), cancellationToken).ConfigureAwait(false);
+        var message = _pipeline.CreateMessage();
+        var request = message.Request;
+        request.Method = RequestMethod.Get;
+        var uri = new RawRequestUriBuilder();
+        uri.Reset(_endpoint);
+        uri.AppendPath(_version, false);
+        uri.AppendPath("/genesets/", false);
+        uri.AppendPath(identifier.Organization.Value, false);
+        uri.AppendPath("/", false);
+        uri.AppendPath(identifier.GeneSet.Value, false);
+        uri.AppendPath($"/{path}/", false);
+        uri.AppendPath(identifier.Tag.Value, false);
+
+        if (options.NoCache)
+            uri.AppendQuery("no_cache", "true");
+
+        uri.AddExpandOptions(options.Expand);
+        request.Uri = uri;
+        request.Headers.Add("Accept", "application/json, text/json");
+        return message;
     }
 
-    public NoResultResponse Delete(GeneSetIdentifier geneset, CancellationToken cancellationToken = default)
+    public async Task<Response<NoResultResponse>> DeleteAsync(GeneSetIdentifier geneset,
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        return await _pipeline.SendRequestAsync<NoResultResponse>(CreateRequest(geneset, RequestMethod.Delete),
+            options, cancellationToken).ConfigureAwait(false);
+    }
+
+    public Response<NoResultResponse> Delete(GeneSetIdentifier geneset, RequestOptions options,
+        CancellationToken cancellationToken = default)
     {
 
         return _pipeline.SendRequest<NoResultResponse>(CreateRequest(geneset, RequestMethod.Delete),
+            options,
             cancellationToken);
     }
 
-    public async Task<SingleResultResponse<GenesetTagResponse>> GetAsync(GeneSetIdentifier geneset, CancellationToken cancellationToken = default)
+    public async Task<Response<SingleResultResponse<GenesetTagResponse>>> GetAsync(GeneSetIdentifier geneset,
+        GetGenesetTagRequestOptions options,
+        CancellationToken cancellationToken = default)
     {
-        return await _pipeline.SendRequestAsync<SingleResultResponse<GenesetTagResponse>>(CreateRequest(geneset, RequestMethod.Get), cancellationToken).ConfigureAwait(false);
+        return await _pipeline.SendRequestAsync<SingleResultResponse<GenesetTagResponse>>(
+            CreateGetRequest(geneset, options),
+            options, cancellationToken).ConfigureAwait(false);
 
     }
 
-    public SingleResultResponse<GenesetTagResponse> Get(GeneSetIdentifier geneset, CancellationToken cancellationToken = default)
+    public Response<SingleResultResponse<GenesetTagResponse>> Get(GeneSetIdentifier geneset,
+        GetGenesetTagRequestOptions options,
+        CancellationToken cancellationToken = default)
     {
+
         return _pipeline.SendRequest<SingleResultResponse<GenesetTagResponse>>(
-            CreateRequest(geneset, RequestMethod.Get), cancellationToken);
+            CreateGetRequest(geneset, options), options, cancellationToken);
 
     }
 
-    public async Task<SingleResultResponse<GenesetTagDownloadResponse>> GetForDownloadAsync(GeneSetIdentifier geneset, CancellationToken cancellationToken = default)
+    public async Task<Response<SingleResultResponse<GenesetTagDownloadResponse>>> GetForDownloadAsync(
+        GeneSetIdentifier geneset, RequestOptions options,
+        CancellationToken cancellationToken = default)
     {
         return await _pipeline.SendRequestAsync<SingleResultResponse<GenesetTagDownloadResponse>>(
-            CreateRequest(geneset, RequestMethod.Get, path: "download"), cancellationToken).ConfigureAwait(false);
+            CreateRequest(geneset, RequestMethod.Get, path: "download"),
+            options, cancellationToken).ConfigureAwait(false);
 
     }
 
-    public SingleResultResponse<GenesetTagDownloadResponse> GetForDownload(GeneSetIdentifier geneset, CancellationToken cancellationToken = default)
+    public Response<SingleResultResponse<GenesetTagDownloadResponse>> GetForDownload(GeneSetIdentifier geneset,
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
     {
         return _pipeline.SendRequest<SingleResultResponse<GenesetTagDownloadResponse>>(
-            CreateRequest(geneset, RequestMethod.Get), cancellationToken);
+            CreateRequest(geneset, RequestMethod.Get), options, cancellationToken);
 
     }
 
@@ -113,22 +158,28 @@ internal class GenesetTagRestClient
     /// <summary> Creates a organization. </summary>
     /// <param name="body"> The UpdateProjectBody to use. </param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public async Task<SingleResultResponse<GenesetRefResponse>> CreateAsync(GenesetTagManifestData body, CancellationToken cancellationToken = default)
+    public async Task<Response<SingleResultResponse<GenesetRefResponse>>> CreateAsync(GenesetTagManifestData body,
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
     {
 
         using var message = CreateNewGenesetTagRequest(body);
-        return await _pipeline.SendRequestAsync<SingleResultResponse<GenesetRefResponse>>(message, cancellationToken).ConfigureAwait(false);
+        return await _pipeline.SendRequestAsync<SingleResultResponse<GenesetRefResponse>>(message,
+            options,
+            cancellationToken).ConfigureAwait(false);
     }
 
 
     /// <summary> Creates a organization. </summary>
     /// <param name="body"> The CreateOrganizationBody to use. </param>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
-    public SingleResultResponse<GenesetRefResponse> Create(GenesetTagManifestData body, CancellationToken cancellationToken = default)
+    public Response<SingleResultResponse<GenesetRefResponse>> Create(GenesetTagManifestData body,
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
     {
 
         using var message = CreateNewGenesetTagRequest(body);
-        return _pipeline.SendRequest<SingleResultResponse<GenesetRefResponse>>(message, cancellationToken);
+        return _pipeline.SendRequest<SingleResultResponse<GenesetRefResponse>>(message, options, cancellationToken);
 
     }
 

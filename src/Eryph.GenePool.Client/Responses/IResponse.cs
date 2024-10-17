@@ -1,12 +1,11 @@
 ﻿using System.Net;
 using JetBrains.Annotations;
 
-namespace Eryph.GenePool.Client.Responses
+namespace Eryph.GenePool.Client.Responses;
+
+[PublicAPI]
+public interface IResponse
 {
-    [PublicAPI]
-    public interface IResponse
-    {
-        HttpStatusCode StatusCode { get;  }
-        ResponseType ResponseType { get;  }
-    }
+    HttpStatusCode StatusCode { get;  }
+    ResponseType ResponseType { get;  }
 }

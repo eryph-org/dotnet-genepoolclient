@@ -6,135 +6,123 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Eryph.GenePool.Client.Internal
+namespace Eryph.GenePool.Client.Internal;
+
+internal class HttpMessageSanitizer(
+    string[] allowedQueryParameters,
+    string[] allowedHeaders,
+    string redactedPlaceholder = "REDACTED")
 {
-    internal class HttpMessageSanitizer
+    private const string LogAllValue = "*";
+    private readonly bool _logAllHeaders = allowedHeaders.Contains(LogAllValue);
+    private readonly bool _logFullQueries = allowedQueryParameters.Contains(LogAllValue);
+    private readonly HashSet<string> _allowedHeaders = new HashSet<string>(allowedHeaders, StringComparer.InvariantCultureIgnoreCase);
+
+    internal static HttpMessageSanitizer Default = new HttpMessageSanitizer([], []);
+
+    public string SanitizeHeader(string name, string value)
     {
-        private const string LogAllValue = "*";
-        private readonly bool _logAllHeaders;
-        private readonly bool _logFullQueries;
-        private readonly string[] _allowedQueryParameters;
-        private readonly string _redactedPlaceholder;
-        private readonly HashSet<string> _allowedHeaders;
-
-        internal static HttpMessageSanitizer Default = new HttpMessageSanitizer(Array.Empty<string>(), Array.Empty<string>());
-
-        public HttpMessageSanitizer(string[] allowedQueryParameters, string[] allowedHeaders, string redactedPlaceholder = "REDACTED")
+        if (_logAllHeaders || _allowedHeaders.Contains(name))
         {
-            _logAllHeaders = allowedHeaders.Contains(LogAllValue);
-            _logFullQueries = allowedQueryParameters.Contains(LogAllValue);
-
-            _allowedQueryParameters = allowedQueryParameters;
-            _redactedPlaceholder = redactedPlaceholder;
-            _allowedHeaders = new HashSet<string>(allowedHeaders, StringComparer.InvariantCultureIgnoreCase);
+            return value;
         }
 
-        public string SanitizeHeader(string name, string value)
-        {
-            if (_logAllHeaders || _allowedHeaders.Contains(name))
-            {
-                return value;
-            }
+        return redactedPlaceholder;
+    }
 
-            return _redactedPlaceholder;
+    public string SanitizeUrl(string url)
+    {
+        if (_logFullQueries)
+        {
+            return url;
         }
-
-        public string SanitizeUrl(string url)
-        {
-            if (_logFullQueries)
-            {
-                return url;
-            }
 
 #if NET5_0_OR_GREATER
             int indexOfQuerySeparator = url.IndexOf('?', StringComparison.Ordinal);
 #else
-            int indexOfQuerySeparator = url.IndexOf('?');
+        var indexOfQuerySeparator = url.IndexOf('?');
 #endif
 
-            if (indexOfQuerySeparator == -1)
+        if (indexOfQuerySeparator == -1)
+        {
+            return url;
+        }
+
+        var stringBuilder = new StringBuilder(url.Length);
+        stringBuilder.Append(url, 0, indexOfQuerySeparator);
+
+        var query = url[indexOfQuerySeparator..];
+
+        var queryIndex = 1;
+        stringBuilder.Append('?');
+
+        do
+        {
+            var endOfParameterValue = query.IndexOf('&', queryIndex);
+            var endOfParameterName = query.IndexOf('=', queryIndex);
+            var noValue = false;
+
+            // Check if we have parameter without value
+            if ((endOfParameterValue == -1 && endOfParameterName == -1) ||
+                (endOfParameterValue != -1 && (endOfParameterName == -1 || endOfParameterName > endOfParameterValue)))
             {
-                return url;
+                endOfParameterName = endOfParameterValue;
+                noValue = true;
             }
 
-            StringBuilder stringBuilder = new StringBuilder(url.Length);
-            stringBuilder.Append(url, 0, indexOfQuerySeparator);
-
-            string query = url.Substring(indexOfQuerySeparator);
-
-            int queryIndex = 1;
-            stringBuilder.Append('?');
-
-            do
+            if (endOfParameterName == -1)
             {
-                int endOfParameterValue = query.IndexOf('&', queryIndex);
-                int endOfParameterName = query.IndexOf('=', queryIndex);
-                bool noValue = false;
+                endOfParameterName = query.Length;
+            }
 
-                // Check if we have parameter without value
-                if ((endOfParameterValue == -1 && endOfParameterName == -1) ||
-                    (endOfParameterValue != -1 && (endOfParameterName == -1 || endOfParameterName > endOfParameterValue)))
-                {
-                    endOfParameterName = endOfParameterValue;
-                    noValue = true;
-                }
+            if (endOfParameterValue == -1)
+            {
+                endOfParameterValue = query.Length;
+            }
+            else
+            {
+                // include the separator
+                endOfParameterValue++;
+            }
 
-                if (endOfParameterName == -1)
-                {
-                    endOfParameterName = query.Length;
-                }
+            var parameterName = query.AsSpan(queryIndex, endOfParameterName - queryIndex);
 
-                if (endOfParameterValue == -1)
-                {
-                    endOfParameterValue = query.Length;
-                }
-                else
-                {
-                    // include the separator
-                    endOfParameterValue++;
-                }
+            var isAllowed = false;
+            foreach (var name in allowedQueryParameters)
+            {
+                if (!parameterName.Equals(name.AsSpan(), StringComparison.OrdinalIgnoreCase)) continue;
+                isAllowed = true;
+                break;
+            }
 
-                ReadOnlySpan<char> parameterName = query.AsSpan(queryIndex, endOfParameterName - queryIndex);
+            var valueLength = endOfParameterValue - queryIndex;
+            var nameLength = endOfParameterName - queryIndex;
 
-                bool isAllowed = false;
-                foreach (string name in _allowedQueryParameters)
-                {
-                    if (parameterName.Equals(name.AsSpan(), StringComparison.OrdinalIgnoreCase))
-                    {
-                        isAllowed = true;
-                        break;
-                    }
-                }
-
-                int valueLength = endOfParameterValue - queryIndex;
-                int nameLength = endOfParameterName - queryIndex;
-
-                if (isAllowed)
+            if (isAllowed)
+            {
+                stringBuilder.Append(query, queryIndex, valueLength);
+            }
+            else
+            {
+                if (noValue)
                 {
                     stringBuilder.Append(query, queryIndex, valueLength);
                 }
                 else
                 {
-                    if (noValue)
+                    stringBuilder.Append(query, queryIndex, nameLength);
+                    stringBuilder.Append('=');
+                    stringBuilder.Append(redactedPlaceholder);
+                    if (query[endOfParameterValue - 1] == '&')
                     {
-                        stringBuilder.Append(query, queryIndex, valueLength);
-                    }
-                    else
-                    {
-                        stringBuilder.Append(query, queryIndex, nameLength);
-                        stringBuilder.Append('=');
-                        stringBuilder.Append(_redactedPlaceholder);
-                        if (query[endOfParameterValue - 1] == '&')
-                        {
-                            stringBuilder.Append('&');
-                        }
+                        stringBuilder.Append('&');
                     }
                 }
+            }
 
-                queryIndex += valueLength;
-            } while (queryIndex < query.Length);
+            queryIndex += valueLength;
+        } while (queryIndex < query.Length);
 
-            return stringBuilder.ToString();
-        }
+        return stringBuilder.ToString();
     }
 }

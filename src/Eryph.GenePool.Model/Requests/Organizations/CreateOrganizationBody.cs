@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
 
-namespace Eryph.GenePool.Model.Requests;
+namespace Eryph.GenePool.Model.Requests.Organizations;
 
 public class CreateOrganizationBody
 {
@@ -15,5 +15,8 @@ public class CreateOrganizationBody
 
     [JsonPropertyName("owner_org_id")]
     public Guid? OrgId { get; set; }
+
+    [JsonPropertyName("owner_org_name")]
+    public string? NewOrgName { get; set; }
 
 }

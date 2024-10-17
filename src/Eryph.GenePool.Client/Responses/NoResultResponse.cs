@@ -1,10 +1,8 @@
-﻿using System.Net;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 
-namespace Eryph.GenePool.Client.Responses
+namespace Eryph.GenePool.Client.Responses;
+
+[PublicAPI]
+public record NoResultResponse : ResponseBase
 {
-    [PublicAPI]
-    public record NoResultResponse : ResponseBase
-    {
-    }
 }

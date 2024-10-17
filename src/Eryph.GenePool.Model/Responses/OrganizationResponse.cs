@@ -3,26 +3,12 @@ using System.Text.Json.Serialization;
 
 namespace Eryph.GenePool.Model.Responses;
 
-public record OrganizationResponse
-{
-    [JsonConstructor]
-    public OrganizationResponse(Guid Id, string Name, Guid? OrgId)
-    {
-        this.Id = Id;
-        this.Name = Name;
-        this.OrgId = OrgId;
-    }
-
-    [JsonPropertyName("id")] public Guid Id { get; init; }
-    [JsonPropertyName("name")] public string Name { get; init; }
-
-    [JsonPropertyName("owner_org_id")]
-    public Guid? OrgId { get; init; }
-
-    public void Deconstruct(out Guid id, out string name, out Guid? orgId)
-    {
-        id = Id;
-        name = Name;
-        orgId = OrgId;
-    }
-}
+[method: JsonConstructor]
+public record OrganizationResponse(
+    [property: JsonPropertyName("id")] Guid Id, 
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("identity_org_id")] Guid? IdentityOrgId,
+    [property: JsonPropertyName("created_at")] DateTimeOffset? Created,
+    [property: JsonPropertyName("genesets_uri")] Uri? GenesetsUri,
+    [property: JsonPropertyName("apikeys_uri")] Uri? ApiKeysUri,
+    [property: JsonPropertyName("etag")] string? ETag);

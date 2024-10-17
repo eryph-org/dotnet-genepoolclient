@@ -1,33 +1,26 @@
+using System;
 using System.Text.Json.Serialization;
 
 namespace Eryph.GenePool.Model.Responses;
 
-public record GenesetTagResponse
-{
-    [JsonConstructor]
-    public GenesetTagResponse(string Name, GenesetResponse Geneset, string Tag, GenesetTagManifestData Manifest)
-    {
-        this.Name = Name;
-        this.Geneset = Geneset;
-        this.Tag = Tag;
-        this.Manifest = Manifest;
-    }
-
-    [JsonPropertyName("name")] public string Name { get; init; }
-
-    [JsonPropertyName("geneset")]
-    public GenesetResponse Geneset { get; init; }
-
-    [JsonPropertyName("tag")] public string Tag { get; init; }
-
-    [JsonPropertyName("manifest")]
-    public GenesetTagManifestData Manifest { get; init; }
-
-    public void Deconstruct(out string name, out GenesetResponse geneset, out string tag, out GenesetTagManifestData manifest)
-    {
-        name = Name;
-        geneset = Geneset;
-        tag = Tag;
-        manifest = Manifest;
-    }
-}
+[method: JsonConstructor]
+public record GenesetTagResponse(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("geneset")]
+    GenesetResponse? Geneset,
+    [property: JsonPropertyName("tag")] string Tag,
+    [property: JsonPropertyName("uri")] Uri? Uri,
+    [property: JsonPropertyName("etag")] string? ETag,
+    [property: JsonPropertyName("manifest")]
+    GenesetTagManifestData? Manifest,
+    [property: JsonPropertyName("pushed_at")]
+    DateTimeOffset? PushedAt,
+    [property: JsonPropertyName("download_uri")]
+    Uri? DownloadUri,
+    [property: JsonPropertyName("genes_uri")]
+    Uri? GenesUri,
+    [property: JsonPropertyName("genes")] GetGeneResponse[]? Genes,
+    [property: JsonPropertyName("genes_continuation_token")]
+    string? GenesContinuationToken,
+    [property: JsonPropertyName("genes_continuation_uri")]
+    Uri? GenesContinuationUri);

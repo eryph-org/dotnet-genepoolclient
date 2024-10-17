@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Eryph.GenePool.Model.Requests;
+namespace Eryph.GenePool.Model.Requests.ApiKeys;
 
 public class CreateApiKeyBody
 {

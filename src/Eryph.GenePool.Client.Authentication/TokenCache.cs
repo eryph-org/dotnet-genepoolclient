@@ -37,8 +37,8 @@ internal class TokenCache
         Func<IPublicClientApplication>? publicApplicationFactory = null)
     {
         _cacheHelperWrapper = cacheHelperWrapper ?? new MsalCacheHelperWrapper();
-        PublicClientApplicationFactory = publicApplicationFactory ?? new Func<IPublicClientApplication>(() => PublicClientApplicationBuilder.Create(Guid.NewGuid().ToString()).Build());
-        Data = Array.Empty<byte>();
+        PublicClientApplicationFactory = publicApplicationFactory ?? (() => PublicClientApplicationBuilder.Create(Guid.NewGuid().ToString()).Build());
+        Data = [];
         _allowUnencryptedStorage = options?.UnsafeAllowUnencryptedStorage ?? false;
         _name = options?.Name ?? Constants.DefaultEryphTokenCacheName;
 

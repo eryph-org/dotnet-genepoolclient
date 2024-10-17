@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
 using Eryph.GenePool.Client.Responses;
+using Eryph.GenePool.Model;
 
 namespace Eryph.GenePool.Client.Internal;
 
 internal static class HttpMessageResponseExtensions
 {
-    internal static async ValueTask<TResponse> DeserializeResponseAsync<TResponse>(this HttpMessage message, CancellationToken cancellationToken)
+    internal static async ValueTask<Response<TResponse>> DeserializeResponseAsync<TResponse>(this HttpMessage message, CancellationToken cancellationToken)
         where TResponse : ResponseBase
     {
         var messageResponse = message.Response;
@@ -24,7 +25,7 @@ internal static class HttpMessageResponseExtensions
 
     }
 
-    private static TResponse ParseDocumentToResponse<TResponse>(Response messageResponse, JsonDocument document)
+    private static Response<TResponse> ParseDocumentToResponse<TResponse>(Response messageResponse, JsonDocument document)
         where TResponse : ResponseBase
     {
         if (messageResponse.IsError)
@@ -35,7 +36,7 @@ internal static class HttpMessageResponseExtensions
             {
                 try
                 {
-                    errorResponse = document.Deserialize<ErrorResponse>();
+                    errorResponse = document.Deserialize<ErrorResponse>(GeneModelDefaults.SerializerOptions);
                     if (errorResponse is not { ResponseType: ResponseType.Error })
                         throw new Exception();
                 }
@@ -57,34 +58,34 @@ internal static class HttpMessageResponseExtensions
                 $"Request failed with status code {messageResponse.Status} {messageResponse.ReasonPhrase}");
         }
 
-        var response = document.Deserialize<TResponse>();
-        return response ?? throw new InvalidCastException($"Response could not be mapped to type {typeof(TResponse)}");
+        var response = document.Deserialize<TResponse>(GeneModelDefaults.SerializerOptions);
+        return
+            new GenepoolResponse<TResponse>(
+            response ?? throw new InvalidCastException($"Response could not be mapped to type {typeof(TResponse)}"),
+            messageResponse);
 
     }
 
     private static void ThrowOnInvalidContent(Response response)
     {
-        if (response.ContentStream == null || response.Headers.ContentLength== 0)
+        if (response.ContentStream != null && response.Headers.ContentLength != 0) return;
+        var errorResponse = new ErrorResponse
         {
-            var errorResponse = new ErrorResponse
-            {
-                StatusCode = (HttpStatusCode)response.Status,
-                StatusCodeString = response.ReasonPhrase,
-                ResponseType = ResponseType.Error,
-                ResponseTypeString = "error"
-            };
+            StatusCode = (HttpStatusCode)response.Status,
+            StatusCodeString = response.ReasonPhrase,
+            ResponseType = ResponseType.Error,
+            ResponseTypeString = "error"
+        };
 
-            throw new ErrorResponseException(errorResponse,
-                response.IsError
-                    ? $"Request failed with status code {response.Status} {response.ReasonPhrase}"
-                    : $"Content missing for successful response.");
-
-        }
+        throw new ErrorResponseException(errorResponse,
+            response.IsError
+                ? $"Request failed with status code {response.Status} {response.ReasonPhrase}"
+                : $"Content missing for successful response.");
 
 
     }
 
-    internal static TResponse DeserializeResponse<TResponse>(this HttpMessage message) where TResponse : ResponseBase
+    internal static Response<TResponse> DeserializeResponse<TResponse>(this HttpMessage message) where TResponse : ResponseBase
     {
         var messageResponse = message.Response;
 

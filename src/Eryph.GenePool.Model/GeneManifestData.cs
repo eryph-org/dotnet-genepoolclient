@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Eryph.GenePool.Model;
 
@@ -7,6 +6,9 @@ namespace Eryph.GenePool.Model;
 
 public class GeneManifestData
 {
+    [JsonPropertyName("version")]
+    public string? Version { get; set; }
+
     [JsonPropertyName("name")]
     public string? Name { get; set; }
 
@@ -32,4 +34,6 @@ public class GeneManifestData
     [JsonPropertyName("original_size")]
     public long? OriginalSize { get; set; }
 
+    [JsonPropertyName("arch")]
+    public string? Architecture { get; set; }
 }

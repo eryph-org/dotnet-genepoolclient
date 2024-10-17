@@ -1,6 +1,7 @@
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace Eryph.GenePool.Model.Requests;
+namespace Eryph.GenePool.Model.Requests.Genesets;
 
 public class NewGenesetRequestBody
 {
@@ -11,6 +12,10 @@ public class NewGenesetRequestBody
 
     public string? ShortDescription { get; set; }
 
+    [JsonPropertyName("description")]
+
+    public string? Description { get; set; }
+
     [JsonPropertyName("description_markdown")]
 
     public string? DescriptionMarkdown { get; set; }
@@ -18,4 +23,7 @@ public class NewGenesetRequestBody
 
     [JsonPropertyName("public")]
     public bool? Public { get; set; }
+
+    [JsonPropertyName("metadata")]
+    public IDictionary<string, string>? Metadata { get; set; }
 }

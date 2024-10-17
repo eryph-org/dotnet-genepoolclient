@@ -207,7 +207,7 @@ internal sealed class AsyncLockWithValue<T>
         private readonly long _index;
 
         /// <summary>
-        /// Returns true if lock contains the cached value. Otherwise false.
+        /// Returns true if lock contains the cached value. Otherwise, false.
         /// </summary>
         public bool HasValue => _owner == default;
 
@@ -217,7 +217,7 @@ internal sealed class AsyncLockWithValue<T>
         /// <exception cref="InvalidOperationException">Value isn't set.</exception>
         public T Value => HasValue ? _value! : throw new InvalidOperationException("Value isn't set");
 
-        public LockOrValue(T? value)
+        public LockOrValue(T value)
         {
             _owner = default;
             _value = value;

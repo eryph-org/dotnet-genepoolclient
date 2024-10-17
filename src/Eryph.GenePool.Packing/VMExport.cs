@@ -7,10 +7,9 @@ namespace Eryph.GenePool.Packing;
 
 public static class VMExport
 {
-    public static (CatletConfig Config, IEnumerable<PackableFile> Files) ExportToPackable(DirectoryInfo vmExport,
+    public static (CatletConfig? Config, IEnumerable<PackableFile> Files) ExportToPackable(DirectoryInfo vmExport,
         CancellationToken token)
     {
-
         var files = new List<PackableFile>();
         var vmPlan = ConvertVmDataToConfig(vmExport) ?? new CatletConfig();
 
@@ -21,18 +20,65 @@ public static class VMExport
             token.ThrowIfCancellationRequested();
 
             files.Add(new PackableFile(vhdFile.FullName, vhdFile.Name,
-                GeneType.Volume, Path.GetFileNameWithoutExtension(vhdFile.Name), true));
+                GeneType.Volume, 
+                Architectures.HyperVAmd64,
+                Path.GetFileNameWithoutExtension(vhdFile.Name), true, null));
         }
         
         return (vmPlan, files);
 
     }
 
+
+
+    public static DirectoryInfo FindExportRootDir(DirectoryInfo vmExport)
+    {
+        // to make sure that we consider also if vm.json is in the parent directory
+        var parent = vmExport.Parent;
+        if(parent==null)
+            return vmExport;
+
+        var vmFiles = parent.GetFiles("vm.json", SearchOption.AllDirectories);
+        var metadataFiles = parent.GetFiles("metadata.json", SearchOption.AllDirectories);
+
+        if (vmFiles.Length > 0 || metadataFiles.Length > 0)
+            return parent;
+
+        return vmExport;
+    }
+
+    public static void ReadMetadata(DirectoryInfo vmExport, GenesetTagInfo genesetTag)
+    {
+        var metadataFile = vmExport.GetFiles("metadata.json", SearchOption.AllDirectories).FirstOrDefault();
+        if (metadataFile == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var metadata = new Dictionary<string, string>();
+
+            using var metadataStream = metadataFile.OpenRead();
+            var newMetadata = JsonSerializer.Deserialize<Dictionary<string, string>>(metadataStream, GeneModelDefaults.SerializerOptions)
+                              ?? metadata;
+            genesetTag.JoinMetadata(newMetadata);
+
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("failed to read metadata.json file included in exported vm", ex);
+        }
+    }
+
     private static CatletConfig? ConvertVmDataToConfig(DirectoryInfo vmExport)
     {
-        var vmConfigFile = vmExport.GetFiles("vm.json").FirstOrDefault();
+        var vmConfigFile = vmExport.GetFiles("vm.json", SearchOption.AllDirectories).FirstOrDefault();
         if (vmConfigFile == null)
+        {
             return null;
+        }
+            
 
 
         try
@@ -56,7 +102,7 @@ public static class VMExport
                 capabilities.Add(new CatletCapabilityConfig
                 {
                     Name = "secure_boot",
-                    Details = new[] { "Template:" + firmwareJson?["SecureBootTemplate"]?.GetValue<string>() }
+                    Details = ["Template:" + firmwareJson?["SecureBootTemplate"]?.GetValue<string>()]
                 });
 
             if ((processorJson?["ExposeVirtualizationExtensions"]?.GetValue<bool>()).GetValueOrDefault())
@@ -72,7 +118,7 @@ public static class VMExport
             {
                 string[]? details = null;
                 if ((securityJson?["EncryptStateAndVmMigrationTraffic"]?.GetValue<bool>()).GetValueOrDefault())
-                    details = new[] { "with_traffic_encryption" };
+                    details = ["with_traffic_encryption"];
 
                 capabilities.Add(new CatletCapabilityConfig
                 {

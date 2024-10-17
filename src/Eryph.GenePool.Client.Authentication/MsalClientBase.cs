@@ -4,22 +4,16 @@ using Microsoft.Identity.Client;
 
 namespace Eryph.GenePool.Client;
 
-internal abstract class MsalClientBase<TClient>
+internal abstract class MsalClientBase<TClient>(
+    string authorityUri,
+    string? clientId,
+    TokenCachePersistenceOptions? cacheOptions)
     where TClient : IClientApplicationBase
 {
-    private readonly AsyncLockWithValue<(TClient Client, TokenCache Cache)> _clientAsyncLock;
-    private readonly TokenCachePersistenceOptions? _tokenCachePersistenceOptions;
+    private readonly AsyncLockWithValue<(TClient Client, TokenCache Cache)> _clientAsyncLock = new();
 
-    internal string AuthorityUri { get; }
-    internal string? ClientId { get; }
-    
-    protected MsalClientBase(string authorityUri, string? clientId, TokenCachePersistenceOptions? cacheOptions)
-    {
-        _tokenCachePersistenceOptions = cacheOptions;
-        AuthorityUri = authorityUri;
-        ClientId = clientId;
-        _clientAsyncLock = new AsyncLockWithValue<(TClient Client, TokenCache Cache)>();
-    }
+    internal string AuthorityUri { get; } = authorityUri;
+    internal string? ClientId { get; } = clientId;
 
     protected abstract ValueTask<TClient> CreateClientAsync(bool async, CancellationToken cancellationToken);
 
@@ -35,9 +29,9 @@ internal abstract class MsalClientBase<TClient>
         var client = await CreateClientAsync(async, cancellationToken).ConfigureAwait(false);
 
         TokenCache? tokenCache = null;
-        if (_tokenCachePersistenceOptions != null)
+        if (cacheOptions != null)
         {
-            tokenCache = new TokenCache(_tokenCachePersistenceOptions);
+            tokenCache = new TokenCache(cacheOptions);
             await tokenCache.RegisterCache(async, client.UserTokenCache, cancellationToken).ConfigureAwait(false);
 
             if (client is IConfidentialClientApplication cca)
@@ -46,7 +40,7 @@ internal abstract class MsalClientBase<TClient>
             }
         }
 
-        asyncLock.SetValue((Client: client, Cache: tokenCache));
+        asyncLock.SetValue((Client: client, Cache: tokenCache)!);
         return client;
     }
 

@@ -1,6 +1,4 @@
 ﻿using System.Buffers;
-using System.Diagnostics;
-using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -34,27 +32,45 @@ public static class GenePacker
         var targetStream = new GenePackerStream(new DirectoryInfo(tempDir), ChunkSize);
         try
         {
-            await CompressAsync(targetStream, file.FullPath, file.ExtremeCompression, progress, token);
+            var format = file.ExtremeCompression ? "xz" : "gz";
+
+            if (!file.ExtremeCompression && originalSize < GeneModelDefaults.MinCompressionBytes)
+            {
+                await using var sourceStream = new FileStream(file.FullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                await sourceStream.CopyToAsync(targetStream, token);
+                format = "plain";
+            }
+            else
+            {
+                await CompressAsync(targetStream, file.FullPath, file.ExtremeCompression, progress, token);
+
+            }
             await targetStream.DisposeAsync();
 
             progress?.Report(new GenePackerProgress(originalSize, originalSize));
 
             var manifestData = new GeneManifestData
             {
+                Version = GeneModelDefaults.LatestGeneManifestVersion.ToString(),
                 FileName = file.FileName,
                 Name = file.GeneName,
                 Size = targetStream.Length,
                 OriginalSize = originalSize,
-                Format = file.ExtremeCompression ? "xz" : "gz",
+                Format = format,
                 Parts = targetStream.GetChunks().ToArray(),
-                Type = file.GeneType.ToString().ToLowerInvariant()
+                Type = file.GeneType.ToString().ToLowerInvariant(),
+                Architecture = file.Architecture,
             };
 
             var jsonString = JsonSerializer.Serialize(manifestData, GeneModelDefaults.SerializerOptions);
 
             using var sha256 = SHA256.Create();
             var manifestHash = GetHashString(sha256.ComputeHash(Encoding.UTF8.GetBytes(jsonString)));
-            await File.WriteAllTextAsync(Path.Combine(tempDir, "gene.json"), jsonString, token);
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "gene.json"), jsonString, Encoding.UTF8, token);
+
+            if(!string.IsNullOrWhiteSpace(file.YamlContent))
+                await File.WriteAllTextAsync(Path.Combine(tempDir, "gene.yaml"), file.YamlContent, Encoding.UTF8, token);
+
 
             var destDir = Path.Combine(Path.GetDirectoryName(tempDir)!, manifestHash);
             if (Directory.Exists(destDir))
@@ -107,7 +123,7 @@ public static class GenePacker
         }
     }
 
-    static string GetHashString(byte[] hashBytes)
+    private static string GetHashString(byte[] hashBytes)
     {
         return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
     }
@@ -140,7 +156,7 @@ public static class GenePacker
 
         _isNativeInitialized = true;
 
-        string libDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes");
+        var libDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes");
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             libDir = Path.Combine(libDir, "win-");
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))

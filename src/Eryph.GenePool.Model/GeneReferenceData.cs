@@ -10,5 +10,8 @@ public class GeneReferenceData
     [JsonPropertyName("hash")]
     public string? Hash { get; set; }
 
+    [JsonPropertyName("arch")]
+    public string? Architecture { get; set; }
+
 
 }

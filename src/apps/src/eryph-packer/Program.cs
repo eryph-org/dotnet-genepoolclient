@@ -10,6 +10,7 @@ using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Yaml;
 using Eryph.GenePool.Client;
+using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Packing;
 using Eryph.Packer;
@@ -19,18 +20,33 @@ using Spectre.Console;
 using Spectre.Console.Json;
 using Spectre.Console.Rendering;
 using Command = System.CommandLine.Command;
+using Validations = Eryph.GenePool.Model.Validations;
 
 //AnsiConsole.Profile.Capabilities.Interactive = false;
-var genePoolUri = new Uri("https://eryphgenepoolapistaging.azurewebsites.net/api/");
+var genePoolUri = new Uri(Environment.GetEnvironmentVariable("ERYPH_PACKER_GENEPOOL_API") 
+                          ?? "https://genepool-api.eryph.io");
+
+var stagingAuthority = Environment.GetEnvironmentVariable("ERYPH_PACKER_AUTHORITY") == "staging";
+
+var clientOptions = new GenePoolClientOptions(GenePoolClientOptions.ServiceVersion.V1,
+    genePoolUri.ToString(), 
+    stagingAuthority);
+
 
 var organizationArgument = new Argument<string>("organization", "name of organization.");
+organizationArgument.AddValidation(OrganizationName.NewValidation);
 var genesetArgument = new Argument<string>("geneset", "name of geneset in format organization/id/[tag]");
+genesetArgument.AddValidation(GeneSetIdentifier.NewValidation);
+
 var refArgument = new Argument<string>("referenced geneset", "name of referenced geneset in format organization/id/tag");
+refArgument.AddValidation(GeneSetIdentifier.NewValidation);
+
 var vmExportArgument = new Argument<DirectoryInfo>("vm export", "path to exported VM");
 var filePathArgument = new Argument<FileInfo>("file", "path to file");
 
 var isPublicOption = new System.CommandLine.Option<bool>("--public", "sets genesets visibility to public");
 var shortDescriptionOption = new System.CommandLine.Option<string>("--description", "sets genesets description");
+shortDescriptionOption.AddValidation(Validations.ValidateGenesetShortDescription);
 
 vmExportArgument.ExistingOnly();
 
@@ -112,7 +128,7 @@ createApiKeyCommand.AddArgument(organizationArgument);
 apiKeyCommand.Add(createApiKeyCommand);
 var keyNameArgument = new Argument<string>("name", "name of the api key");
 var permissionsArgument = new Argument<string[]>("permissions",
-    () => new []{ "Geneset.ReadWrite" }, description: "permissions of the api key");
+    () => ["Geneset.ReadWrite"], description: "permissions of the api key");
 createApiKeyCommand.AddArgument(keyNameArgument);
 createApiKeyCommand.AddArgument(permissionsArgument);
 
@@ -137,13 +153,18 @@ initGenesetCommand.SetHandler( context =>
     genesetInfo.Create();
     if(File.Exists(Path.Combine(genesetInfo.GetGenesetPath(), "readme.md")))
     {
-        genesetInfo.SetMarkdownFile("readme.md");
+        AnsiConsole.WriteLine("Using file readme.md as content for geneset markdown description.");
     }
+    else
+    {
+        File.WriteAllText(
+            Path.Combine(genesetInfo.GetGenesetPath(), "readme.md"), $"# geneset {genesetInfo.GenesetName}\n");
+        AnsiConsole.WriteLine("Generated skeleton readme.md for geneset.");
 
+    }
+    genesetInfo.SetMarkdownFile("readme.md");
     genesetInfo.SetIsPublic(isPublic);
-
-    if (!string.IsNullOrWhiteSpace(description))
-        genesetInfo.SetShortDescription(description);
+    genesetInfo.SetShortDescription(!string.IsNullOrWhiteSpace(description) ? description : genesetInfo.Id);
 
     AnsiConsole.WriteLine("Geneset was initialized:");
     WriteJson(genesetInfo.ToString());
@@ -155,6 +176,11 @@ initGenesetTagCommand.SetHandler(context =>
     var genesetTagInfo = new GenesetTagInfo(genesetName, ".");
     if(genesetTagInfo.Exists())
         throw new EryphPackerUserException("Geneset tag is already initialized");
+
+    var genesetInfo = new GenesetInfo(genesetName, ".");
+    if(!genesetInfo.Exists())
+        throw new EryphPackerUserException($"Geneset is not initialized. Initialize the geneset first with geneset init {genesetInfo.GenesetName}");
+
 
     genesetTagInfo.Create();
     AnsiConsole.WriteLine("Geneset tag was initialized:");
@@ -193,36 +219,37 @@ infoGenesetTagCommand.SetHandler(context =>
 addVMCommand.SetHandler(async context =>
 {
     var token = context.GetCancellationToken();
-    var genesetInfo = PrepareGeneSetTagCommand(context);
+    var genesetTagInfo = PrepareGeneSetTagCommand(context);
     var vmExportDir = context.ParseResult.GetValueForArgument(vmExportArgument);
-    var metadata = new Dictionary<string, string>();
-    var metadataFile = new FileInfo(Path.Combine(vmExportDir.FullName, "metadata.json"));
-    if (metadataFile.Exists)
+
+    // find the root of the exported vm
+    vmExportDir = VMExport.FindExportRootDir(vmExportDir);
+
+
+    var absolutePackPath = Path.GetFullPath(genesetTagInfo.GetGenesetPath());
+    var (config, packableFiles) = VMExport.ExportToPackable(vmExportDir, token);
+    VMExport.ReadMetadata(vmExportDir, genesetTagInfo);
+
+    var catletGenerated = false;
+    if (config != null)
     {
-        try
+        var configYaml = CatletConfigYamlSerializer.Serialize(config);
+        var catletYamlFilePath = Path.Combine(absolutePackPath, "catlet.yaml");
+
+        if (configYaml != "{}") // do not serialize empty file
         {
-            await using var metadataStream = metadataFile.OpenRead();
-            var newMetadata = await JsonSerializer.DeserializeAsync<Dictionary<string, string>>(metadataStream, GeneModelDefaults.SerializerOptions) 
-                              ?? metadata;
-            genesetInfo.JoinMetadata(newMetadata);
-        }
-        catch (Exception ex)
-        {
-            throw new Exception("failed to read metadata.json file included in exported vm", ex);
+            await File.WriteAllTextAsync(catletYamlFilePath, configYaml);
+            catletGenerated = true;
         }
     }
 
-    var absolutePackPath = Path.GetFullPath(genesetInfo.GetGenesetPath());
-    var (config, packableFiles) = VMExport.ExportToPackable(vmExportDir, token);
-    
-    var configYaml = CatletConfigYamlSerializer.Serialize(config);
-    var catletYamlFilePath = Path.Combine(absolutePackPath, "catlet.yaml");
-    await File.WriteAllTextAsync(catletYamlFilePath, configYaml);
+    if(!catletGenerated)
+        AnsiConsole.MarkupLine("[yellow]Catlet config is empty.[/]. You will have to a catlet.yaml file to the geneset.");
 
     ResetPackableFolder(absolutePackPath);
     WritePackableFiles(packableFiles, absolutePackPath);
     
-    WriteJson(genesetInfo.ToString());
+    WriteJson(genesetTagInfo.ToString());
 });
 
 // pack catlet command
@@ -257,17 +284,24 @@ packCommand.SetHandler(async context =>
             // pack catlet
             if (File.Exists(catletFile))
             {
+                var fileLength = new FileInfo(catletFile).Length;
+                if (fileLength > GeneModelDefaults.MaxYamlSourceBytes)
+                    throw new EryphPackerUserException(
+                        $"Catlet file is too large. Max size is {GeneModelDefaults.MaxYamlSourceBytes / 1024 / 1024} MiB.");
+
                 var catletContent = File.ReadAllText(catletFile);
                 var catletConfig = DeserializeCatletConfigString(catletContent);
                 var validationResult = CatletConfigValidations.ValidateCatletConfig(catletConfig);
-                validationResult.ToEither()
+                _ = validationResult.ToEither()
                     .MapLeft(issues => Error.New("The catlet configuration is invalid.",
                         Error.Many(issues.Map(i => i.ToError()))))
                     .IfLeft(e => e.Throw());
                 var configJson = ConfigModelJsonSerializer.Serialize(catletConfig);
                 await File.WriteAllTextAsync(Path.Combine(packFolder, "catlet.json"), configJson);
                 packableFiles.Add(new PackableFile(Path.Combine(packFolder, "catlet.json"),
-                    "catlet.json", GeneType.Catlet, "catlet", false));
+                    "catlet.json", GeneType.Catlet,
+                    Architectures.Any, // catlet is architecture independent
+                    "catlet", false, catletContent));
                 parent = catletConfig.Parent;
             }
 
@@ -275,32 +309,31 @@ packCommand.SetHandler(async context =>
 
             // pack fodder
             AnsiConsole.MarkupLine("Preparing fodder...");
-            
+
             var fodderDir = new DirectoryInfo(Path.Combine(absoluteGenesetPath, "fodder"));
             if (fodderDir.Exists)
             {
-                foreach (var fodderFile in fodderDir.GetFiles("*.*").Where(x =>
-                         {
-                             var extension = Path.GetExtension(x.Name).ToLowerInvariant();
-                             return extension is ".yaml" or ".yml";
-                         }))
+                await AddFodderFromDirectory(fodderDir, Architectures.Any);
+                foreach (var hypervisorDir in fodderDir.GetDirectories())
                 {
-                    var fodderContent = File.ReadAllText(fodderFile.FullName);
-                    var fodderConfig = DeserializeFodderConfigString(fodderContent);
-                    var validationResult = FodderGeneConfigValidations.ValidateFodderGeneConfig(fodderConfig);
-                    validationResult.ToEither()
-                        .MapLeft(issues => Error.New($"The fodder configuration '{fodderFile.Name}' is invalid.",
-                            Error.Many(issues.Map(i => i.ToError()))))
-                        .IfLeft(e => e.Throw());
-                    var fodderJson = ConfigModelJsonSerializer.Serialize(fodderConfig);
-                    var fodderPackFolder = Path.Combine(packFolder, "fodder");
-                    if (!Directory.Exists(fodderPackFolder))
-                        Directory.CreateDirectory(fodderPackFolder);
+                    if (string.Equals(hypervisorDir.Name, Hypervisors.HyperV, StringComparison.OrdinalIgnoreCase))
+                    {
+                        await AddFodderFromDirectory(hypervisorDir, Architectures.HyperVAny);
 
-                    var fodderJsonFile = Path.Combine(fodderPackFolder, $"{fodderConfig.Name}.json");
-                    await File.WriteAllTextAsync(fodderJsonFile, fodderJson);
-                    packableFiles.Add(new PackableFile(fodderJsonFile,
-                        $"{fodderConfig.Name}.json", GeneType.Fodder, fodderConfig.Name, false));
+                        foreach (var processorDir  in hypervisorDir.GetDirectories())
+                        {
+                            if (string.Equals(processorDir.Name, ProcessorTypes.Amd64,
+                                    StringComparison.OrdinalIgnoreCase))
+                                await AddFodderFromDirectory(processorDir, Architectures.HyperVAmd64);
+                            else
+                                AnsiConsole.MarkupLine($"Fodder dir contains [yellow]unknown processor type name '{processorDir.Name}'[/]");
+                        }
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLine($"Fodder dir contains [yellow]unknown hypervisor name '{hypervisorDir.Name}'[/]");
+
+                    }
                 }
             }
 
@@ -320,14 +353,14 @@ packCommand.SetHandler(async context =>
 
             var packingTasks = packableFiles.Select(pf => (
                 Packable: pf,
-                ProgressTask: progressContext.AddTask($"Packing gene {pf.GeneName}", autoStart: false)
+                ProgressTask: progressContext.AddTask($"Packing gene {pf.GeneName} (arch: {pf.Architecture})", autoStart: false)
                 )).ToList();
 
             // this will pack all genes in .packed folder
             foreach (var packingTask in packingTasks)
             {
                 if (!isInteractive)
-                    AnsiConsole.MarkupLineInterpolated($"Packing gene {packingTask.Packable.GeneName}...");
+                    AnsiConsole.MarkupLineInterpolated($"Packing gene {packingTask.Packable.GeneName} (arch: {packingTask.Packable.Architecture})...");
 
                 packingTask.ProgressTask.StartTask();
                 var progress = new Progress<GenePackerProgress>();
@@ -340,9 +373,10 @@ packCommand.SetHandler(async context =>
                 packingTask.ProgressTask.StopTask();
                 
                 if (!isInteractive)
-                    AnsiConsole.MarkupLineInterpolated($"Gene {packingTask.Packable.GeneName} [green]packed[/]");
+                    AnsiConsole.MarkupLineInterpolated($"Gene {packingTask.Packable.GeneName} (arch: {packingTask.Packable.Architecture}) [green]packed[/]");
 
-                packedGenesetInfo.AddGene(packingTask.Packable.GeneType, packingTask.Packable.GeneName, packedFile);
+                packedGenesetInfo.AddGene(packingTask.Packable.GeneType, packingTask.Packable.GeneName, packedFile,
+                    packingTask.Packable.Architecture);
             }
 
             // remove the temporary .pack folder
@@ -350,6 +384,39 @@ packCommand.SetHandler(async context =>
                 Directory.Delete(packFolder, true);
 
             return packedGenesetInfo;
+
+            async Task AddFodderFromDirectory(DirectoryInfo directory, string architecture)
+            {
+                foreach (var fodderFile in directory.GetFiles("*.*").Where(x =>
+                         {
+                             var extension = Path.GetExtension(x.Name).ToLowerInvariant();
+                             return extension is ".yaml" or ".yml";
+                         }))
+                {
+                    if (fodderFile.Length > GeneModelDefaults.MaxYamlSourceBytes)
+                        throw new EryphPackerUserException(
+                            $"Fodder file '{fodderFile.Name}' is too large. Max size is {GeneModelDefaults.MaxYamlSourceBytes / 1024 / 1024} MiB.");
+
+                    var fodderContent = File.ReadAllText(fodderFile.FullName);
+                    var fodderConfig = DeserializeFodderConfigString(fodderContent);
+                    var validationResult = FodderGeneConfigValidations.ValidateFodderGeneConfig(fodderConfig);
+                    validationResult.ToEither()
+                        .MapLeft(issues => Error.New($"The fodder configuration '{fodderFile.Name}' is invalid.",
+                            Error.Many(issues.Map(i => i.ToError()))))
+                        .IfLeft(e => e.Throw());
+                    var fodderJson = ConfigModelJsonSerializer.Serialize(fodderConfig);
+                    var fodderPackFolder = Path.Combine(packFolder, "fodder");
+                    if (!Directory.Exists(fodderPackFolder))
+                        Directory.CreateDirectory(fodderPackFolder);
+
+                    var fodderJsonFile = Path.Combine(fodderPackFolder, $"{fodderConfig.Name}.json");
+                    await File.WriteAllTextAsync(fodderJsonFile, fodderJson);
+                    packableFiles.Add(new PackableFile(fodderJsonFile,
+                        $"{fodderConfig.Name}.json", GeneType.Fodder,
+                        architecture,
+                        fodderConfig.Name!, false, fodderContent));
+                }
+            }
 
             static CatletConfig DeserializeCatletConfigString(string configString)
             {
@@ -396,12 +463,12 @@ pushCommand.SetHandler(async context =>
         {
             statusContext.Status = "Authenticated to genepool.";
             statusContext.Refresh();
-            return await AuthProvider.GetCredential(apiKey);
+            return await AuthProvider.GetCredential(apiKey, stagingAuthority);
         });
 
     var genePoolClient = credential.ApiKey != null
-        ? new GenePoolClient(genePoolUri, credential.ApiKey)
-        : new GenePoolClient(genePoolUri, credential.Token!);
+        ? new GenePoolClient(genePoolUri, credential.ApiKey, clientOptions)
+        : new GenePoolClient(genePoolUri, credential.Token!, clientOptions);
 
     var genesetClient = genePoolClient.GetGenesetClient(genesetTagInfo.Organization, genesetTagInfo.Id);
     var tagClient = genesetClient.GetGenesetTagClient(genesetTagInfo.Tag);
@@ -419,7 +486,26 @@ pushCommand.SetHandler(async context =>
                 statusContext.Refresh();
                 await genesetClient.CreateAsync(genesetInfo.ManifestData.Public ?? false,
                     genesetInfo.ManifestData.ShortDescription,
-                    markdownContent, token
+                    genesetInfo.ManifestData.Description,
+                    markdownContent, 
+                    genesetInfo.ManifestData.Metadata,
+                    cancellationToken: token
+                );
+            }
+            else
+            {
+                statusContext.Status = $"Updating geneset {genesetInfo.GenesetName}";
+                statusContext.Refresh();
+                var geneset = await genesetClient.GetAsync(
+                    new GetGenesetRequestOptions{ NoCache = true},
+                    cancellationToken: token);
+                await genesetClient.UpdateAsync(geneset?.Public ?? genesetInfo.ManifestData.Public,
+                    genesetInfo.ManifestData.ShortDescription,
+                    genesetInfo.ManifestData.Description,
+                    markdownContent,
+                    genesetInfo.ManifestData.Metadata,
+                    geneset?.ETag,
+                    cancellationToken: token
                 );
             }
 
@@ -468,21 +554,21 @@ pushCommand.SetHandler(async context =>
                     var uploadedSize = progressData.TotalUploadedSize * 1d;
                     if (totalSize > 10 * 1024)
                     {
-                        totalSizeScale = "KB";
+                        totalSizeScale = "KiB";
                         totalSize /= 1024d;
                         uploadedSize /= 1024d;
                     }
 
                     if (totalSize > 10 * 1024)
                     {
-                        totalSizeScale = "MB";
+                        totalSizeScale = "MiB";
                         totalSize /= 1024d;
                         uploadedSize /= 1024d;
                     }
 
                     if (totalSize > 10 * 1024)
                     {
-                        totalSizeScale = "GB";
+                        totalSizeScale = "GiB";
                         totalSize /= 1024d;
                         uploadedSize /= 1024d;
                     }
@@ -523,7 +609,7 @@ pushCommand.SetHandler(async context =>
                         $"{baseDescription}upload completed";
                     progressTask?.StopTask();
                 }
-            };
+            }
         });
 
     await AnsiConsole.Status()
@@ -531,7 +617,7 @@ pushCommand.SetHandler(async context =>
         .SpinnerStyle(Style.Parse("green bold"))
         .StartAsync($"Creating geneset tag {genesetTagInfo.GenesetTagName}", async statusContext =>
         {
-            await tagClient.CreateAsync(genesetTagInfo.ManifestData, token);
+            await tagClient.CreateAsync(genesetTagInfo.ManifestData, cancellationToken: token);
 
         });
 
@@ -553,11 +639,11 @@ createApiKeyCommand.SetHandler(async (context) =>
         {
             statusContext.Status = "Authenticated to genepool.";
             statusContext.Refresh();
-            return await AuthProvider.GetCredential(null);
+            return await AuthProvider.GetCredential(null, stagingAuthority);
         });
 
 
-    var genePoolClient = new GenePoolClient(genePoolUri, credential.Token!);
+    var genePoolClient = new GenePoolClient(genePoolUri, credential.Token!, clientOptions);
     var orgClient = genePoolClient.GetOrganizationClient(organization);
 
     var apiKeyResponseJson = await AnsiConsole.Status()
@@ -565,7 +651,7 @@ createApiKeyCommand.SetHandler(async (context) =>
         .SpinnerStyle(Style.Parse("green bold"))
         .StartAsync("Creating api key", async _ =>
         {
-            var apiKeyResponse = await orgClient.CreateApiKeyAsync(keyName, permissions, token);
+            var apiKeyResponse = await orgClient.CreateApiKeyAsync(keyName, permissions, cancellationToken: token);
             var apiKeyResponseJson =
                 JsonSerializer.Serialize(apiKeyResponse, new JsonSerializerOptions(GeneModelDefaults.SerializerOptions)
                 {
@@ -590,11 +676,11 @@ deleteApiKeyCommand.SetHandler(async (context) =>
         {
             statusContext.Status = "Authenticated to genepool.";
             statusContext.Refresh();
-            return await AuthProvider.GetCredential(null);
+            return await AuthProvider.GetCredential(null, stagingAuthority);
         });
 
 
-    var genePoolClient = new GenePoolClient(genePoolUri, credential.Token!);
+    var genePoolClient = new GenePoolClient(genePoolUri, credential.Token!, clientOptions);
     var apiKeyClient = genePoolClient.GetApiKeyClient(organization, keyId);
 
     await AnsiConsole.Status()
@@ -602,7 +688,7 @@ deleteApiKeyCommand.SetHandler(async (context) =>
         .SpinnerStyle(Style.Parse("green bold"))
         .StartAsync("Deleting api key", async _ =>
         {
-            await apiKeyClient.DeleteAsync(token);
+            await apiKeyClient.DeleteAsync(cancellationToken: token);
         });
 
 });
@@ -625,7 +711,7 @@ commandLineBuilder.UseExceptionHandler((ex, context) =>
         var error = eex.ToError();
 
         Grid createGrid() => new Grid()
-            .AddColumn(new GridColumn() { Width = 2 })
+            .AddColumn(new GridColumn { Width = 2 })
             .AddColumn();
 
         Grid addRow(Grid grid, IRenderable renderable) =>
@@ -691,10 +777,10 @@ async Task<List<PackableFile>> ReadPackableFiles(string genesetPath)
     if (File.Exists(Path.Combine(packFolder, "packable.json")))
     {
         var packableJson = await File.ReadAllTextAsync(Path.Combine(packFolder, "packable.json"));
-        return JsonSerializer.Deserialize<List<PackableFile>>(packableJson, GeneModelDefaults.SerializerOptions) ?? new List<PackableFile>();
+        return JsonSerializer.Deserialize<List<PackableFile>>(packableJson, GeneModelDefaults.SerializerOptions) ?? [];
     }
 
-    return new List<PackableFile>();
+    return [];
 }
 
 GenesetTagInfo PrepareGeneSetTagCommand(InvocationContext context)
@@ -705,6 +791,7 @@ GenesetTagInfo PrepareGeneSetTagCommand(InvocationContext context)
     if (!genesetInfo.Exists())
         throw new EryphPackerUserException($"Geneset tag {genesetName} not found");
 
+    genesetInfo.Validate();
     return genesetInfo;
 }
 
@@ -716,6 +803,7 @@ GenesetInfo PrepareGeneSetCommand(InvocationContext context)
     if (!genesetInfo.Exists())
         throw new EryphPackerUserException($"Geneset {genesetName} not found");
 
+    genesetInfo.Validate();
     return genesetInfo;
 }
 
@@ -723,11 +811,4 @@ void WriteJson(string json)
 {
     // Wrap the JsonText in Rows to ensure a line break at the end
     AnsiConsole.Write(new Rows(new JsonText(json).StringColor(Color.Teal)));
-}
-
-public struct GeneUploadTask
-{
-    public string GeneName { get; set; }
-    public int No { get; set; }
-    public int Total { get; set; }
 }

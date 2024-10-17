@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Azure.Core;
+﻿using Azure.Core;
 using Azure.Core.Pipeline;
 
 namespace Eryph.GenePool.Client;

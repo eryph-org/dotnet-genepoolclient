@@ -1,14 +1,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-#nullable enable
-
 using System.Text.Json;
 
-namespace Eryph.GenePool.Client.Internal
+namespace Eryph.GenePool.Client.Internal;
+
+internal interface IUtf8JsonSerializable
 {
-    internal interface IUtf8JsonSerializable
-    {
-        void Write(Utf8JsonWriter writer);
-    }
+    void Write(Utf8JsonWriter writer);
 }

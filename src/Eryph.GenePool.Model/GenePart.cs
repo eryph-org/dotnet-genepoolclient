@@ -1,9 +1,4 @@
-﻿using System;
-using Dbosoft.Functional.DataTypes;
-using Eryph.ConfigModel;
-using LanguageExt;
-using LanguageExt.ClassInstances;
-using LanguageExt.Common;
+﻿using Eryph.ConfigModel;
 
 namespace Eryph.GenePool.Model;
 
@@ -17,6 +12,7 @@ public class GenePart : EryphName<GenePart>
                          allowUnderscores: false,
                          allowDots: false,
                          allowSpaces: false)
-                     | Validations<GenePart>.ValidateLength(value, 40, 40));
+                     | Validations<GenePart>.ValidateLength(value, 40, 40)
+                     | GeneValidations.ValidateHashCharacters(value));
     }
 }

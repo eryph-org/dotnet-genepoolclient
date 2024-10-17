@@ -1,16 +1,18 @@
-﻿using System;
-using System.Text.Json.Serialization;
+﻿namespace Eryph.GenePool.Client;
 
-namespace Eryph.GenePool.Client;
 
-public record UpdateOrganizationBody
-{
-    [JsonPropertyName("name")]
+// currently not supported
 
-    public string? Name { get; set; }
+//public record UpdateOrganizationBody
+//{
+//    [JsonPropertyName("name")]
 
-    [JsonPropertyName("owner_org_id")]
+//    public string? Name { get; set; }
 
-    public Guid? OrgId { get; set; }
+//    [JsonPropertyName("owner_org_id")]
 
-}
+//    public Guid? OrgId { get; set; }
+
+//    public string? ETag { get; set; }
+
+//}
