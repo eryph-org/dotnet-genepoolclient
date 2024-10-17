@@ -86,12 +86,9 @@ public class ManifestValidations
             let splitHash = hash.Split(':')
             from gSep in guard(splitHash.Length == 2,
                 Validations.BadRequestError("Gene reference hash has to contain one : as hash type separator")).ToValidation()
-            from gType in guard(splitHash[0] is "sha1" or "sha256",
-                Validations.BadRequestError("hash type has to be sha1 or sha256")).ToValidation()
-            from hashValid in
-                splitHash[0] == "sha1"
-                    ? HashSha1.NewValidation(splitHash[1]).Map(_ => Unit.Default)
-                    : HashSha256.NewValidation(splitHash[1]).Map(_ => Unit.Default)
+            from gType in guard(splitHash[0] is "sha256",
+                Validations.BadRequestError("hash type has to be sha256")).ToValidation()
+            from hashValid in HashSha256.NewValidation(splitHash[1]).Map(_ => Unit.Default)
 
 
             select Unit.Default;
