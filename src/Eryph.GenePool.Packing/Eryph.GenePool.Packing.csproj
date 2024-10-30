@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.6.2-PullRequest0096.34" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.6.2-PullRequest0096.34" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Yaml" Version="0.6.2-PullRequest0096.34" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.6.2-PullRequest0096.36" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.6.2-PullRequest0096.36" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Yaml" Version="0.6.2-PullRequest0096.36" />
     <PackageReference Include="Joveler.Compression.XZ" Version="4.3.0" />
   </ItemGroup>
 
