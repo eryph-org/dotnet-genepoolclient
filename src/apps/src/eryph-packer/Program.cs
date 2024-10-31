@@ -296,7 +296,7 @@ packCommand.SetHandler(async context =>
                     .MapLeft(issues => Error.New("The catlet configuration is invalid.",
                         Error.Many(issues.Map(i => i.ToError()))))
                     .IfLeft(e => e.Throw());
-                var configJson = ConfigModelJsonSerializer.Serialize(catletConfig);
+                var configJson = CatletConfigJsonSerializer.Serialize(catletConfig);
                 await File.WriteAllTextAsync(Path.Combine(packFolder, "catlet.json"), configJson);
                 packableFiles.Add(new PackableFile(Path.Combine(packFolder, "catlet.json"),
                     "catlet.json", GeneType.Catlet,
@@ -404,7 +404,7 @@ packCommand.SetHandler(async context =>
                         .MapLeft(issues => Error.New($"The fodder configuration '{fodderFile.Name}' is invalid.",
                             Error.Many(issues.Map(i => i.ToError()))))
                         .IfLeft(e => e.Throw());
-                    var fodderJson = ConfigModelJsonSerializer.Serialize(fodderConfig);
+                    var fodderJson = FodderGeneConfigJsonSerializer.Serialize(fodderConfig);
                     var fodderPackFolder = Path.Combine(packFolder, "fodder");
                     if (!Directory.Exists(fodderPackFolder))
                         Directory.CreateDirectory(fodderPackFolder);
