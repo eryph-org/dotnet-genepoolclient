@@ -5,19 +5,19 @@ namespace Eryph.GenePool.Client;
 
 public class ErrorResponseException : Exception
 {
-    public ErrorResponse Response { get; }
+    public ResponseBase Response { get; }
 
-    public ErrorResponseException(ErrorResponse response)
+    public ErrorResponseException(ResponseBase response)
     {
         Response = response;
     }
 
-    public ErrorResponseException(ErrorResponse response, string message) : base(message)
+    public ErrorResponseException(ResponseBase response, string message) : base(message)
     {
         Response = response;
     }
 
-    public ErrorResponseException(ErrorResponse response, string message, Exception inner) : base(message, inner)
+    public ErrorResponseException(ResponseBase response, string message, Exception inner) : base(message, inner)
     {
         Response = response;
     }

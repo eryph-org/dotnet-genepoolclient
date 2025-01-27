@@ -9,6 +9,6 @@ public enum ResponseType
     NoResult,
     SingleResult,
     ListResult,
-    PagedResult
-
+    PagedResult,
+    InvalidContent,
 }
