@@ -5,7 +5,6 @@
 using System.Text;
 using Azure;
 using Azure.Core;
-using LanguageExt;
 
 namespace Eryph.GenePool.Client.Tests;
 

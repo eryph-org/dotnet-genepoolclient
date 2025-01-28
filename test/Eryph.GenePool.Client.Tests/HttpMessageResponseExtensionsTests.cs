@@ -135,7 +135,7 @@ public class HttpMessageResponseExtensionsTests
         var act = () => message.DeserializeResponse<Customer>();
 
         var exception = act.Should().Throw<GenepoolClientException>();
-        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8.")
+        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8")
             .Which.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -150,7 +150,7 @@ public class HttpMessageResponseExtensionsTests
             CancellationToken.None);
 
         var exception = await act.Should().ThrowAsync<GenepoolClientException>();
-        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8.")
+        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8")
             .Which.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -286,7 +286,7 @@ public class HttpMessageResponseExtensionsTests
         var act = () => message.DeserializeResponse<Customer>();
 
         var exception = act.Should().Throw<GenepoolClientException>();
-        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8.")
+        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8")
             .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
@@ -302,7 +302,7 @@ public class HttpMessageResponseExtensionsTests
             CancellationToken.None);
 
         var exception = await act.Should().ThrowAsync<GenepoolClientException>();
-        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8.")
+        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8")
             .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
