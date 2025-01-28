@@ -7,7 +7,7 @@ namespace Eryph.GenePool.Client;
 
 /// <summary>
 /// This exception is thrown when a request to the Genepool API
-/// is not successful.
+/// has not been successful.
 /// </summary>
 public class GenepoolClientException : Exception
 {

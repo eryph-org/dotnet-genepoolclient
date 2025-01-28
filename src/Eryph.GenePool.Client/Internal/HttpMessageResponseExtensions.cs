@@ -33,7 +33,7 @@ internal static class HttpMessageResponseExtensions
         {
             throw CreateInvalidContentException(
                 message.Response,
-                $"The response does not contain valid JSON: {jex.Message}.",
+                $"The response does not contain valid JSON: {jex.Message}",
                 jex);
         }
     }
@@ -42,19 +42,18 @@ internal static class HttpMessageResponseExtensions
         this HttpMessage message)
         where TResponse : ResponseBase
     {
-        var messageResponse = message.Response;
-
-        ThrowOnInvalidContent(messageResponse);
+        ThrowOnInvalidContent(message.Response);
+        
         try
         {
-            using var document = JsonDocument.Parse(messageResponse.ContentStream!);
-            return ParseDocumentToResponse<TResponse>(messageResponse, document);
+            using var document = JsonDocument.Parse(message.Response.ContentStream!);
+            return ParseDocumentToResponse<TResponse>(message.Response, document);
         }
         catch (JsonException jex)
         {
             throw CreateInvalidContentException(
                 message.Response,
-                $"The response does not contain valid JSON: {jex.Message}.",
+                $"The response does not contain valid JSON: {jex.Message}",
                 jex);
         }
     }
@@ -83,14 +82,14 @@ internal static class HttpMessageResponseExtensions
         {
             throw CreateInvalidContentException(
                 response,
-                "The response has no content.");
+                "The response has no content");
         }
 
         if ((response.Headers.ContentType ?? "") != ContentType.ApplicationJson)
         {
             throw CreateInvalidContentException(
                 response,
-                $"The content type of the response is invalid: {response.Headers.ContentType}.");
+                $"The content type of the response is invalid: {response.Headers.ContentType}");
         }
     }
 
@@ -102,7 +101,7 @@ internal static class HttpMessageResponseExtensions
             if (result is null)
                 throw CreateInvalidContentException(
                     response,
-                    "The JSON response is null.");
+                    "The JSON response is null");
 
             return result;
         }
@@ -110,7 +109,7 @@ internal static class HttpMessageResponseExtensions
         {
             throw CreateInvalidContentException(
                 response,
-                $"The JSON response is not a valid {typeof(T).Name}: {jex.Message}.",
+                $"The JSON response is not a valid {typeof(T).Name}: {jex.Message}",
                 jex);
         }
     }

@@ -1,4 +1,4 @@
-﻿// Based on // https://github.com/Azure/azure-sdk-for-net/blob/c7d7ab3eb72a88bd651bb1cba7e269f658f2b7e6/sdk/core/Azure.Core.TestFramework/src/MockResponse.cs
+﻿// Based on https://github.com/Azure/azure-sdk-for-net/blob/c7d7ab3eb72a88bd651bb1cba7e269f658f2b7e6/sdk/core/Azure.Core.TestFramework/src/MockResponse.cs
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
