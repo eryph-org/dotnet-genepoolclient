@@ -7,7 +7,6 @@ using Eryph.GenePool.Client.Responses;
 using Moq;
 using System.Text.Json.Serialization;
 using FluentAssertions;
-using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
 
 namespace Eryph.GenePool.Client.Tests;
 
@@ -68,11 +67,10 @@ public class HttpMessageResponseExtensionsTests
         var message = CreateMessage(response);
         var act = () => message.DeserializeResponse<Customer>();
 
-        var exception = act.Should().Throw<ErrorResponseException>();
-        exception.WithMessage("The JSON response is not a valid Customer*");
-        exception.WithInnerException<JsonException>();
-        exception.Which.Response.Should().BeOfType<InvalidContentResponse>()
+        var exception = act.Should().Throw<GenepoolClientException>();
+        exception.WithMessage("The JSON response is not a valid Customer*")
             .Which.StatusCode.Should().Be(HttpStatusCode.OK);
+        exception.WithInnerException<JsonException>();
     }
 
     [Fact]
@@ -90,11 +88,10 @@ public class HttpMessageResponseExtensionsTests
         var act = async () => await message.DeserializeResponseAsync<Customer>(
             CancellationToken.None);
 
-        var exception = await act.Should().ThrowAsync<ErrorResponseException>();
-        exception.WithMessage("The JSON response is not a valid Customer*");
-        exception.WithInnerException<JsonException>();
-        exception.Which.Response.Should().BeOfType<InvalidContentResponse>()
+        var exception = await act.Should().ThrowAsync<GenepoolClientException>();
+        exception.WithMessage("The JSON response is not a valid Customer*")
             .Which.StatusCode.Should().Be(HttpStatusCode.OK);
+        exception.WithInnerException<JsonException>();
     }
 
     [Fact]
@@ -106,11 +103,10 @@ public class HttpMessageResponseExtensionsTests
         var message = CreateMessage(response);
         var act = () => message.DeserializeResponse<Customer>();
 
-        var exception = act.Should().Throw<ErrorResponseException>();
-        exception.WithMessage("The response does not contain valid JSON: *");
-        exception.WithInnerException<JsonException>();
-        exception.Which.Response.Should().BeOfType<InvalidContentResponse>()
+        var exception = act.Should().Throw<GenepoolClientException>();
+        exception.WithMessage("The response does not contain valid JSON: *")
             .Which.StatusCode.Should().Be(HttpStatusCode.OK);
+        exception.WithInnerException<JsonException>();
     }
 
     [Fact]
@@ -123,11 +119,10 @@ public class HttpMessageResponseExtensionsTests
         var act = async () => await message.DeserializeResponseAsync<Customer>(
             CancellationToken.None);
 
-        var exception = await act.Should().ThrowAsync<ErrorResponseException>();
-        exception.WithMessage("The response does not contain valid JSON: *");
-        exception.WithInnerException<JsonException>();
-        exception.Which.Response.Should().BeOfType<InvalidContentResponse>()
+        var exception = await act.Should().ThrowAsync<GenepoolClientException>();
+        exception.WithMessage("The response does not contain valid JSON: *")
             .Which.StatusCode.Should().Be(HttpStatusCode.OK);
+        exception.WithInnerException<JsonException>();
     }
 
     [Fact]
@@ -139,9 +134,8 @@ public class HttpMessageResponseExtensionsTests
         var message = CreateMessage(response);
         var act = () => message.DeserializeResponse<Customer>();
 
-        var exception = act.Should().Throw<ErrorResponseException>();
-        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8.");
-        exception.Which.Response.Should().BeOfType<InvalidContentResponse>()
+        var exception = act.Should().Throw<GenepoolClientException>();
+        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8.")
             .Which.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -155,9 +149,8 @@ public class HttpMessageResponseExtensionsTests
         var act = async () => await message.DeserializeResponseAsync<Customer>(
             CancellationToken.None);
 
-        var exception = await act.Should().ThrowAsync<ErrorResponseException>();
-        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8.");
-        exception.Which.Response.Should().BeOfType<InvalidContentResponse>()
+        var exception = await act.Should().ThrowAsync<GenepoolClientException>();
+        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8.")
             .Which.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -168,6 +161,7 @@ public class HttpMessageResponseExtensionsTests
             .WithIsError(true)
             .WithJson("""
                       {
+                        "status_code": 400,
                         "message": "test-error-message"
                       }
                       """);
@@ -176,7 +170,8 @@ public class HttpMessageResponseExtensionsTests
         var act = () => message.DeserializeResponse<Customer>();
 
         var exception = act.Should().Throw<ErrorResponseException>();
-        exception.WithMessage("test-error-message");
+        exception.WithMessage("test-error-message")
+            .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var result = exception.Which.Response.Should().BeOfType<ErrorResponse>().Subject;
         result.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         result.Message.Should().Be("test-error-message");
@@ -189,6 +184,7 @@ public class HttpMessageResponseExtensionsTests
             .WithIsError(true)
             .WithJson("""
                       {
+                        "status_code": 400,
                         "message": "test-error-message"
                       }
                       """);
@@ -198,7 +194,8 @@ public class HttpMessageResponseExtensionsTests
             CancellationToken.None);
 
         var exception = await act.Should().ThrowAsync<ErrorResponseException>();
-        exception.WithMessage("test-error-message");
+        exception.WithMessage("test-error-message")
+            .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var result = exception.Which.Response.Should().BeOfType<ErrorResponse>().Subject;
         result.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         result.Message.Should().Be("test-error-message");
@@ -218,11 +215,10 @@ public class HttpMessageResponseExtensionsTests
         var message = CreateMessage(response);
         var act = () => message.DeserializeResponse<Customer>();
 
-        var exception = act.Should().Throw<ErrorResponseException>();
-        exception.WithMessage("The JSON response is not a valid ErrorResponse*");
-        exception.WithInnerException<JsonException>();
-        exception.Which.Response.Should().BeOfType<InvalidContentResponse>()
+        var exception = act.Should().Throw<GenepoolClientException>();
+        exception.WithMessage("The JSON response is not a valid ErrorResponse*")
             .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        exception.WithInnerException<JsonException>();
     }
 
     [Fact]
@@ -240,11 +236,10 @@ public class HttpMessageResponseExtensionsTests
         var act = async () => await message.DeserializeResponseAsync<Customer>(
             CancellationToken.None);
 
-        var exception = await act.Should().ThrowAsync<ErrorResponseException>();
-        exception.WithMessage("The JSON response is not a valid ErrorResponse*");
-        exception.WithInnerException<JsonException>();
-        exception.Which.Response.Should().BeOfType<InvalidContentResponse>()
+        var exception = await act.Should().ThrowAsync<GenepoolClientException>();
+        exception.WithMessage("The JSON response is not a valid ErrorResponse*")
             .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        exception.WithInnerException<JsonException>();
     }
 
     [Fact]
@@ -257,11 +252,10 @@ public class HttpMessageResponseExtensionsTests
         var message = CreateMessage(response);
         var act = () => message.DeserializeResponse<Customer>();
 
-        var exception = act.Should().Throw<ErrorResponseException>();
-        exception.WithMessage("The response does not contain valid JSON: *");
-        exception.WithInnerException<JsonException>();
-        exception.Which.Response.Should().BeOfType<InvalidContentResponse>()
+        var exception = act.Should().Throw<GenepoolClientException>();
+        exception.WithMessage("The response does not contain valid JSON: *")
             .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        exception.WithInnerException<JsonException>();
     }
 
     [Fact]
@@ -275,11 +269,10 @@ public class HttpMessageResponseExtensionsTests
         var act = async () => await message.DeserializeResponseAsync<Customer>(
             CancellationToken.None);
 
-        var exception = await act.Should().ThrowAsync<ErrorResponseException>();
-        exception.WithMessage("The response does not contain valid JSON: *");
-        exception.WithInnerException<JsonException>();
-        exception.Which.Response.Should().BeOfType<InvalidContentResponse>()
+        var exception = await act.Should().ThrowAsync<GenepoolClientException>();
+        exception.WithMessage("The response does not contain valid JSON: *")
             .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        exception.WithInnerException<JsonException>();
     }
 
     [Fact]
@@ -292,9 +285,8 @@ public class HttpMessageResponseExtensionsTests
         var message = CreateMessage(response);
         var act = () => message.DeserializeResponse<Customer>();
 
-        var exception = act.Should().Throw<ErrorResponseException>();
-        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8.");
-        exception.Which.Response.Should().BeOfType<InvalidContentResponse>()
+        var exception = act.Should().Throw<GenepoolClientException>();
+        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8.")
             .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
@@ -309,13 +301,12 @@ public class HttpMessageResponseExtensionsTests
         var act = async () => await message.DeserializeResponseAsync<Customer>(
             CancellationToken.None);
 
-        var exception = await act.Should().ThrowAsync<ErrorResponseException>();
-        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8.");
-        exception.Which.Response.Should().BeOfType<InvalidContentResponse>()
+        var exception = await act.Should().ThrowAsync<GenepoolClientException>();
+        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8.")
             .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
-    private HttpMessage CreateMessage(Response response)
+    private static HttpMessage CreateMessage(Response response)
     {
         var message =  new HttpMessage(
             Mock.Of<Request>(),

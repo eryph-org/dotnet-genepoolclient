@@ -10,5 +10,4 @@ public enum ResponseType
     SingleResult,
     ListResult,
     PagedResult,
-    InvalidContent,
 }

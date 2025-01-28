@@ -1,23 +1,25 @@
 ﻿using System;
+using System.Net;
 using Eryph.GenePool.Client.Responses;
 
 namespace Eryph.GenePool.Client;
 
-public class ErrorResponseException : Exception
+/// <summary>
+/// This exception is thrown when a request to the Genepool API
+/// returned an error response.
+/// </summary>
+public class ErrorResponseException : GenepoolClientException
 {
-    public ResponseBase Response { get; }
+    /// <summary>
+    /// The received error response.
+    /// </summary>
+    public ErrorResponse Response { get; }
 
-    public ErrorResponseException(ResponseBase response)
-    {
-        Response = response;
-    }
-
-    public ErrorResponseException(ResponseBase response, string message) : base(message)
-    {
-        Response = response;
-    }
-
-    public ErrorResponseException(ResponseBase response, string message, Exception inner) : base(message, inner)
+    public ErrorResponseException(
+        ErrorResponse response,
+        string message,
+        HttpStatusCode statusCode)
+        : base(message, statusCode)
     {
         Response = response;
     }

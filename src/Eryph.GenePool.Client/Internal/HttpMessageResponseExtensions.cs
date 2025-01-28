@@ -31,8 +31,8 @@ internal static class HttpMessageResponseExtensions
         }
         catch (JsonException jex)
         {
-            throw new ErrorResponseException(
-                CreateInvalidContentResponse(message.Response),
+            throw CreateInvalidContentException(
+                message.Response,
                 $"The response does not contain valid JSON: {jex.Message}.",
                 jex);
         }
@@ -52,8 +52,8 @@ internal static class HttpMessageResponseExtensions
         }
         catch (JsonException jex)
         {
-            throw new ErrorResponseException(
-                CreateInvalidContentResponse(message.Response),
+            throw CreateInvalidContentException(
+                message.Response,
                 $"The response does not contain valid JSON: {jex.Message}.",
                 jex);
         }
@@ -70,7 +70,7 @@ internal static class HttpMessageResponseExtensions
             var message = string.IsNullOrWhiteSpace(errorResponse.Message)
                 ? $"The request failed with status code {messageResponse.Status} {messageResponse.ReasonPhrase}"
                 : errorResponse.Message;
-            throw new ErrorResponseException(errorResponse, message);
+            throw new ErrorResponseException(errorResponse, message, (HttpStatusCode)messageResponse.Status);
         }
 
         var response = Deserialize<TResponse>(document, messageResponse);
@@ -79,25 +79,17 @@ internal static class HttpMessageResponseExtensions
 
     private static void ThrowOnInvalidContent(Response response)
     {
-        var invalidContentResponse = new InvalidContentResponse
-        {
-            StatusCode = (HttpStatusCode)response.Status,
-            StatusCodeString = response.ReasonPhrase,
-            ResponseType = ResponseType.InvalidContent,
-            ResponseTypeString = "invalid content"
-        };
-
         if (response.ContentStream is null || response.Headers.ContentLength == 0)
         {
-            throw new ErrorResponseException(
-                invalidContentResponse,
+            throw CreateInvalidContentException(
+                response,
                 "The response has no content.");
         }
 
         if ((response.Headers.ContentType ?? "") != ContentType.ApplicationJson)
         {
-            throw new ErrorResponseException(
-                invalidContentResponse,
+            throw CreateInvalidContentException(
+                response,
                 $"The content type of the response is invalid: {response.Headers.ContentType}.");
         }
     }
@@ -108,28 +100,29 @@ internal static class HttpMessageResponseExtensions
         {
             var result = document.Deserialize<T>(GeneModelDefaults.SerializerOptions);
             if (result is null)
-                throw new ErrorResponseException(
-                    CreateInvalidContentResponse(response),
+                throw CreateInvalidContentException(
+                    response,
                     "The JSON response is null.");
 
             return result;
         }
         catch (JsonException jex)
         {
-            throw new ErrorResponseException(
-                CreateInvalidContentResponse(response),
+            throw CreateInvalidContentException(
+                response,
                 $"The JSON response is not a valid {typeof(T).Name}: {jex.Message}.",
                 jex);
         }
     }
 
-    private static InvalidContentResponse CreateInvalidContentResponse(
-        Response response) =>
-        new()
-        {
-            StatusCode = (HttpStatusCode)response.Status,
-            StatusCodeString = response.ReasonPhrase,
-            ResponseType = ResponseType.InvalidContent,
-            ResponseTypeString = "invalid content"
-        };
+    private static GenepoolClientException CreateInvalidContentException(
+        Response response,
+        string message) =>
+        new(message, (HttpStatusCode)response.Status);
+
+    private static GenepoolClientException CreateInvalidContentException(
+        Response response,
+        string message,
+        Exception innerException) =>
+        new(message, (HttpStatusCode)response.Status, innerException);
 }
