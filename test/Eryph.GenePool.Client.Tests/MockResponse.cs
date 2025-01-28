@@ -204,4 +204,15 @@ public class MockResponse : Response
         SetIsError(true);
         return this;
     }
+
+    /// <summary>
+    /// Fluent API to set the <c>Content-Type</c> header.
+    /// </summary>
+    /// <param name="contentType">The content type which should be set.</param>
+    /// <returns>The modified <see cref="MockResponse"/>.</returns>
+    public MockResponse WithContentType(string contentType)
+    {
+        AddHeader(HttpHeader.Names.ContentType, contentType);
+        return this;
+    }
 }

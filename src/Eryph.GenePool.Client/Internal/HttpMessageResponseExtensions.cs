@@ -85,7 +85,17 @@ internal static class HttpMessageResponseExtensions
                 "The response has no content");
         }
 
-        if ((response.Headers.ContentType ?? "") != ContentType.ApplicationJson)
+        var contentType = response.Headers.ContentType ?? "";
+
+        if (contentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
+        {
+            throw CreateInvalidContentException(
+                response,
+                "The response is an HTML page. Please verify that your internet access"
+                + " is not blocked by a proxy or capture portal.");
+        }
+
+        if (contentType != ContentType.ApplicationJson)
         {
             throw CreateInvalidContentException(
                 response,

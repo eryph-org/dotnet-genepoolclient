@@ -135,7 +135,7 @@ public class HttpMessageResponseExtensionsTests
         var act = () => message.DeserializeResponse<Customer>();
 
         var exception = act.Should().Throw<GenepoolClientException>();
-        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8")
+        exception.WithMessage("The response is an HTML page. Please verify that your internet access is not blocked by a proxy or capture portal.")
             .Which.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -150,7 +150,38 @@ public class HttpMessageResponseExtensionsTests
             CancellationToken.None);
 
         var exception = await act.Should().ThrowAsync<GenepoolClientException>();
-        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8")
+        exception.WithMessage("The response is an HTML page. Please verify that your internet access is not blocked by a proxy or capture portal.")
+            .Which.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public void DeserializeResponse_OkWithInvalidContentType_ThrowsException()
+    {
+        var response = new MockResponse(200)
+            .WithContentType("application/x-test")
+            .WithContent("test");
+
+        var message = CreateMessage(response);
+        var act = () => message.DeserializeResponse<Customer>();
+
+        var exception = act.Should().Throw<GenepoolClientException>();
+        exception.WithMessage("The content type of the response is invalid: application/x-test")
+            .Which.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task DeserializeResponseAsync_OkWithInvalidContentType_ThrowsException()
+    {
+        var response = new MockResponse(200)
+            .WithContentType("application/x-test")
+            .WithContent("test");
+
+        var message = CreateMessage(response);
+        var act = async () => await message.DeserializeResponseAsync<Customer>(
+            CancellationToken.None);
+
+        var exception = await act.Should().ThrowAsync<GenepoolClientException>();
+        exception.WithMessage("The content type of the response is invalid: application/x-test")
             .Which.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -286,7 +317,7 @@ public class HttpMessageResponseExtensionsTests
         var act = () => message.DeserializeResponse<Customer>();
 
         var exception = act.Should().Throw<GenepoolClientException>();
-        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8")
+        exception.WithMessage("The response is an HTML page. Please verify that your internet access is not blocked by a proxy or capture portal.")
             .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
@@ -302,7 +333,40 @@ public class HttpMessageResponseExtensionsTests
             CancellationToken.None);
 
         var exception = await act.Should().ThrowAsync<GenepoolClientException>();
-        exception.WithMessage("The content type of the response is invalid: text/html; charset=utf-8")
+        exception.WithMessage("The response is an HTML page. Please verify that your internet access is not blocked by a proxy or capture portal.")
+            .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public void DeserializeResponse_BadRequestWithInvalidContentType_ThrowsException()
+    {
+        var response = new MockResponse(400)
+            .WithIsError(true)
+            .WithContentType("application/x-test")
+            .WithContent("test");
+
+        var message = CreateMessage(response);
+        var act = () => message.DeserializeResponse<Customer>();
+
+        var exception = act.Should().Throw<GenepoolClientException>();
+        exception.WithMessage("The content type of the response is invalid: application/x-test")
+            .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task DeserializeResponseAsync_BadRequestWithInvalidContentType_ThrowsException()
+    {
+        var response = new MockResponse(400)
+            .WithIsError(true)
+            .WithContentType("application/x-test")
+            .WithContent("test");
+
+        var message = CreateMessage(response);
+        var act = async () => await message.DeserializeResponseAsync<Customer>(
+            CancellationToken.None);
+
+        var exception = await act.Should().ThrowAsync<GenepoolClientException>();
+        exception.WithMessage("The content type of the response is invalid: application/x-test")
             .Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
