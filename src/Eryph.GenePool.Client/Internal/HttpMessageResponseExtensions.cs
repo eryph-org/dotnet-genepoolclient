@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -85,9 +86,14 @@ internal static class HttpMessageResponseExtensions
                 "The response has no content");
         }
 
-        var contentType = response.Headers.ContentType ?? "";
+        if (!MediaTypeHeaderValue.TryParse(response.Headers.ContentType, out var headerValue))
+        {
+            throw CreateInvalidContentException(
+                response,
+                $"The content-type of the response is invalid: {response.Headers.ContentType}");
+        }
 
-        if (contentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(headerValue.MediaType, "text/html", StringComparison.OrdinalIgnoreCase))
         {
             throw CreateInvalidContentException(
                 response,
@@ -95,7 +101,7 @@ internal static class HttpMessageResponseExtensions
                 + " is not blocked by a proxy or capture portal.");
         }
 
-        if (contentType != ContentType.ApplicationJson)
+        if (!string.Equals(headerValue.MediaType, "application/json", StringComparison.OrdinalIgnoreCase))
         {
             throw CreateInvalidContentException(
                 response,

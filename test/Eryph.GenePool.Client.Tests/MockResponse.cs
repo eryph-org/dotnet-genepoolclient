@@ -170,7 +170,10 @@ public class MockResponse : Response
     /// </remarks>
     public MockResponse WithJson(string json)
     {
-        AddHeader(HttpHeader.Common.JsonContentType);
+        // The charset parameter is not specified for application/json but
+        // some API frameworks include it as a security fix for an old browser
+        // vulnerability. Currently, charset is included by the gene pool API.
+        AddHeader(HttpHeader.Names.ContentType, "application/json; charset=utf-8");
         SetContent(json);
         return this;
     }
