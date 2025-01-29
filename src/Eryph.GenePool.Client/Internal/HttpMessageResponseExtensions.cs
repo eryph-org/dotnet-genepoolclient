@@ -90,7 +90,7 @@ internal static class HttpMessageResponseExtensions
         {
             throw CreateInvalidContentException(
                 response,
-                $"The content-type of the response is invalid: {response.Headers.ContentType}");
+                $"The content type of the response is invalid: {response.Headers.ContentType}");
         }
 
         if (string.Equals(headerValue.MediaType, "text/html", StringComparison.OrdinalIgnoreCase))
