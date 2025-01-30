@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System;
+using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
@@ -10,7 +12,8 @@ namespace Eryph.GenePool.Client.Internal;
 
 internal static class PipelineSendExtensions
 {
-    public static async ValueTask<Response<TResponse>> SendRequestAsync<TResponse>(this HttpPipeline pipeline, 
+    public static async ValueTask<Response<TResponse>> SendRequestAsync<TResponse>(
+        this HttpPipeline pipeline, 
         HttpMessage message,
         RequestOptions requestOptions,
         CancellationToken cancellationToken)
@@ -21,6 +24,12 @@ internal static class PipelineSendExtensions
             await pipeline.SendAsync(message, cancellationToken).ConfigureAwait(false);
             return await message.DeserializeResponseAsync<TResponse>(cancellationToken).ConfigureAwait(false);
         }
+        catch (Exception ex) when (
+            ex is RequestFailedException or IOException
+                or AggregateException { InnerException: RequestFailedException or IOException })
+        {
+            throw CreateException(ex);
+        }
         finally
         {
             if (message.HasResponse) 
@@ -30,7 +39,8 @@ internal static class PipelineSendExtensions
         }
     }
 
-    public static Response<TResponse> SendRequest<TResponse>(this HttpPipeline pipeline, 
+    public static Response<TResponse> SendRequest<TResponse>(
+        this HttpPipeline pipeline, 
         HttpMessage message,
         RequestOptions requestOptions,
         CancellationToken cancellationToken)
@@ -41,6 +51,12 @@ internal static class PipelineSendExtensions
             pipeline.Send(message, cancellationToken);
             return message.DeserializeResponse<TResponse>();
         }
+        catch (Exception ex) when (
+            ex is RequestFailedException or IOException
+                or AggregateException { InnerException: RequestFailedException or IOException })
+        {
+            throw CreateException(ex);
+        }
         finally
         {
             if (message.HasResponse)
@@ -50,4 +66,20 @@ internal static class PipelineSendExtensions
         }
     }
 
+    private static GenepoolClientException CreateException(Exception exception)
+    {
+        var message = exception switch
+        {
+            // When a retry policy is used, the exceptions of all attempts are wrapped in
+            // an AggregateException.
+            AggregateException ae => string.IsNullOrWhiteSpace(ae.InnerException?.Message)
+                ? ae.Message
+                : ae.InnerException.Message,
+            _ => exception.Message,
+        };
+        
+        return new GenepoolClientException(
+            $"The request failed without a proper response: {message}",
+            exception);
+    }
 }
