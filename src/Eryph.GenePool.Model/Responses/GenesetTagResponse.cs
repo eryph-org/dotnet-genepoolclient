@@ -15,6 +15,10 @@ public record GenesetTagResponse(
     GenesetTagManifestData? Manifest,
     [property: JsonPropertyName("pushed_at")]
     DateTimeOffset? PushedAt,
+    [property: JsonPropertyName("total_size")]
+    long? TotalSize,
+    [property: JsonPropertyName("size")]
+    long? Size,
     [property: JsonPropertyName("download_uri")]
     Uri? DownloadUri,
     [property: JsonPropertyName("genes_uri")]

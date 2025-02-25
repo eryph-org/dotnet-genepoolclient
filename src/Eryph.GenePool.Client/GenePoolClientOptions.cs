@@ -30,7 +30,8 @@ public class GenePoolClientOptions : ClientOptions
     
     public string[] Scopes { get; set; } =
     [
-        ScopeNames.OrgReadWrite, ScopeNames.GenesetReadWrite
+        ScopeNames.OrgReadWrite, ScopeNames.GenesetReadWrite,
+        ScopeNames.ApiKeyReadWrite
     ];
 
     public string? HardwareId { get; set; }

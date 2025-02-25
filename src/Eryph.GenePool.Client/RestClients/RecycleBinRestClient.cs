@@ -94,7 +94,7 @@ internal class RecycleBinRestClient
     {
         var message = CreateOrgRequest(orgName, RequestMethod.Post, "destroy-tags");
         var content = new Utf8JsonRequestContent();
-        content.JsonWriter.WriteObjectValue(genesets.Select(x=>x.Value).ToArray());
+        content.JsonWriter.WriteObjectValue(genesets.Select(x=>$"{x.GeneSet.Value}/{x.Tag.Value}").ToArray());
         message.Request.Content = content;
         return message;
     }
@@ -120,7 +120,7 @@ internal class RecycleBinRestClient
     {
         var message = CreateOrgRequest(orgName, RequestMethod.Post, "restore-tags");
         var content = new Utf8JsonRequestContent();
-        content.JsonWriter.WriteObjectValue(genesets.Select(x=>x.Value).ToArray());
+        content.JsonWriter.WriteObjectValue(genesets.Select(x => $"{x.GeneSet.Value}/{x.Tag.Value}").ToArray());
         message.Request.Content = content;
         return message;
     }
