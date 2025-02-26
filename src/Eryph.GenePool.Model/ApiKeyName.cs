@@ -6,16 +6,13 @@ namespace Eryph.GenePool.Model;
 
 public class ApiKeyName : ValidatingNewType<ApiKeyName, string, OrdStringOrdinalIgnoreCase>
 {
-    public ApiKeyName(string value) : base(Normalize(value)!)
+    public ApiKeyName(string value) : base(value)
     {
-        ValidOrThrow(Validations<ApiKeyName>.ValidateCharacters(
-                         value,
-                         allowHyphens: true,
-                         allowUnderscores: true,
-                         allowDots: false,
-                         allowSpaces: false)
-                     | Validations<ApiKeyName>.ValidateLength(value, 1, 50));
+        ValidOrThrow(
+            // until ValidateNoControlChars has been moved to Validations<T>
+            Validations.ValidateNoControlChars(value, "APIKey Name")
+                .Map(option => option.IfNone(""))
+            | Validations<ApiKeyName>.ValidateLength(value, 1, 50));
     }
 
-    private static string? Normalize(string value) => value?.ToLowerInvariant();
 }
