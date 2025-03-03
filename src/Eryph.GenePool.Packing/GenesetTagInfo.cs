@@ -58,7 +58,7 @@ public class GenesetTagInfo
                 if (currentManifest != null)
                 {
                     throw new InvalidOperationException(
-                        $"Directory already contains a manifest for geneset tag '{currentManifest.Geneset}' but you trying to access geneset tag '{GenesetTagName}'. Make sure that you are in the right folder.");
+                        $"Directory already contains a manifest for geneset tag '{currentManifest.Geneset}' but you are trying to access geneset tag '{GenesetTagName}'. Make sure that you are in the correct directory.");
                 }
                 throw new InvalidOperationException(
                     "Directory already contains a invalid manifest.");
