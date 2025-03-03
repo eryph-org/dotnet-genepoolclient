@@ -60,7 +60,7 @@ public class GenesetInfo
                 if (currentManifest != null)
                 {
                     throw new InvalidOperationException(
-                        $"Directory already contains a manifest for geneset '{currentManifest.Geneset}' but you trying to access geneset '{GenesetName}'. Make sure that you are in the right folder.");
+                        $"Directory already contains a manifest for geneset '{currentManifest.Geneset}' but you are trying to access geneset '{GenesetName}'. Make sure that you are in the correct directory.");
                 }
                 throw new InvalidOperationException(
                     $"Directory already contains a invalid manifest.");

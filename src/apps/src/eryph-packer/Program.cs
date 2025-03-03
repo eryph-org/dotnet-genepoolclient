@@ -131,10 +131,15 @@ packCommand.AddArgument(genesetArgument);
 
 genesetTagCommand.Add(packCommand);
 
-var pushCommand = new Command("push", "This command uploads a geneset to eryph genepool");
+var pushCommand = new Command("push", "This command uploads a geneset tag to eryph genepool");
 pushCommand.AddArgument(genesetArgument);
 pushCommand.AddOption(apiKeyOption);
 genesetTagCommand.Add(pushCommand);
+
+var pushGenesetCommand = new Command("push", "This command uploads a geneset to eryph genepool.");
+pushGenesetCommand.AddArgument(genesetArgument);
+pushGenesetCommand.AddOption(apiKeyOption);
+genesetCommand.Add(pushGenesetCommand);
 
 // ReSharper disable once StringLiteralTypo
 var apiKeyCommand = new Command("apikey", "Commands to manage api key");
@@ -494,36 +499,7 @@ pushCommand.SetHandler(async context =>
         .SpinnerStyle(Style.Parse("green bold"))
         .StartAsync($"Checking geneset tag {genesetTagInfo.GenesetTagName}", async statusContext =>
         {
-            var markdownContent = genesetInfo.GetMarkdownContent();
-
-            if (!await genesetClient.ExistsAsync())
-            {
-                statusContext.Status = $"Creating geneset {genesetInfo.GenesetName}";
-                statusContext.Refresh();
-                await genesetClient.CreateAsync(genesetInfo.ManifestData.Public ?? false,
-                    genesetInfo.ManifestData.ShortDescription,
-                    genesetInfo.ManifestData.Description,
-                    markdownContent, 
-                    genesetInfo.ManifestData.Metadata,
-                    cancellationToken: token
-                );
-            }
-            else
-            {
-                statusContext.Status = $"Updating geneset {genesetInfo.GenesetName}";
-                statusContext.Refresh();
-                var geneset = await genesetClient.GetAsync(
-                    new GetGenesetRequestOptions{ NoCache = true},
-                    cancellationToken: token);
-                await genesetClient.UpdateAsync(geneset?.Public ?? genesetInfo.ManifestData.Public,
-                    genesetInfo.ManifestData.ShortDescription,
-                    genesetInfo.ManifestData.Description,
-                    markdownContent,
-                    genesetInfo.ManifestData.Metadata,
-                    geneset?.ETag,
-                    cancellationToken: token
-                );
-            }
+            await CreateOrUpdateGeneset(genesetInfo, genesetClient, statusContext, token);
 
             if (!genesetTagInfo.IsReference() && await tagClient.ExistsAsync())
                 throw new EryphPackerUserException($"Geneset tag {genesetTagInfo.GenesetTagName} already exists on genepool. Tags can only be updated when they are references.");
@@ -639,6 +615,45 @@ pushCommand.SetHandler(async context =>
 
     AnsiConsole.WriteLine($"Geneset tag '{genesetTagInfo.ManifestData.Geneset}' successfully pushed to genepool.");
 });
+
+// push geneset command
+// ------------------------------
+pushGenesetCommand.SetHandler(async context =>
+{
+    var token = context.GetCancellationToken();
+    var genesetInfo = PrepareGeneSetCommand(context);
+    var apiKey = context.ParseResult.GetValueForOption(apiKeyOption);
+
+
+    var credential = await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots2)
+        .SpinnerStyle(Style.Parse("green bold"))
+        .StartAsync("Authenticating to genepool...", async statusContext =>
+        {
+            statusContext.Status = "Authenticated to genepool.";
+            statusContext.Refresh();
+            return await AuthProvider.GetCredential(apiKey, stagingAuthority);
+        });
+
+    var genePoolClient = credential.ApiKey != null
+        ? new GenePoolClient(genePoolUri, credential.ApiKey, clientOptions)
+        : new GenePoolClient(genePoolUri, credential.Token!, clientOptions);
+
+    var genesetClient = genePoolClient.GetGenesetClient(genesetInfo.Organization, genesetInfo.Id);
+
+    await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots2)
+        .SpinnerStyle(Style.Parse("green bold"))
+        .StartAsync($"Checking geneset {genesetInfo.GenesetName}", async statusContext =>
+        {
+            await CreateOrUpdateGeneset(genesetInfo, genesetClient, statusContext, token);
+
+        });
+
+    AnsiConsole.WriteLine($"Geneset '{genesetInfo.GenesetName}' successfully pushed to genepool.");
+
+});
+
 
 // api key management
 createApiKeyCommand.SetHandler(async (context) =>
@@ -827,4 +842,39 @@ void WriteJson(string json)
 {
     // Wrap the JsonText in Rows to ensure a line break at the end
     AnsiConsole.Write(new Rows(new JsonText(json).StringColor(Color.Teal)));
+}
+
+async Task CreateOrUpdateGeneset(GenesetInfo genesetInfo, GenesetClient genesetClient, 
+    StatusContext statusContext, CancellationToken token)
+{
+    var markdownContent = genesetInfo.GetMarkdownContent();
+
+    if (!await genesetClient.ExistsAsync())
+    {
+        statusContext.Status = $"Creating geneset {genesetInfo.GenesetName}";
+        statusContext.Refresh();
+        await genesetClient.CreateAsync(genesetInfo.ManifestData.Public ?? false,
+            genesetInfo.ManifestData.ShortDescription,
+            genesetInfo.ManifestData.Description,
+            markdownContent,
+            genesetInfo.ManifestData.Metadata,
+            cancellationToken: token
+        );
+    }
+    else
+    {
+        statusContext.Status = $"Updating geneset {genesetInfo.GenesetName}";
+        statusContext.Refresh();
+        var geneset = await genesetClient.GetAsync(
+            new GetGenesetRequestOptions { NoCache = true },
+            cancellationToken: token);
+        await genesetClient.UpdateAsync(geneset?.Public ?? genesetInfo.ManifestData.Public,
+            genesetInfo.ManifestData.ShortDescription,
+            genesetInfo.ManifestData.Description,
+            markdownContent,
+            genesetInfo.ManifestData.Metadata,
+            geneset?.ETag,
+            cancellationToken: token
+        );
+    }
 }
