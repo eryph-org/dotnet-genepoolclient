@@ -73,4 +73,43 @@ public class UserClient
             throw;
         }
     }
+
+
+    /// <summary> Get user search keys </summary>
+    /// <param name="cancellationToken"> The cancellation token to use. </param>
+    /// <param name="options">Request options</param>
+    public virtual async Task<GetSearchKeysResponse?> GetSearchKeysAsync(RequestOptions? options = default,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(UserClient)}.{nameof(GetSearchKeys)}");
+        scope.Start();
+        try
+        {
+            return (await RestClient.GetSearchKeysAsync(options ?? new RequestOptions(), cancellationToken).ConfigureAwait(false)).Value.Value;
+        }
+        catch (Exception e)
+        {
+            scope.Failed(e);
+            throw;
+        }
+    }
+
+    /// <summary> Get user search keys. </summary>
+    /// <param name="cancellationToken"> The cancellation token to use. </param>
+    /// <param name="options">Request options</param>
+    public virtual GetSearchKeysResponse? GetSearchKeys(GetUserRequestOptions? options = default,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _clientDiagnostics.CreateScope($"{nameof(UserClient)}.{nameof(GetSearchKeys)}");
+        scope.Start();
+        try
+        {
+            return RestClient.GetSearchKeys(options ?? new RequestOptions(), cancellationToken).Value.Value;
+        }
+        catch (Exception e)
+        {
+            scope.Failed(e);
+            throw;
+        }
+    }
 }
