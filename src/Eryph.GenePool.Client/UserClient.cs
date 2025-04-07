@@ -97,7 +97,7 @@ public class UserClient
     /// <summary> Get user search keys. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     /// <param name="options">Request options</param>
-    public virtual GetSearchKeysResponse? GetSearchKeys(GetUserRequestOptions? options = default,
+    public virtual GetSearchKeysResponse? GetSearchKeys(RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(UserClient)}.{nameof(GetSearchKeys)}");
