@@ -52,6 +52,23 @@ internal class UserRestClient
         return message;
     }
 
+    internal HttpMessage CreateSearchKeysRequest(RequestOptions options)
+    {
+        var message = _pipeline.CreateMessage();
+        var request = message.Request;
+        request.Method = RequestMethod.Get;
+        var uri = new RawRequestUriBuilder();
+        uri.Reset(_endpoint);
+        uri.AppendPath(_version, false);
+        // ReSharper disable once StringLiteralTypo
+        uri.AppendPath("/users", false);
+        uri.AppendPath("/search_keys", false);
+
+        request.Uri = uri;
+        request.Headers.Add("Accept", "application/json, text/json");
+        return message;
+    }
+
 
     /// <summary> Get information for current user. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
@@ -77,6 +94,29 @@ internal class UserRestClient
 
     }
 
+    /// <summary> Get search keys for current user. </summary>
+    /// <param name="cancellationToken"> The cancellation token to use. </param>
+    /// <param name="options">Request options</param>
+    public async Task<Response<SingleResultResponse<GetSearchKeysResponse>>> GetSearchKeysAsync(
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        return await _pipeline.SendRequestAsync<SingleResultResponse<GetSearchKeysResponse>>(CreateSearchKeysRequest(options)
+            , options, cancellationToken).ConfigureAwait(false);
+
+    }
+
+    /// <summary> Get search keys for current user. </summary>
+    /// <param name="cancellationToken"> The cancellation token to use. </param>
+    /// <param name="options">Request options</param>
+    public Response<SingleResultResponse<GetSearchKeysResponse>> GetSearchKeys(
+        RequestOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        return _pipeline.SendRequest<SingleResultResponse<GetSearchKeysResponse>>(
+            CreateSearchKeysRequest(options), options, cancellationToken);
+
+    }
 
 
 }
