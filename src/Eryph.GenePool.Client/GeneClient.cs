@@ -159,7 +159,7 @@ public class GeneClient
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual async Task<GetGeneResponse?> GetAsync(
-        RequestOptions? options = default,
+        GetGeneRequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
@@ -167,7 +167,7 @@ public class GeneClient
         try
         {
             return (await RestClient.GetAsync(_geneset, _gene,
-                options ?? new RequestOptions(),
+                options ?? new GetGeneRequestOptions(),
                 cancellationToken).ConfigureAwait(false)).Value.Value;
         }
         catch (Exception e)
@@ -180,7 +180,7 @@ public class GeneClient
     /// <summary> Get a projects. </summary>
     /// <param name="cancellationToken"> The cancellation token to use. </param>
     public virtual GetGeneResponse? Get(
-        RequestOptions? options = default,
+        GetGeneRequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
         using var scope = _clientDiagnostics.CreateScope($"{nameof(GeneClient)}.{nameof(Get)}");
@@ -188,7 +188,7 @@ public class GeneClient
         try
         {
             return RestClient.Get(_geneset, _gene,
-                options ?? new RequestOptions(),
+                options ?? new GetGeneRequestOptions(),
                 cancellationToken).Value.Value;
         }
         catch (Exception e)
@@ -209,7 +209,7 @@ public class GeneClient
         try
         {
             var res = RestClient.Get(_geneset, _gene,
-                options ?? new RequestOptions(),
+                new GetGeneRequestOptions(options ?? new RequestOptions()),
                 cancellationToken).Value;
             return true;
         }
@@ -231,7 +231,7 @@ public class GeneClient
         try
         {
             await RestClient.GetAsync(_geneset, _gene,
-                    options?? new RequestOptions(),
+                    new GetGeneRequestOptions(options ?? new RequestOptions()),
                     cancellationToken)
                 .ConfigureAwait(false);
             return true;
@@ -500,6 +500,7 @@ public class GeneClient
     IProgress<GeneUploadProgress>? progress = default)
     {
         options ??= new RequestOptions();
+        var getOptions = new GetGeneRequestOptions(options);
 
         var geneExists = await ExistsAsync(options, cancellationToken).ConfigureAwait(false);
         var yamlContentPath = Path.Combine(path, "gene.yaml");
@@ -514,7 +515,7 @@ public class GeneClient
             uploadUris = createResponse?.UploadUris ?? uploadUris;
         }
 
-        var geneStatus = await GetAsync(options,cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("Gene not found.");
+        var geneStatus = await GetAsync(getOptions, cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("Gene not found.");
         if (geneStatus.Available.GetValueOrDefault())
             return geneStatus;
 
@@ -533,7 +534,7 @@ public class GeneClient
         while (!processingTimeout.IsCancellationRequested)
         {
             await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
-            geneStatus = await GetAsync(options,cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("Gene not found.");
+            geneStatus = await GetAsync(getOptions, cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("Gene not found.");
             if (geneStatus.Available.GetValueOrDefault())
                 return geneStatus;
 
