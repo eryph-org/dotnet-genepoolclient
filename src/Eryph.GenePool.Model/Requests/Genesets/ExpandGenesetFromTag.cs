@@ -9,5 +9,4 @@ public struct ExpandGenesetFromTag
 
     [JsonPropertyName("description")]
     public bool Description { get; set; }
-
 }

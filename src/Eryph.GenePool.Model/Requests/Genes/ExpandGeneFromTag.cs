@@ -9,5 +9,4 @@ public struct ExpandGeneFromTag
 
     [JsonPropertyName("download_uris")]
     public bool DownloadUris { get; set; }
-
 }

@@ -57,6 +57,30 @@ internal class GenesRestClient
         return message;
     }
 
+    internal HttpMessage CreateGetRequest(GeneSetIdentifier identifier, Gene gene, GetGeneRequestOptions options)
+    {
+        var message = _pipeline.CreateMessage();
+        var request = message.Request;
+        request.Method = RequestMethod.Get;
+        var uri = new RawRequestUriBuilder();
+        uri.Reset(_endpoint);
+        uri.AppendPath(_version, false);
+        uri.AppendPath("/genes/", false);
+        uri.AppendPath(identifier.Organization.Value, true);
+        uri.AppendPath("/", false);
+        uri.AppendPath(identifier.GeneSet.Value, true);
+        uri.AppendPath("/", false);
+        uri.AppendPath(identifier.Tag.Value, true);
+        uri.AppendPath("/", false);
+        uri.AppendPath(gene.Value, true);
+
+        uri.AddExpandOptions(options.Expand);
+
+        request.Uri = uri;
+        request.Headers.Add("Accept", "application/json, text/json");
+        return message;
+    }
+
     public async Task<Response<NoResultResponse>> DeleteAsync(GeneSetIdentifier geneset, Gene gene,
         RequestOptions options,
         CancellationToken cancellationToken = default)
@@ -75,20 +99,20 @@ internal class GenesRestClient
     }
 
     public async Task<Response<SingleResultResponse<GetGeneResponse>>> GetAsync(GeneSetIdentifier geneset, Gene gene,
-        RequestOptions options,
+        GetGeneRequestOptions options,
         CancellationToken cancellationToken = default)
     {
         return await _pipeline.SendRequestAsync<SingleResultResponse<GetGeneResponse>>(
-            CreateRequest(geneset, gene, RequestMethod.Get),options, cancellationToken).ConfigureAwait(false);
+            CreateGetRequest(geneset, gene, options),options, cancellationToken).ConfigureAwait(false);
 
     }
 
     public Response<SingleResultResponse<GetGeneResponse>> Get(GeneSetIdentifier geneset, Gene gene,
-        RequestOptions options,
+        GetGeneRequestOptions options,
         CancellationToken cancellationToken = default)
     {
         return _pipeline.SendRequest<SingleResultResponse<GetGeneResponse>>(
-            CreateRequest(geneset, gene, RequestMethod.Get), options, cancellationToken);
+            CreateGetRequest(geneset, gene, options), options, cancellationToken);
 
     }
 
