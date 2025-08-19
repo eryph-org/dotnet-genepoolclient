@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.GenePool.Model.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.GenePool.Client.Tests", "test\Eryph.GenePool.Client.Tests\Eryph.GenePool.Client.Tests.csproj", "{E6562279-2BCC-45C6-920A-EF211DEB49D4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.GenePool.Compression", "src\Eryph.GenePool.Compression\Eryph.GenePool.Compression.csproj", "{5C581260-FA52-4A94-9D95-9268870C42B6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -63,6 +65,10 @@ Global
 		{E6562279-2BCC-45C6-920A-EF211DEB49D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E6562279-2BCC-45C6-920A-EF211DEB49D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E6562279-2BCC-45C6-920A-EF211DEB49D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5C581260-FA52-4A94-9D95-9268870C42B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C581260-FA52-4A94-9D95-9268870C42B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C581260-FA52-4A94-9D95-9268870C42B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C581260-FA52-4A94-9D95-9268870C42B6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
