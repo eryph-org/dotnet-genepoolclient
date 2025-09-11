@@ -1,11 +1,9 @@
 ﻿using System.Buffers;
-using System.IO.Compression;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Eryph.GenePool.Compression;
 using Eryph.GenePool.Model;
-using Joveler.Compression.XZ;
 
 namespace Eryph.GenePool.Packing;
 
@@ -14,12 +12,10 @@ public static class GenePacker
     private const int ChunkSize = 1024 * 1024 * 80;
     private const int BufferSize = 1024 * 1024 * 1;
 
-    private static bool _isNativeInitialized;
-
     public static async Task<string> CreateGene(
         PackableFile file,
         string genesetDir,
-        IProgress<GenePackerProgress>? progress = default,
+        IProgress<GenePackerProgress>? progress = null,
         CancellationToken token = default)
     {
         var originalSize = new FileInfo(file.FullPath).Length;
@@ -32,19 +28,14 @@ public static class GenePacker
         var targetStream = new GenePackerStream(new DirectoryInfo(tempDir), ChunkSize);
         try
         {
-            var format = file.ExtremeCompression ? "xz" : "gz";
-
-            if (!file.ExtremeCompression && originalSize < GeneModelDefaults.MinCompressionBytes)
+            var format = file.ExtremeCompression switch
             {
-                await using var sourceStream = new FileStream(file.FullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                await sourceStream.CopyToAsync(targetStream, token);
-                format = "plain";
-            }
-            else
-            {
-                await CompressAsync(targetStream, file.FullPath, file.ExtremeCompression, progress, token);
+                true => "xz",
+                false when originalSize >= GeneModelDefaults.MinCompressionBytes => "gz",
+                false => "plain"
+            };
 
-            }
+            await CompressAsync(targetStream, file.FullPath, format, progress, token);
             await targetStream.DisposeAsync();
 
             progress?.Report(new GenePackerProgress(originalSize, originalSize));
@@ -88,21 +79,13 @@ public static class GenePacker
 
     private static async Task CompressAsync(
         Stream targetStream,
-        string filePath,
-        bool extremeCompression,
+        string sourcePath,
+        string format,
         IProgress<GenePackerProgress>? progress,
         CancellationToken cancellationToken)
     {
-        if (extremeCompression)
-        {
-            InitializeNativeLibrary();
-        }
-
-        await using var sourceStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-        await using var compressionStream = extremeCompression
-            ? CreateXZStream(targetStream)
-            : new GZipStream(targetStream, CompressionLevel.Fastest, false);
+        await using var sourceStream = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        await using var compressionStream = CompressionStreamFactory.CreateCompressionStream(targetStream, format);
 
         var buffer = ArrayPool<byte>.Shared.Rent(Math.Min(BufferSize, (int)Math.Min(int.MaxValue, sourceStream.Length)));
         try
@@ -126,76 +109,5 @@ public static class GenePacker
     private static string GetHashString(byte[] hashBytes)
     {
         return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
-    }
-
-    private static Stream CreateXZStream(Stream targetStream)
-    {
-        InitializeNativeLibrary();
-
-        var compOpts = new XZCompressOptions
-        {
-            Level = LzmaCompLevel.Default,
-            ExtremeFlag = true,
-            LeaveOpen = true,
-        };
-
-        var threadOpts = new XZThreadedCompressOptions
-        {
-            Threads = Environment.ProcessorCount > 8
-                ? Environment.ProcessorCount - 2
-                : Environment.ProcessorCount > 2 ? Environment.ProcessorCount - 1 : 1,
-        };
-
-        return new XZStream(targetStream, compOpts, threadOpts);
-    }
-
-    private static void InitializeNativeLibrary()
-    {
-        if (_isNativeInitialized)
-            return;
-
-        _isNativeInitialized = true;
-
-        var libDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes");
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            libDir = Path.Combine(libDir, "win-");
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            libDir = Path.Combine(libDir, "linux-");
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            libDir = Path.Combine(libDir, "osx-");
-
-        switch (RuntimeInformation.ProcessArchitecture)
-        {
-            case Architecture.X86:
-                libDir += "x86";
-                break;
-            case Architecture.X64:
-                libDir += "x64";
-                break;
-            case Architecture.Arm:
-                libDir += "arm";
-                break;
-            case Architecture.Arm64:
-                libDir += "arm64";
-                break;
-        }
-        libDir = Path.Combine(libDir, "native");
-        if (!Directory.Exists(libDir))
-            libDir = AppDomain.CurrentDomain.BaseDirectory;
-
-        string? libPath = null;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            libPath = Path.Combine(libDir, "liblzma.dll");
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            libPath = Path.Combine(libDir, "liblzma.so");
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            libPath = Path.Combine(libDir, "liblzma.dylib");
-
-        if (libPath == null)
-            throw new PlatformNotSupportedException($"Unable to find native library.");
-        if (!File.Exists(libPath))
-            throw new PlatformNotSupportedException($"Unable to find native library [{libPath}].");
-
-        XZInit.GlobalInit(libPath);
     }
 }

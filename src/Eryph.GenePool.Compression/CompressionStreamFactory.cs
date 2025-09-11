@@ -1,78 +1,79 @@
-﻿using Joveler.Compression.XZ;
-using System;
-using System.Collections.Generic;
-using System.IO.Compression;
-using System.Linq;
+﻿using System.IO.Compression;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+using Joveler.Compression.XZ;
 
 namespace Eryph.GenePool.Compression;
 
+/// <summary>
+/// Contains helper methods for creating (de)compression streams for the different
+/// compression formats which are supported for genes.
+/// </summary>
 public static class CompressionStreamFactory
 {
     private static bool _isXzInitialized;
 
-    public static Stream CreateCompressionStream(Stream targetStream, string format)
+    public static Stream CreateCompressionStream(Stream targetStream, string format, bool leaveOpen = false)
     {
         return format switch
         {
             "plain" => targetStream,
-            // TODO should we set leave open to false
-            "gz" => new GZipStream(targetStream, CompressionLevel.Fastest, false),
-            "xz" => CreateXzCompressionStream(targetStream),
+            "gz" => new GZipStream(targetStream, CompressionLevel.Fastest, leaveOpen),
+            "xz" => CreateXzCompressionStream(targetStream, leaveOpen),
             _ => throw new ArgumentException($"The compression format {format} is not supported.", nameof(format))
         };
     }
 
-    public static Stream CreateDecompressionStream(Stream sourceStream, string format)
+    public static Stream CreateDecompressionStream(Stream sourceStream, string format, bool leaveOpen = false)
     {
         return format switch
         {
             "plain" => sourceStream,
-            "gz" => new GZipStream(sourceStream, CompressionMode.Decompress),
-            "xz" => CreateXzDecompressionStream(sourceStream),
+            "gz" => new GZipStream(sourceStream, CompressionMode.Decompress, leaveOpen),
+            "xz" => CreateXzDecompressionStream(sourceStream, leaveOpen),
             _ => throw new ArgumentException($"The compression format {format} is not supported.", nameof(format))
         };
     }
 
-    private static Stream CreateXzCompressionStream(Stream targetStream)
+    private static Stream CreateXzCompressionStream(Stream targetStream, bool leaveOpen)
     {
         InitializeNativeLibrary();
 
-        var compOpts = new XZCompressOptions
-        {
-            Level = LzmaCompLevel.Default,
-            ExtremeFlag = true,
-            LeaveOpen = true,
-        };
-
-        var threadOpts = new XZThreadedCompressOptions
-        {
-            Threads = Environment.ProcessorCount > 8
-                ? Environment.ProcessorCount - 2
-                : Environment.ProcessorCount > 2 ? Environment.ProcessorCount - 1 : 1,
-        };
-
-        return new XZStream(targetStream, compOpts, threadOpts);
+        return new XZStream(
+            targetStream,
+            new XZCompressOptions
+            {
+                Level = LzmaCompLevel.Default,
+                ExtremeFlag = true,
+                LeaveOpen = leaveOpen,
+            },
+            new XZThreadedCompressOptions
+            {
+                Threads = Environment.ProcessorCount > 8
+                    ? Environment.ProcessorCount - 2
+                    : Environment.ProcessorCount > 2 ? Environment.ProcessorCount - 1 : 1,
+            });
     }
 
-    private static Stream CreateXzDecompressionStream(Stream sourceStream)
+    private static Stream CreateXzDecompressionStream(Stream sourceStream, bool leaveOpen)
     {
         InitializeNativeLibrary();
 
-        var threadOpts = new XZThreadedDecompressOptions
-        {
-            Threads = Environment.ProcessorCount switch
+        return new XZStream(
+            sourceStream,
+            new XZDecompressOptions
             {
-                >= 8 => Environment.ProcessorCount - 2,
-                > 2 => Environment.ProcessorCount - 1,
-                _ => 1,
+                LeaveOpen = leaveOpen,
             },
-            MemlimitThreading = XZHardware.PhysMem() / 4
-        };
-
-        return new XZStream(sourceStream, new XZDecompressOptions(), threadOpts);
+            new XZThreadedDecompressOptions
+            {
+                Threads = Environment.ProcessorCount switch
+                {
+                    >= 8 => Environment.ProcessorCount - 2,
+                    > 2 => Environment.ProcessorCount - 1,
+                    _ => 1,
+                },
+                MemlimitThreading = XZHardware.PhysMem() / 4,
+            });
     }
 
     private static void InitializeNativeLibrary()
