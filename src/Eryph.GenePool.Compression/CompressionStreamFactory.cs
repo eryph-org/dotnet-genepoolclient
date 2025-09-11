@@ -11,6 +11,7 @@ namespace Eryph.GenePool.Compression;
 public static class CompressionStreamFactory
 {
     private static bool _isXzInitialized;
+    private static object _xzInitLock = new();
 
     public static Stream CreateCompressionStream(Stream targetStream, string format, bool leaveOpen = false)
     {
@@ -78,51 +79,54 @@ public static class CompressionStreamFactory
 
     private static void InitializeNativeLibrary()
     {
-        if (_isXzInitialized)
-            return;
-
-        _isXzInitialized = true;
-
-        var libDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes");
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            libDir = Path.Combine(libDir, "win-");
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            libDir = Path.Combine(libDir, "linux-");
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            libDir = Path.Combine(libDir, "osx-");
-
-        switch (RuntimeInformation.ProcessArchitecture)
+        lock (_xzInitLock)
         {
-            case Architecture.X86:
-                libDir += "x86";
-                break;
-            case Architecture.X64:
-                libDir += "x64";
-                break;
-            case Architecture.Arm:
-                libDir += "arm";
-                break;
-            case Architecture.Arm64:
-                libDir += "arm64";
-                break;
+            if (_isXzInitialized)
+                return;
+
+            var libDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes");
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                libDir = Path.Combine(libDir, "win-");
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                libDir = Path.Combine(libDir, "linux-");
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                libDir = Path.Combine(libDir, "osx-");
+
+            switch (RuntimeInformation.ProcessArchitecture)
+            {
+                case Architecture.X86:
+                    libDir += "x86";
+                    break;
+                case Architecture.X64:
+                    libDir += "x64";
+                    break;
+                case Architecture.Arm:
+                    libDir += "arm";
+                    break;
+                case Architecture.Arm64:
+                    libDir += "arm64";
+                    break;
+            }
+            libDir = Path.Combine(libDir, "native");
+            if (!Directory.Exists(libDir))
+                libDir = AppDomain.CurrentDomain.BaseDirectory;
+
+            string? libPath = null;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                libPath = Path.Combine(libDir, "liblzma.dll");
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                libPath = Path.Combine(libDir, "liblzma.so");
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                libPath = Path.Combine(libDir, "liblzma.dylib");
+
+            if (libPath == null)
+                throw new PlatformNotSupportedException($"Unable to find native library.");
+            if (!File.Exists(libPath))
+                throw new PlatformNotSupportedException($"Unable to find native library [{libPath}].");
+
+            XZInit.GlobalInit(libPath);
+
+            _isXzInitialized = true;
         }
-        libDir = Path.Combine(libDir, "native");
-        if (!Directory.Exists(libDir))
-            libDir = AppDomain.CurrentDomain.BaseDirectory;
-
-        string? libPath = null;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            libPath = Path.Combine(libDir, "liblzma.dll");
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            libPath = Path.Combine(libDir, "liblzma.so");
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            libPath = Path.Combine(libDir, "liblzma.dylib");
-
-        if (libPath == null)
-            throw new PlatformNotSupportedException($"Unable to find native library.");
-        if (!File.Exists(libPath))
-            throw new PlatformNotSupportedException($"Unable to find native library [{libPath}].");
-
-        XZInit.GlobalInit(libPath);
     }
 }
