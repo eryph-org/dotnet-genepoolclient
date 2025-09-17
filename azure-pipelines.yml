@@ -88,7 +88,7 @@ jobs:
       addSpnToEnvironment: true
       workingDirectory: '$(Build.ArtifactStagingDirectory)\packer_build\bin'
       inlineScript: |
-        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvi $Env:servicePrincipalId -kvt $Env:tenantId -kvs $Env:servicePrincipalKey -tr http://rfc3161timestamp.globalsign.com/advanced -kvc "codesigning-2023" -v eryph-packer.exe
+        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvi $Env:servicePrincipalId -kvt $Env:tenantId -kvs $Env:servicePrincipalKey -tr http://rfc3161timestamp.globalsign.com/advanced -kvc "codesigning-2025" -v eryph-packer.exe
 
 
   - task: ArchiveFiles@2
