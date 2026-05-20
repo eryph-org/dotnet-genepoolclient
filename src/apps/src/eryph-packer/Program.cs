@@ -289,13 +289,15 @@ addVolumeCommand.SetHandler(async context =>
     var volumeFile = context.ParseResult.GetValueForArgument(filePathArgument);
     var architectureOverride = context.ParseResult.GetValueForOption(architectureOption);
 
-    var (defaultArchitecture, compression) = Path.GetExtension(volumeFile.Name).ToLowerInvariant() switch
+    var extension = Path.GetExtension(volumeFile.Name).ToLowerInvariant();
+    if (!VMExport.VolumeExtensions.TryGetValue(extension, out var volumeExtension))
     {
-        ".vhdx" or ".vhd" => (Architectures.HyperVAmd64, GeneCompression.Extreme),
-        ".qcow2" => (Architectures.KvmAmd64, GeneCompression.None),
-        var ext => throw new EryphPackerUserException(
-            $"Unsupported volume file type '{ext}'. Supported types are '.vhdx', '.vhd' and '.qcow2'.")
-    };
+        var supportedTypes = string.Join(", ", VMExport.VolumeExtensions.Keys);
+        throw new EryphPackerUserException(
+            $"Unsupported volume file type '{extension}'. Supported types are {supportedTypes}.");
+    }
+
+    var (defaultArchitecture, compression) = volumeExtension;
 
     var architecture = !string.IsNullOrWhiteSpace(architectureOverride)
         ? architectureOverride
