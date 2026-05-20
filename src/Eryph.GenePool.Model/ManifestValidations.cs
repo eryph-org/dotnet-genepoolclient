@@ -1,4 +1,5 @@
-﻿using Dbosoft.Functional.Validations;
+﻿using System.Linq;
+using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
 using LanguageExt;
 using LanguageExt.Common;
@@ -99,12 +100,10 @@ public class ManifestValidations
     {
         return
             from gNull in guard(notEmpty(architecture), Validations.BadRequestError("Architecture is empty")).ToValidation()
-            from gVal in guard(string.Equals(architecture,Architectures.HyperVAmd64) 
-                               || string.Equals(architecture, Architectures.HyperVAny) 
-                               || string.Equals(architecture, Architectures.Any),
-                Validations.BadRequestError($"Architecture value has to be '{Architectures.HyperVAmd64}'" +
-                                            $", '{Architectures.HyperVAny}' " +
-                                            $"or '{Architectures.Any}'")).ToValidation()
+            from gVal in guard(Architectures.KnownNames.Contains(architecture),
+                Validations.BadRequestError(
+                    $"Architecture value has to be one of {string.Join(", ", Architectures.KnownNames.Select(n => $"'{n}'"))}."))
+                .ToValidation()
 
             select Unit.Default;
     }

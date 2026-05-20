@@ -1,51 +1,128 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Eryph.ConfigModel.Catlets;
+using Eryph.ConfigModel.Yaml;
 using Eryph.GenePool.Model;
 
 namespace Eryph.GenePool.Packing;
 
 public static class VMExport
 {
+    private static readonly Dictionary<string, (string DefaultArchitecture, GeneCompression Compression)>
+        VolumeExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            [".vhdx"] = (Architectures.HyperVAmd64, GeneCompression.Extreme),
+            [".vhd"]  = (Architectures.HyperVAmd64, GeneCompression.Extreme),
+            [".qcow2"] = (Architectures.KvmAmd64, GeneCompression.None),
+        };
+
     public static (CatletConfig? Config, IEnumerable<PackableFile> Files) ExportToPackable(DirectoryInfo vmExport,
         CancellationToken token)
     {
         var files = new List<PackableFile>();
-        var vmPlan = ConvertVmDataToConfig(vmExport) ?? new CatletConfig();
+        var catletFromYaml = ReadCatletConfig(vmExport);
+        var vmPlan = catletFromYaml
+                     ?? ConvertVmDataToConfig(vmExport)
+                     ?? new CatletConfig();
 
-        var vhdFiles = vmExport.GetFiles("*.vhdx", SearchOption.AllDirectories);
-
-        foreach (var vhdFile in vhdFiles)
+        foreach (var volumeFile in vmExport.GetFiles("*", SearchOption.AllDirectories))
         {
             token.ThrowIfCancellationRequested();
 
-            files.Add(new PackableFile(vhdFile.FullName, vhdFile.Name,
-                GeneType.Volume, 
-                Architectures.HyperVAmd64,
-                Path.GetFileNameWithoutExtension(vhdFile.Name), true, null));
+            if (!VolumeExtensions.TryGetValue(volumeFile.Extension, out var spec))
+                continue;
+
+            var architecture = DetectArchitectureFromPath(volumeFile, vmExport) ?? spec.DefaultArchitecture;
+
+            files.Add(new PackableFile(volumeFile.FullName, volumeFile.Name,
+                GeneType.Volume,
+                architecture,
+                Path.GetFileNameWithoutExtension(volumeFile.Name), spec.Compression, null));
         }
-        
+
+        // When the user supplies catlet.yaml, it is the source of truth for drives.
+        // Only the legacy vm.json / no-config path gets drives auto-derived from the volume scan.
+        if (catletFromYaml is null)
+            MergeDrivesFromVolumes(vmPlan, files);
+
         return (vmPlan, files);
 
     }
 
-
-
-    public static DirectoryInfo FindExportRootDir(DirectoryInfo vmExport)
+    private static string? DetectArchitectureFromPath(FileInfo file, DirectoryInfo root)
     {
-        // to make sure that we consider also if vm.json is in the parent directory
-        var parent = vmExport.Parent;
-        if(parent==null)
-            return vmExport;
+        var dir = file.Directory;
+        if (dir == null || PathsEqual(dir.FullName, root.FullName))
+            return null;
 
-        var vmFiles = parent.GetFiles("vm.json", SearchOption.AllDirectories);
-        var metadataFiles = parent.GetFiles("metadata.json", SearchOption.AllDirectories);
+        // <hypervisor>/<processor>/<file>
+        var processor = ProcessorTypes.KnownNames.FirstOrDefault(p =>
+            string.Equals(p, dir.Name, StringComparison.OrdinalIgnoreCase));
+        if (processor is not null)
+        {
+            var hypervisorDir = dir.Parent;
+            var hypervisor = hypervisorDir is null
+                ? null
+                : Hypervisors.KnownNames.FirstOrDefault(h =>
+                    string.Equals(h, hypervisorDir.Name, StringComparison.OrdinalIgnoreCase));
+            if (hypervisor is not null)
+                return $"{hypervisor}/{processor}";
+        }
 
-        if (vmFiles.Length > 0 || metadataFiles.Length > 0)
-            return parent;
+        // <hypervisor>/<file>
+        var directHypervisor = Hypervisors.KnownNames.FirstOrDefault(h =>
+            string.Equals(h, dir.Name, StringComparison.OrdinalIgnoreCase));
+        if (directHypervisor is not null)
+            return $"{directHypervisor}/any";
 
-        return vmExport;
+        return null;
     }
+
+    private static bool PathsEqual(string a, string b) =>
+        string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(a)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(b)),
+            StringComparison.OrdinalIgnoreCase);
+
+    private static void MergeDrivesFromVolumes(CatletConfig config, IEnumerable<PackableFile> files)
+    {
+        var existingDriveNames = (config.Drives ?? [])
+            .Select(d => d.Name)
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var newDrives = files
+            .Where(f => f.GeneType == GeneType.Volume)
+            .Select(f => f.GeneName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(name => !existingDriveNames.Contains(name))
+            .Select(name => new CatletDriveConfig { Name = name })
+            .ToArray();
+
+        if (newDrives.Length == 0)
+            return;
+
+        config.Drives = (config.Drives ?? []).Concat(newDrives).ToArray();
+    }
+
+    private static CatletConfig? ReadCatletConfig(DirectoryInfo vmExport)
+    {
+        var catletFile = vmExport.GetFiles("catlet.yaml", SearchOption.AllDirectories).FirstOrDefault();
+        if (catletFile == null)
+            return null;
+
+        try
+        {
+            var content = File.ReadAllText(catletFile.FullName).Trim().Replace("\r\n", "\n");
+            return CatletConfigYamlSerializer.Deserialize(content);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to read catlet.yaml file '{catletFile.FullName}'", ex);
+        }
+    }
+
+
 
     public static void ReadMetadata(DirectoryInfo vmExport, GenesetTagInfo genesetTag)
     {
