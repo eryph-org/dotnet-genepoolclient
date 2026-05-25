@@ -210,6 +210,32 @@ public class ManifestValidationsTests
     }
 
     [Fact]
+    public void ValidateCloudCompatibility_NullEntryArray_ReturnsFail()
+    {
+        var cloudCompatibility = new Dictionary<string, CloudImageReference[]>
+        {
+            ["sda"] = null!,
+        };
+
+        var result = ManifestValidations.ValidateCloudCompatibility(cloudCompatibility, "cloud_compatibility");
+
+        result.Should().BeFail();
+    }
+
+    [Fact]
+    public void ValidateCloudCompatibility_NullEntry_ReturnsFail()
+    {
+        var cloudCompatibility = new Dictionary<string, CloudImageReference[]>
+        {
+            ["sda"] = [null!],
+        };
+
+        var result = ManifestValidations.ValidateCloudCompatibility(cloudCompatibility, "cloud_compatibility");
+
+        result.Should().BeFail();
+    }
+
+    [Fact]
     public void ValidateGenesetManifest_WithCloudCompatibility_ReturnsSuccess()
     {
         var manifest = new GenesetManifestData

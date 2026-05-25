@@ -124,9 +124,19 @@ public class ManifestValidations
                 var drivePath = AppendPath(path, kv.Key);
                 var keyValidation = ValidateCloudCompatibilityDriveName(kv.Key)
                     .MapFail(e => new ValidationIssue(drivePath, e.Message));
-                var entriesValidation = (kv.Value ?? [])
-                    .Select((entry, i) => ValidateCloudImageReference(entry, $"{drivePath}[{i}]"))
-                    .Aggregate(Success<ValidationIssue, Unit>(Unit.Default), (a, b) => a | b);
+                var entriesValidation = kv.Value is null
+                    ? Fail<ValidationIssue, Unit>(new ValidationIssue(drivePath,
+                        "Cloud compatibility entries must be an array."))
+                    : kv.Value
+                        .Select((entry, i) =>
+                        {
+                            var entryPath = $"{drivePath}[{i}]";
+                            return entry is null
+                                ? Fail<ValidationIssue, Unit>(new ValidationIssue(entryPath,
+                                    "Cloud image reference must not be null."))
+                                : ValidateCloudImageReference(entry, entryPath);
+                        })
+                        .Aggregate(Success<ValidationIssue, Unit>(Unit.Default), (a, b) => a | b);
                 return acc | keyValidation | entriesValidation;
             });
     }
