@@ -8,8 +8,8 @@ namespace Eryph.GenePool.Packing;
 
 public static class VMExport
 {
-    private static readonly Dictionary<string, (string DefaultArchitecture, GeneCompression Compression)>
-        VolumeExtensions = new(StringComparer.OrdinalIgnoreCase)
+    public static readonly IReadOnlyDictionary<string, (string DefaultArchitecture, GeneCompression Compression)>
+        VolumeExtensions = new Dictionary<string, (string DefaultArchitecture, GeneCompression Compression)>(StringComparer.OrdinalIgnoreCase)
         {
             [".vhdx"] = (Architectures.HyperVAmd64, GeneCompression.Extreme),
             [".vhd"]  = (Architectures.HyperVAmd64, GeneCompression.Extreme),
