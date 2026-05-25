@@ -29,4 +29,12 @@ public class GenesetManifestData
 
     [JsonPropertyName("metadata")]
     public Dictionary<string, string>? Metadata { get; set; }
+
+    /// <summary>
+    /// Maps a catlet drive name (e.g. <c>sda</c>) to an ordered list of
+    /// candidate cloud images that may be substituted for that drive when
+    /// building on a public cloud. Order expresses preference.
+    /// </summary>
+    [JsonPropertyName("cloud_compatibility")]
+    public Dictionary<string, CloudImageReference[]>? CloudCompatibility { get; set; }
 }
