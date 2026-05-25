@@ -28,11 +28,12 @@ public static class GenePacker
         var targetStream = new GenePackerStream(new DirectoryInfo(tempDir), ChunkSize);
         try
         {
-            var format = file.ExtremeCompression switch
+            var format = file.Compression switch
             {
-                true => "xz",
-                false when originalSize >= GeneModelDefaults.MinCompressionBytes => "gz",
-                false => "plain"
+                GeneCompression.Extreme => "xz",
+                GeneCompression.None => "plain",
+                _ when originalSize >= GeneModelDefaults.MinCompressionBytes => "gz",
+                _ => "plain"
             };
 
             await CompressAsync(targetStream, file.FullPath, format, progress, token);

@@ -120,9 +120,15 @@ addVMCommand.AddArgument(genesetArgument);
 addVMCommand.AddArgument(vmExportArgument);
 genesetTagCommand.AddCommand(addVMCommand);
 
+var architectureOption = new System.CommandLine.Option<string>(
+    new[] { "--architecture", "--arch" },
+    "overrides the detected architecture (e.g. azure/amd64, ec2/amd64)");
+architectureOption.AddValidation(ManifestValidations.ValidateArchitecture);
+
 var addVolumeCommand = new Command("add-volume", "This command adds a volume reference to the geneset tag.");
 addVolumeCommand.AddArgument(genesetArgument);
 addVolumeCommand.AddArgument(filePathArgument);
+addVolumeCommand.AddOption(architectureOption);
 genesetTagCommand.AddCommand(addVolumeCommand);
 
 
@@ -243,11 +249,13 @@ addVMCommand.SetHandler(async context =>
     var genesetTagInfo = PrepareGeneSetTagCommand(context);
     var vmExportDir = context.ParseResult.GetValueForArgument(vmExportArgument);
 
-    // find the root of the exported vm
-    vmExportDir = VMExport.FindExportRootDir(vmExportDir);
-
-
     var absolutePackPath = Path.GetFullPath(genesetTagInfo.GetGenesetPath());
+
+    var hasCatletYaml = vmExportDir.GetFiles("catlet.yaml", SearchOption.AllDirectories).Any();
+    var hasVmJson = vmExportDir.GetFiles("vm.json", SearchOption.AllDirectories).Any();
+    if (hasCatletYaml && hasVmJson)
+        AnsiConsole.MarkupLine("[yellow]Both catlet.yaml and vm.json are present in the import directory — using catlet.yaml, ignoring vm.json.[/]");
+
     var (config, packableFiles) = VMExport.ExportToPackable(vmExportDir, token);
     VMExport.ReadMetadata(vmExportDir, genesetTagInfo);
 
@@ -269,7 +277,47 @@ addVMCommand.SetHandler(async context =>
 
     ResetPackableFolder(absolutePackPath);
     WritePackableFiles(packableFiles, absolutePackPath);
-    
+
+    WriteJson(genesetTagInfo.ToString());
+});
+
+// add volume command
+// ------------------------------
+addVolumeCommand.SetHandler(async context =>
+{
+    var genesetTagInfo = PrepareGeneSetTagCommand(context);
+    var volumeFile = context.ParseResult.GetValueForArgument(filePathArgument);
+    var architectureOverride = context.ParseResult.GetValueForOption(architectureOption);
+
+    var extension = Path.GetExtension(volumeFile.Name).ToLowerInvariant();
+    if (!VMExport.VolumeExtensions.TryGetValue(extension, out var volumeExtension))
+    {
+        var supportedTypes = string.Join(", ", VMExport.VolumeExtensions.Keys);
+        throw new EryphPackerUserException(
+            $"Unsupported volume file type '{extension}'. Supported types are {supportedTypes}.");
+    }
+
+    var (defaultArchitecture, compression) = volumeExtension;
+
+    var architecture = !string.IsNullOrWhiteSpace(architectureOverride)
+        ? architectureOverride
+        : defaultArchitecture;
+
+    var absolutePackPath = Path.GetFullPath(genesetTagInfo.GetGenesetPath());
+    var packableFiles = await ReadPackableFiles(absolutePackPath);
+
+    var geneName = Path.GetFileNameWithoutExtension(volumeFile.Name);
+    packableFiles.RemoveAll(p => p.GeneType == GeneType.Volume
+                                 && string.Equals(p.GeneName, geneName, StringComparison.OrdinalIgnoreCase)
+                                 && string.Equals(p.Architecture, architecture, StringComparison.OrdinalIgnoreCase));
+
+    packableFiles.Add(new PackableFile(volumeFile.FullName, volumeFile.Name,
+        GeneType.Volume,
+        architecture,
+        geneName, compression, null));
+
+    WritePackableFiles(packableFiles, absolutePackPath);
+
     WriteJson(genesetTagInfo.ToString());
 });
 
@@ -322,7 +370,7 @@ packCommand.SetHandler(async context =>
                 packableFiles.Add(new PackableFile(Path.Combine(packFolder, "catlet.json"),
                     "catlet.json", GeneType.Catlet,
                     Architectures.Any, // catlet is architecture independent
-                    "catlet", false, catletContent));
+                    "catlet", GeneCompression.Default, catletContent));
                 parent = catletConfig.Parent;
             }
 
@@ -337,23 +385,27 @@ packCommand.SetHandler(async context =>
                 await AddFodderFromDirectory(fodderDir, Architectures.Any);
                 foreach (var hypervisorDir in fodderDir.GetDirectories())
                 {
-                    if (string.Equals(hypervisorDir.Name, Hypervisors.HyperV, StringComparison.OrdinalIgnoreCase))
-                    {
-                        await AddFodderFromDirectory(hypervisorDir, Architectures.HyperVAny);
-
-                        foreach (var processorDir  in hypervisorDir.GetDirectories())
-                        {
-                            if (string.Equals(processorDir.Name, ProcessorTypes.Amd64,
-                                    StringComparison.OrdinalIgnoreCase))
-                                await AddFodderFromDirectory(processorDir, Architectures.HyperVAmd64);
-                            else
-                                AnsiConsole.MarkupLine($"Fodder dir contains [yellow]unknown processor type name '{processorDir.Name}'[/]");
-                        }
-                    }
-                    else
+                    var hypervisor = Hypervisors.KnownNames.FirstOrDefault(h =>
+                        string.Equals(hypervisorDir.Name, h, StringComparison.OrdinalIgnoreCase));
+                    if (hypervisor is null)
                     {
                         AnsiConsole.MarkupLine($"Fodder dir contains [yellow]unknown hypervisor name '{hypervisorDir.Name}'[/]");
+                        continue;
+                    }
 
+                    await AddFodderFromDirectory(hypervisorDir, $"{hypervisor}/any");
+
+                    foreach (var processorDir in hypervisorDir.GetDirectories())
+                    {
+                        var processor = ProcessorTypes.KnownNames.FirstOrDefault(p =>
+                            string.Equals(processorDir.Name, p, StringComparison.OrdinalIgnoreCase));
+                        if (processor is null)
+                        {
+                            AnsiConsole.MarkupLine($"Fodder dir contains [yellow]unknown processor type name '{processorDir.Name}'[/]");
+                            continue;
+                        }
+
+                        await AddFodderFromDirectory(processorDir, $"{hypervisor}/{processor}");
                     }
                 }
             }
@@ -435,7 +487,7 @@ packCommand.SetHandler(async context =>
                     packableFiles.Add(new PackableFile(fodderJsonFile,
                         $"{fodderConfig.Name}.json", GeneType.Fodder,
                         architecture,
-                        fodderConfig.Name!, false, fodderContent));
+                        fodderConfig.Name!, GeneCompression.Default, fodderContent));
                 }
             }
 
