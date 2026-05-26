@@ -7,6 +7,7 @@ using Eryph.ConfigModel;
 using Eryph.GenePool.Client.Internal;
 using Eryph.GenePool.Client.Requests;
 using Eryph.GenePool.Client.RestClients;
+using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Requests.Genesets;
 using Eryph.GenePool.Model.Responses;
 
@@ -235,6 +236,8 @@ public class GenesetClient
         string? description = default,
         string? descriptionMarkdown = default,
         IDictionary<string,string>? metadata = default,
+        string? version = default,
+        IDictionary<string, CloudImageReference[]>? cloudCompatibility = default,
         RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
@@ -249,7 +252,9 @@ public class GenesetClient
                 ShortDescription = shortDescription,
                 Description = description,
                 DescriptionMarkdown = descriptionMarkdown,
-                Metadata = metadata
+                Metadata = metadata,
+                Version = version,
+                CloudCompatibility = cloudCompatibility
             };
 
             return (await RestClient.CreateAsync(body,
@@ -270,6 +275,8 @@ public class GenesetClient
         string? descriptionMarkdown = default,
         IDictionary<string, string>? metadata = default,
         string? etag = default,
+        string? version = default,
+        IDictionary<string, CloudImageReference[]>? cloudCompatibility = default,
         RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
@@ -285,7 +292,9 @@ public class GenesetClient
                 Description = description,
                 DescriptionMarkdown = descriptionMarkdown,
                 Metadata = metadata,
-                ETag = etag
+                ETag = etag,
+                Version = version,
+                CloudCompatibility = cloudCompatibility
             };
 
             return (await RestClient.UpdateAsync(_organization, _geneset, body,
@@ -309,6 +318,8 @@ public class GenesetClient
         string? descriptionMarkdown = default,
         IDictionary<string, string>? metadata = default,
         string? etag = default,
+        string? version = default,
+        IDictionary<string, CloudImageReference[]>? cloudCompatibility = default,
         RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
@@ -323,7 +334,9 @@ public class GenesetClient
                 Description = description,
                 DescriptionMarkdown = descriptionMarkdown,
                 Metadata = metadata,
-                ETag = etag
+                ETag = etag,
+                Version = version,
+                CloudCompatibility = cloudCompatibility
             };
             return RestClient.Update(_organization, _geneset, body,
                 options ?? new RequestOptions(),
@@ -344,6 +357,8 @@ public class GenesetClient
         string? description = default,
         string? descriptionMarkdown = default,
         IDictionary<string, string>? metadata = default,
+        string? version = default,
+        IDictionary<string, CloudImageReference[]>? cloudCompatibility = default,
         RequestOptions? options = default,
         CancellationToken cancellationToken = default)
     {
@@ -358,7 +373,9 @@ public class GenesetClient
                 ShortDescription = shortDescription,
                 Description = description,
                 DescriptionMarkdown = descriptionMarkdown,
-                Metadata = metadata
+                Metadata = metadata,
+                Version = version,
+                CloudCompatibility = cloudCompatibility
             };
             return RestClient.Create(body,
                 options?? new RequestOptions(),

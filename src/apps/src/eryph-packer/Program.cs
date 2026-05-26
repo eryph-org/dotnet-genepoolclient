@@ -910,6 +910,8 @@ async Task CreateOrUpdateGeneset(GenesetInfo genesetInfo, GenesetClient genesetC
             genesetInfo.ManifestData.Description,
             markdownContent,
             genesetInfo.ManifestData.Metadata,
+            version: genesetInfo.ManifestData.Version,
+            cloudCompatibility: genesetInfo.ManifestData.CloudCompatibility,
             cancellationToken: token
         );
     }
@@ -926,6 +928,8 @@ async Task CreateOrUpdateGeneset(GenesetInfo genesetInfo, GenesetClient genesetC
             markdownContent,
             genesetInfo.ManifestData.Metadata,
             geneset?.ETag,
+            version: genesetInfo.ManifestData.Version,
+            cloudCompatibility: genesetInfo.ManifestData.CloudCompatibility,
             cancellationToken: token
         );
     }
