@@ -103,9 +103,21 @@ internal class MsalPublicClient(
             if (browserOptions.ParentActivityOrWindow != null)
             {
                 // Resolve the handle and pass the IntPtr value: MSAL only sets the owner window for
-                // an IntPtr, not for a Func<IntPtr>. Skip a zero handle so MSAL falls back to an
-                // unowned dialog instead of throwing invalid_owner_window_type.
-                var parentWindow = browserOptions.ParentActivityOrWindow();
+                // an IntPtr, not for a Func<IntPtr>. The callback may run on a non-UI thread here
+                // (AcquireTokenInteractiveAsync offloads to Task.Run when called from an STA thread),
+                // so a handle resolved with UI-thread affinity can throw. The parent window is
+                // optional, so treat a failure or a zero handle as "no parent" and let MSAL show an
+                // unowned dialog rather than failing the sign-in.
+                var parentWindow = IntPtr.Zero;
+                try
+                {
+                    parentWindow = browserOptions.ParentActivityOrWindow();
+                }
+                catch (Exception) when (!cancellationToken.IsCancellationRequested)
+                {
+                    // Ignore: fall back to an unowned dialog.
+                }
+
                 if (parentWindow != IntPtr.Zero)
                 {
                     builder.WithParentActivityOrWindow(parentWindow);
