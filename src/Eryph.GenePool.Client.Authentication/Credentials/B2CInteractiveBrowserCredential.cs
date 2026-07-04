@@ -42,13 +42,15 @@ public class B2CInteractiveBrowserCredential : TokenCredential
         Argument.AssertNotNullOrWhiteSpace(authorityUri, nameof(authorityUri));
         Debug.Assert(authorityUri != null, nameof(authorityUri) + " != null");
 
+        var browserOptions = options as B2CInteractiveBrowserCredentialOptions;
+
         ClientId = clientId;
-        LoginHint = (options as B2CInteractiveBrowserCredentialOptions)?.LoginHint;
-        var redirectUrl = (options as B2CInteractiveBrowserCredentialOptions)?.RedirectUri?.AbsoluteUri ?? Constants.DefaultRedirectUrl;
-        var configurePublicClient = (options as B2CInteractiveBrowserCredentialOptions)?.ConfigurePublicClientApplication;
-        Client = client ?? new MsalPublicClient(authorityUri, clientId, redirectUrl, options, configurePublicClient);
-        Record = (options as B2CInteractiveBrowserCredentialOptions)?.AuthenticationRecord;
-        BrowserCustomization = (options as B2CInteractiveBrowserCredentialOptions)?.BrowserCustomization;
+        LoginHint = browserOptions?.LoginHint;
+        var redirectUrl = browserOptions?.RedirectUri?.AbsoluteUri ?? Constants.DefaultRedirectUrl;
+        Client = client ?? new MsalPublicClient(authorityUri, clientId, redirectUrl, options,
+            browserOptions?.ConfigurePublicClientApplication);
+        Record = browserOptions?.AuthenticationRecord;
+        BrowserCustomization = browserOptions?.BrowserCustomization;
     }
 
 
