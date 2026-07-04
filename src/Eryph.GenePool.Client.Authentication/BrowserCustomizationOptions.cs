@@ -21,7 +21,9 @@ public class BrowserCustomizationOptions
     /// authentication dialog. This is required when using the embedded WebView2 dialog on a
     /// Windows desktop (WPF/WinForms) application so that the sign-in window is displayed
     /// modally over the application. For WPF the handle can be obtained via
-    /// <c>new WindowInteropHelper(window).Handle</c>.
+    /// <c>new WindowInteropHelper(window).EnsureHandle()</c>, which also creates the handle if
+    /// the window has not been shown yet (unlike <c>Handle</c>, which returns
+    /// <c>IntPtr.Zero</c> in that case).
     /// </summary>
     public Func<IntPtr>? ParentActivityOrWindow { get; set; }
 
