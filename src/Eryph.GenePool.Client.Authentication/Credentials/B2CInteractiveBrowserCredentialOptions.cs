@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using Azure.Core;
+using Microsoft.Identity.Client;
 
 namespace Eryph.GenePool.Client.Credentials;
 
@@ -43,4 +44,25 @@ public class B2CInteractiveBrowserCredentialOptions : TokenCredentialOptions
     /// The options for customizing the browser for interactive authentication.
     /// </summary>
     public BrowserCustomizationOptions? BrowserCustomization { get; set; }
+
+    /// <summary>
+    /// An optional callback which is invoked with the underlying MSAL
+    /// <see cref="PublicClientApplicationBuilder"/> just before the public client application is
+    /// built. This exposes the builder so that a consuming application can apply additional
+    /// configuration which requires packages that this library does not reference itself.
+    /// </summary>
+    /// <remarks>
+    /// The most common use case is enabling the embedded WebView2 sign-in dialog for a Windows
+    /// desktop (WPF/WinForms) application. To do so, add the
+    /// <c>Microsoft.Identity.Client.Desktop</c> package to the consuming application and call
+    /// <c>WithWindowsEmbeddedBrowserSupport()</c> on the builder:
+    /// <code>
+    /// options.ConfigurePublicClientApplication = builder =>
+    ///     builder.WithWindowsEmbeddedBrowserSupport();
+    /// </code>
+    /// Combine this with <see cref="BrowserCustomizationOptions.UseEmbeddedWebView"/> set to
+    /// <c>true</c> and <see cref="BrowserCustomizationOptions.ParentActivityOrWindow"/> to show the
+    /// dialog modally over the application window.
+    /// </remarks>
+    public Action<PublicClientApplicationBuilder>? ConfigurePublicClientApplication { get; set; }
 }
