@@ -102,7 +102,14 @@ internal class MsalPublicClient(
             }
             if (browserOptions.ParentActivityOrWindow != null)
             {
-                builder.WithParentActivityOrWindow(browserOptions.ParentActivityOrWindow);
+                // Resolve the handle and pass the IntPtr value: MSAL only sets the owner window for
+                // an IntPtr, not for a Func<IntPtr>. Skip a zero handle so MSAL falls back to an
+                // unowned dialog instead of throwing invalid_owner_window_type.
+                var parentWindow = browserOptions.ParentActivityOrWindow();
+                if (parentWindow != IntPtr.Zero)
+                {
+                    builder.WithParentActivityOrWindow(parentWindow);
+                }
             }
         }
         return await builder
