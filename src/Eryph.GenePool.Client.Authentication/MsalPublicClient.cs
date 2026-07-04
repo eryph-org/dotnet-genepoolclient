@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Identity.Client;
 
@@ -8,10 +9,13 @@ internal class MsalPublicClient(
     string authorityUri,
     string? clientId,
     string redirectUrl,
-    TokenCredentialOptions? options)
+    TokenCredentialOptions? options,
+    Action<PublicClientApplicationBuilder>? configureBuilder = null)
     : MsalClientBase<IPublicClientApplication>(authorityUri, clientId, options?.TokenCachePersistenceOptions)
 {
     internal string RedirectUrl { get; } = redirectUrl;
+
+    private readonly Action<PublicClientApplicationBuilder>? _configureBuilder = configureBuilder;
 
     protected override ValueTask<IPublicClientApplication> CreateClientAsync(bool async, CancellationToken cancellationToken)
     {
@@ -24,11 +28,16 @@ internal class MsalPublicClient(
             .Create(ClientId)
             .WithB2CAuthority(AuthorityUri);
 
-        
+
         if (!string.IsNullOrEmpty(RedirectUrl))
         {
             pubAppBuilder = pubAppBuilder.WithRedirectUri(RedirectUrl);
         }
+
+        // Allow the consuming application to apply additional configuration to the builder,
+        // e.g. to enable the embedded WebView2 sign-in dialog via the
+        // Microsoft.Identity.Client.Desktop package.
+        _configureBuilder?.Invoke(pubAppBuilder);
 
         return new ValueTask<IPublicClientApplication>(pubAppBuilder.Build());
     }
@@ -74,9 +83,7 @@ internal class MsalPublicClient(
 
         var builder = client.AcquireTokenInteractive(scopes)
             .WithPrompt(prompt)
-            .WithClaims(claims ?? "")
-            .WithPrompt(prompt)
-            .WithClaims(claims);
+            .WithClaims(claims ?? "");
         if (loginHint != null)
         {
             builder.WithLoginHint(loginHint);
@@ -92,6 +99,10 @@ internal class MsalPublicClient(
             if (browserOptions.SystemBrowserOptions != null)
             {
                 builder.WithSystemWebViewOptions(browserOptions.SystemBrowserOptions);
+            }
+            if (browserOptions.ParentActivityOrWindow != null)
+            {
+                builder.WithParentActivityOrWindow(browserOptions.ParentActivityOrWindow);
             }
         }
         return await builder

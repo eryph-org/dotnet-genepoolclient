@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+﻿using System;
+using JetBrains.Annotations;
 using Microsoft.Identity.Client;
 
 namespace Eryph.GenePool.Client;
@@ -14,6 +15,17 @@ public class BrowserCustomizationOptions
     /// or the system default browser
     /// </summary>
     public bool? UseEmbeddedWebView { get; set; }
+
+    /// <summary>
+    /// A callback which returns the handle of the window that should own the interactive
+    /// authentication dialog. This is required when using the embedded WebView2 dialog on a
+    /// Windows desktop (WPF/WinForms) application so that the sign-in window is displayed
+    /// modally over the application. For WPF the handle can be obtained via
+    /// <c>new WindowInteropHelper(window).EnsureHandle()</c>, which also creates the handle if
+    /// the window has not been shown yet (unlike <c>Handle</c>, which returns
+    /// <c>IntPtr.Zero</c> in that case).
+    /// </summary>
+    public Func<IntPtr>? ParentActivityOrWindow { get; set; }
 
     internal SystemWebViewOptions? SystemBrowserOptions;
 
