@@ -83,9 +83,7 @@ internal class MsalPublicClient(
 
         var builder = client.AcquireTokenInteractive(scopes)
             .WithPrompt(prompt)
-            .WithClaims(claims ?? "")
-            .WithPrompt(prompt)
-            .WithClaims(claims);
+            .WithClaims(claims ?? "");
         if (loginHint != null)
         {
             builder.WithLoginHint(loginHint);
