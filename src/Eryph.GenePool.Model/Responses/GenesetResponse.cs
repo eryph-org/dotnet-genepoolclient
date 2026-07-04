@@ -10,6 +10,8 @@ public record GenesetResponse(
     [property: JsonPropertyName("org")] OrganizationRefResponse Org,
     [property: JsonPropertyName("geneset")]
     string Geneset,
+    [property: JsonPropertyName("version")]
+    string? Version,
     [property: JsonPropertyName("uri")] Uri? Uri,
     [property: JsonPropertyName("etag")] string? ETag,
     [property: JsonPropertyName("public")] bool Public,
@@ -23,6 +25,8 @@ public record GenesetResponse(
     Uri DescriptionUri,
     [property: JsonPropertyName("metadata")]
     IDictionary<string, string>? Metadata,
+    [property: JsonPropertyName("cloud_compatibility")]
+    IDictionary<string, CloudImageReference[]>? CloudCompatibility,
     [property: JsonPropertyName("tags_uri")]
     Uri TagsUri,
     [property: JsonPropertyName("tags")] GenesetTagResponse[]? Tags,
